@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1, "user_id": 4,
+    "bio": "Master plumber with 8+ years experience. Specialising in residential repairs and installations.",
+    "location": "Greenfield District, Metro City",
+    "base_rate": 45, "is_verified": true,
+    "kyc_doc_url": "/mock/kyc/marcus_id.jpg", "avg_rating": 4.9,
+    "latitude": 51.5101, "longitude": -0.1340,
+    "category_ids": [1],
+    "services": ["Pipe Repair", "Drain Cleaning", "Leak Detection", "Installation"]
+  },
+  {
+    "id": 2, "user_id": 5,
+    "bio": "Certified electrician. Domestic rewiring, fault finding and smart-home installs.",
+    "location": "Riverside, Metro City",
+    "base_rate": 52, "is_verified": true,
+    "kyc_doc_url": "/mock/kyc/priya_id.jpg", "avg_rating": 4.8,
+    "latitude": 51.5050, "longitude": -0.1190,
+    "category_ids": [2],
+    "services": ["Wiring", "Fuse Box", "Lighting", "Fault Finding"]
+  },
+  {
+    "id": 3, "user_id": 6,
+    "bio": "Reliable deep-clean specialist. End-of-tenancy and regular home cleaning.",
+    "location": "Old Town, Metro City",
+    "base_rate": 35, "is_verified": true,
+    "kyc_doc_url": "/mock/kyc/tom_id.jpg", "avg_rating": 4.7,
+    "latitude": 51.5036, "longitude": -0.1410,
+    "category_ids": [3],
+    "services": ["Deep Clean", "End of Tenancy", "Regular Clean", "Carpets"]
+  },
+  {
+    "id": 4, "user_id": 7,
+    "bio": "Gardener and landscaper. Lawn care, hedge trimming and seasonal tidy-ups.",
+    "location": "Hillcrest, Metro City",
+    "base_rate": 40, "is_verified": true,
+    "kyc_doc_url": "/mock/kyc/leon_id.jpg", "avg_rating": 4.6,
+    "latitude": 51.5120, "longitude": -0.1110,
+    "category_ids": [4],
+    "services": ["Lawn Care", "Hedge Trimming", "Planting", "Clearance"]
+  },
+  {
+    "id": 5, "user_id": 8,
+    "bio": "Electrician specialising in AC units and ventilation. Awaiting verification.",
+    "location": "Riverside, Metro City",
+    "base_rate": 48, "is_verified": false,
+    "kyc_doc_url": "/mock/kyc/james_id.jpg", "avg_rating": 0,
+    "latitude": 51.4990, "longitude": -0.1250,
+    "category_ids": [2, 5],
+    "services": ["AC Install", "AC Repair", "Ventilation"]
+  },
+  {
+    "id": 6, "user_id": 9,
+    "bio": "Home cleaner offering eco-friendly products. Awaiting verification.",
+    "location": "Old Town, Metro City",
+    "base_rate": 30, "is_verified": false,
+    "kyc_doc_url": "/mock/kyc/rosa_id.jpg", "avg_rating": 0,
+    "latitude": 51.5075, "longitude": -0.1300,
+    "category_ids": [3],
+    "services": ["Regular Clean", "Eco Clean", "Ironing"]
+  }
+]

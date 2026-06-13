@@ -1,0 +1,26 @@
+[
+  {
+    "id": 2847, "customer_id": 1, "provider_id": 1, "category_id": 1,
+    "status": "in_progress", "scheduled_at": "2026-06-11T14:00:00",
+    "address": "14 Maple Street, Apt 3", "total": 95,
+    "notes": "Leaking pipe under kitchen sink. Customer reports water damage to cabinet floor."
+  },
+  {
+    "id": 2846, "customer_id": 2, "provider_id": 2, "category_id": 2,
+    "status": "completed", "scheduled_at": "2026-06-08T10:00:00",
+    "address": "8 Oak Avenue", "total": 120,
+    "notes": "Replace consumer unit and test circuits."
+  },
+  {
+    "id": 2845, "customer_id": 3, "provider_id": 3, "category_id": 3,
+    "status": "reviewed", "scheduled_at": "2026-06-05T13:00:00",
+    "address": "22 Pine Road", "total": 60,
+    "notes": "End-of-tenancy deep clean, two-bed flat."
+  },
+  {
+    "id": 2848, "customer_id": 1, "provider_id": 4, "category_id": 4,
+    "status": "requested", "scheduled_at": "2026-06-15T09:00:00",
+    "address": "14 Maple Street, Apt 3", "total": 80,
+    "notes": "Front lawn overgrown, needs cut and hedge trim."
+  }
+]
