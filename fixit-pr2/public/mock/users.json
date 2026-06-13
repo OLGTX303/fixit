@@ -1,0 +1,13 @@
+[
+  { "id": 1,  "name": "Alex Chen",     "email": "alex@email.com",    "password_hash": "$2y$mock$customer", "role": "customer", "phone": "+44 7700 900001" },
+  { "id": 2,  "name": "Sandra Mills",  "email": "sandra@email.com",  "password_hash": "$2y$mock$customer", "role": "customer", "phone": "+44 7700 900002" },
+  { "id": 3,  "name": "David Kim",     "email": "david@email.com",   "password_hash": "$2y$mock$customer", "role": "customer", "phone": "+44 7700 900003" },
+  { "id": 4,  "name": "Marcus Rivera", "email": "marcus@email.com",  "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900004" },
+  { "id": 5,  "name": "Priya Sharma",  "email": "priya@email.com",   "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900005" },
+  { "id": 6,  "name": "Tom Walsh",     "email": "tom@email.com",     "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900006" },
+  { "id": 7,  "name": "Leon Mendez",   "email": "leon@email.com",    "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900007" },
+  { "id": 8,  "name": "James Okoye",   "email": "james@email.com",   "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900008" },
+  { "id": 9,  "name": "Rosa Tan",      "email": "rosa@email.com",    "password_hash": "$2y$mock$provider", "role": "provider", "phone": "+44 7700 900009" },
+  { "id": 10, "name": "Admin One",     "email": "admin@fixit.com",   "password_hash": "$2y$mock$admin",    "role": "admin",    "phone": "+44 7700 900010" },
+  { "id": 11, "name": "Admin Two",     "email": "ops@fixit.com",     "password_hash": "$2y$mock$admin",    "role": "admin",    "phone": "+44 7700 900011" }
+]

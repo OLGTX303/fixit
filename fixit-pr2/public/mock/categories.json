@@ -1,0 +1,8 @@
+[
+  { "id": 1, "name": "Plumbing",   "description": "Pipe repair, leaks, installations", "icon_url": "🔧" },
+  { "id": 2, "name": "Electrical", "description": "Wiring, fixtures, fault finding",    "icon_url": "⚡" },
+  { "id": 3, "name": "Cleaning",   "description": "Deep cleans and regular service",    "icon_url": "🧹" },
+  { "id": 4, "name": "Gardening",  "description": "Lawn care, hedges, landscaping",      "icon_url": "🌱" },
+  { "id": 5, "name": "AC Service", "description": "Install, repair and maintenance",     "icon_url": "❄️" },
+  { "id": 6, "name": "Moving",     "description": "Local moves and heavy lifting",       "icon_url": "📦" }
+]

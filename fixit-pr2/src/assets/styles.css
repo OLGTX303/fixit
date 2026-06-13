@@ -1,0 +1,145 @@
+/* FixIt design tokens — mirrored from the PR1 mockup (fixit-tokens.jsx).
+   Brand accent is #FF6635 (the mockup palette). The brief also mentions
+   #E8632A; we follow the mockup since it is the authoritative visual source. */
+:root {
+  --fx-accent: #FF6635;
+  --fx-accent-soft: #FFF2EE;
+  --fx-accent-dark: #E04F20;
+  --fx-bg: #F7F8FA;
+  --fx-surface: #FFFFFF;
+  --fx-text: #111827;
+  --fx-muted: #6B7280;
+  --fx-muted-soft: #9CA3AF;
+  --fx-border: #E5E7EB;
+  --fx-border-soft: #F3F4F6;
+  --fx-success: #22C55E;
+  --fx-success-soft: #F0FDF4;
+  --fx-warn: #F59E0B;
+  --fx-warn-soft: #FFFBEB;
+  --fx-blue: #3B82F6;
+  --fx-blue-soft: #EFF6FF;
+  --fx-error: #EF4444;
+  --fx-error-soft: #FEF2F2;
+  --fx-radius: 16px;
+  --fx-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; }
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--fx-bg);
+  color: var(--fx-text);
+}
+
+/* Bootstrap brand overrides */
+.btn-primary {
+  --bs-btn-bg: var(--fx-accent);
+  --bs-btn-border-color: var(--fx-accent);
+  --bs-btn-hover-bg: var(--fx-accent-dark);
+  --bs-btn-hover-border-color: var(--fx-accent-dark);
+  --bs-btn-active-bg: var(--fx-accent-dark);
+  --bs-btn-active-border-color: var(--fx-accent-dark);
+  --bs-btn-disabled-bg: var(--fx-border);
+  --bs-btn-disabled-border-color: var(--fx-border);
+  --bs-btn-disabled-color: var(--fx-muted);
+  font-weight: 600;
+  border-radius: 14px;
+  padding: 13px 20px;
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--fx-accent);
+  --bs-btn-border-color: var(--fx-accent);
+  --bs-btn-hover-bg: var(--fx-accent);
+  --bs-btn-hover-border-color: var(--fx-accent);
+  --bs-btn-active-bg: var(--fx-accent);
+  font-weight: 600;
+  border-radius: 14px;
+}
+.text-accent { color: var(--fx-accent) !important; }
+.bg-accent { background: var(--fx-accent) !important; }
+.bg-accent-soft { background: var(--fx-accent-soft) !important; }
+
+/* Shared building blocks */
+.fx-card {
+  background: var(--fx-surface);
+  border-radius: var(--fx-radius);
+  box-shadow: var(--fx-shadow);
+  padding: 14px;
+}
+.fx-chip {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  padding: 7px 14px; border-radius: 100px; font-size: 13px; font-weight: 500;
+  background: var(--fx-surface); color: var(--fx-text);
+  border: 1.5px solid var(--fx-border); cursor: pointer; user-select: none;
+}
+.fx-chip.active { background: var(--fx-accent); color: #fff; border-color: var(--fx-accent); }
+.fx-chip.sm { padding: 4px 10px; font-size: 12px; }
+
+.fx-avatar {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; flex-shrink: 0; background: var(--fx-accent-soft); color: var(--fx-accent);
+}
+.fx-input {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--fx-border-soft); border-radius: 12px; padding: 13px 15px;
+  border: none; width: 100%; font-size: 15px; color: var(--fx-text);
+}
+.fx-input:focus { outline: 2px solid var(--fx-accent); }
+.fx-label {
+  font-size: 12px; font-weight: 600; color: var(--fx-muted);
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.fx-badge {
+  display: inline-flex; align-items: center; padding: 3px 9px;
+  border-radius: 100px; font-size: 11px; font-weight: 600;
+}
+
+/* App shell: phone-style column that grows to full width on desktop */
+.fx-shell { min-height: 100%; display: flex; flex-direction: column; }
+.fx-main { flex: 1; padding-bottom: 88px; }   /* room for bottom nav on mobile */
+
+/* Bottom tab nav (mobile-first) */
+.fx-bottomnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--fx-border);
+  display: flex; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+}
+.fx-bottomnav .nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--fx-muted-soft); font-size: 10px; cursor: pointer;
+  background: none; border: none;
+}
+.fx-bottomnav .nav-item.active { color: var(--fx-accent); font-weight: 600; }
+
+/* Side nav (desktop ≥ 992px) */
+.fx-sidenav { display: none; }
+@media (min-width: 992px) {
+  .fx-bottomnav { display: none; }
+  .fx-main { padding-bottom: 24px; }
+  .fx-layout { display: flex; max-width: 1280px; margin: 0 auto; }
+  .fx-sidenav {
+    display: flex; flex-direction: column; gap: 4px;
+    width: 240px; flex-shrink: 0; padding: 20px 14px;
+    border-right: 1px solid var(--fx-border); height: 100vh;
+    position: sticky; top: 0; background: var(--fx-surface);
+  }
+  .fx-sidenav .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+    border-radius: 12px; color: var(--fx-muted); font-weight: 500;
+    cursor: pointer; background: none; border: none; text-align: left;
+  }
+  .fx-sidenav .nav-item.active { background: var(--fx-accent-soft); color: var(--fx-accent); font-weight: 600; }
+  .fx-content { flex: 1; min-width: 0; }
+}
+
+/* Leaflet map sizing */
+.fx-map { height: 240px; width: 100%; border-radius: 16px; overflow: hidden; z-index: 1; }
+@media (min-width: 992px) { .fx-map { height: 420px; } }
+
+.fx-page { max-width: 640px; margin: 0 auto; padding: 12px 20px; }
+@media (min-width: 992px) { .fx-page { max-width: 820px; padding: 24px 32px; } }

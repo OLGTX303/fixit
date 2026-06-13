@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FixIt — UI Mockups (Print)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #ECEEF1;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Screen layout ─────────────────────────────────── */
+    .page {
+      width: 1056px;       /* A4 landscape at 96dpi ≈ 1122px; leave room for margins */
+      min-height: 748px;
+      margin: 0 auto 32px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 36px 14px;
+      border-bottom: 1.5px solid #E5E7EB;
+      flex-shrink: 0;
+    }
+    .page-header-left { display: flex; align-items: center; gap: 14px; }
+    .page-logo {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: #FF6635;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-brand { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -0.3px; }
+    .page-section-pill {
+      background: #FFF2EE;
+      color: #FF6635;
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .page-meta { font-size: 11px; color: #9CA3AF; font-weight: 500; }
+
+    .phones-row {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 28px;
+      padding: 24px 36px 28px;
+    }
+
+    .print-phone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .phone-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6B7280;
+      letter-spacing: 0.3px;
+      text-align: center;
+    }
+
+    /* ── Cover page ────────────────────────────────────── */
+    .cover {
+      width: 1056px;
+      height: 748px;
+      margin: 0 auto 32px;
+      background: #0F172A;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+      overflow: hidden;
+      position: relative;
+    }
+    .cover-bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,102,53,0.08);
+    }
+
+    /* ── Print rules ───────────────────────────────────── */
+    @media print {
+      @page { size: landscape; margin: 0.5cm; }
+
+      body { background: #fff; }
+
+      .page, .cover {
+        width: 100%;
+        min-height: 0;
+        height: auto;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        break-after: page;
+        break-inside: avoid;
+      }
+
+      /* Freeze all animations at end state */
+      *, *::before, *::after {
+        animation-delay: -99s !important;
+        animation-duration: .001s !important;
+        animation-iteration-count: 1 !important;
+        animation-fill-mode: both !important;
+        animation-play-state: running !important;
+        transition-duration: 0s !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="fixit-tokens.jsx"></script>
+  <script type="text/babel" src="fixit-customer.jsx"></script>
+  <script type="text/babel" src="fixit-provider.jsx"></script>
+  <script type="text/babel" src="fixit-admin.jsx"></script>
+
+  <script type="text/babel">
+
+    // ── Shared print wrappers ────────────────────────────
+
+    function Logo() {
+      return (
+        <div className="page-logo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </div>
+      );
+    }
+
+    function PageHeader({ section, role, pageNum, total }) {
+      return (
+        <div className="page-header">
+          <div className="page-header-left">
+            <Logo />
+            <span className="page-brand">FixIt</span>
+            <span className="page-section-pill">{role}</span>
+            <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>{section}</span>
+          </div>
+          <span className="page-meta">Page {pageNum} of {total} · fixit-mockups · Jun 2026</span>
+        </div>
+      );
+    }
+
+    function PrintPhone({ children, label, w = 280, h = 607 }) {
+      return (
+        <div className="print-phone">
+          <IOSDevice width={w} height={h}>{children}</IOSDevice>
+          <div className="phone-label">{label}</div>
+        </div>
+      );
+    }
+
+    function EmptyPhone({ w = 280, h = 607 }) {
+      return (
+        <div className="print-phone">
+          <div style={{ width: w, height: h }} />
+        </div>
+      );
+    }
+
+    // ── Cover ────────────────────────────────────────────
+    function Cover() {
+      return (
+        <div className="cover">
+          <div className="cover-bg-circle" style={{ width: 500, height: 500, top: -120, right: -100 }} />
+          <div className="cover-bg-circle" style={{ width: 300, height: 300, bottom: -80, left: -60 }} />
+
+          {/* Logo mark */}
+          <div style={{ width: 72, height: 72, borderRadius: 20, background: '#FF6635', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: '0 8px 32px rgba(255,102,53,0.4)' }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </div>
+
+          <div style={{ fontSize: 56, fontWeight: 800, color: '#fff', letterSpacing: -2, lineHeight: 1, marginBottom: 12 }}>FixIt</div>
+          <div style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)', fontWeight: 400, marginBottom: 40, letterSpacing: 0.2 }}>On-Demand Home Services Marketplace</div>
+
+          {/* Role pills */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 48 }}>
+            {[
+              { label: 'Customer',         count: '8 screens', color: '#FF6635' },
+              { label: 'Service Provider', count: '5 screens', color: '#3B82F6' },
+              { label: 'Administrator',    count: '3 screens', color: '#8B5CF6' },
+            ].map(r => (
+              <div key={r.label} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 20px', textAlign: 'center', minWidth: 160 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, margin: '0 auto 8px' }} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{r.label}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>{r.count}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 32 }}>
+            {[['16', 'Total Screens'], ['3', 'User Roles'], ['Jun 2026', 'Date']].map(([v, l]) => (
+              <div key={l} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#FF6635' }}>{v}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.8 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Print layout pages (3 phones per page) ───────────
+    const PAGES = [
+      { role: 'Customer', section: 'Login & Registration',    pageNum: 2,  phones: [{ label: 'C1 · Login',            node: <C1_Login mode="login" /> }, { label: 'C1b · Register',        node: <C1_Login mode="register" /> }, { label: 'C2 · Browse Categories', node: <C2_Browse /> }] },
+      { role: 'Customer', section: 'Discovery & Booking',     pageNum: 3,  phones: [{ label: 'C3 · Search + Map',     node: <C3_Search /> }, { label: 'C4 · Provider Detail',  node: <C4_ProviderDetail /> }, { label: 'C5 · Booking Form',     node: <C5_BookingForm /> }] },
+      { role: 'Customer', section: 'Job Management & Review', pageNum: 4,  phones: [{ label: 'C6 · Job Tracker',      node: <C6_JobTracker /> }, { label: 'C7 · Rate & Review',    node: <C7_Review /> }, null] },
+      { role: 'Provider', section: 'Onboarding',              pageNum: 5,  phones: [{ label: 'P1 · Profile Setup',   node: <P1_Profile /> }, { label: 'P2 · KYC Upload',       node: <P2_KYC /> }, { label: 'P3 · Booking Requests', node: <P3_Requests /> }] },
+      { role: 'Provider', section: 'Job Management & Chat',   pageNum: 6,  phones: [{ label: 'P4 · Job Status Update', node: <P4_JobUpdate /> }, { label: 'P5 · In-App Chat',    node: <P5_Chat /> }, null] },
+      { role: 'Admin',    section: 'Platform Management',     pageNum: 7,  phones: [{ label: 'A1 · Provider Verification', node: <A1_Verification /> }, { label: 'A2 · User & Category Mgmt', node: <A2_Management /> }, { label: 'A3 · Booking & Review Monitor', node: <A3_Monitoring /> }] },
+    ];
+
+    const TOTAL_PAGES = PAGES.length + 1; // +1 for cover
+
+    function PrintApp() {
+      return (
+        <div style={{ padding: '32px 24px' }}>
+          <Cover />
+          {PAGES.map((pg) => (
+            <div key={pg.pageNum} className="page">
+              <PageHeader role={pg.role} section={pg.section} pageNum={pg.pageNum} total={TOTAL_PAGES} />
+              <div className="phones-row">
+                {pg.phones.map((ph, i) =>
+                  ph
+                    ? <PrintPhone key={i} label={ph.label}>{ph.node}</PrintPhone>
+                    : <EmptyPhone key={i} />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<PrintApp />);
+
+    // Auto-print after fonts + React render settle
+    document.fonts.ready.then(() => {
+      setTimeout(() => { window.print(); }, 800);
+    });
+
+  </script>
+</body>
+</html>

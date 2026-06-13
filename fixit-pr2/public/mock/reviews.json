@@ -1,0 +1,7 @@
+[
+  { "id": 1, "job_id": 2845, "rating": 5, "comment": "End-of-tenancy clean was spotless. Got my full deposit back!", "created_at": "2026-06-05T18:30:00" },
+  { "id": 2, "job_id": 2846, "rating": 5, "comment": "Priya rewired the kitchen safely and tidily. Highly recommended.", "created_at": "2026-06-08T16:10:00" },
+  { "id": 3, "job_id": 2846, "rating": 4, "comment": "Great work, fair price. Arrived a little late but kept me informed.", "created_at": "2026-06-09T09:05:00" },
+  { "id": 4, "job_id": 2845, "rating": 5, "comment": "Fixed our burst pipe in under an hour. Incredibly professional!", "created_at": "2026-06-06T11:20:00" },
+  { "id": 5, "job_id": 2845, "rating": 5, "comment": "Friendly, on time, and left the place cleaner than before.", "created_at": "2026-06-07T14:45:00" }
+]
