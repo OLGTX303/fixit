@@ -1,8 +1,44 @@
+# Dependencies & build output
 node_modules/
 dist/
-.DS_Store
-*.local
+vendor/
+
+# Environment & secrets
 .env
+.env.local
+.env.production.local
 .env.*
+*.local
+*.pem
+
+# PR1 mockup tooling
 .design-canvas.state.json
 .thumbnail
+
+# Scratch / prompts / reference (not part of shipped project)
+.scratch/
+sourcecoderepo/
+*Prompt*.md
+FixIt_PR3_*.md
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Capacitor generated
+.capacitor/
+
+# Android build artifacts
+fixit-frontend/android/.gradle/
+fixit-frontend/android/app/build/
+fixit-frontend/android/build/
+fixit-frontend/android/local.properties
+*.apk
+*.aab
+
+# PHP / logs
+*.log
+fixit-backend/storage/
