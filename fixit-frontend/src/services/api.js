@@ -92,6 +92,9 @@ export async function register(payload) {
   return data
 }
 
+export const getCaptchaChallenge = () => get('/auth/captcha')
+export const verifyCaptcha = (payload) => post('/auth/captcha/verify', payload)
+
 export async function login(email, password) {
   const data = await post('/auth/login', { email, password })
   persistSession(data.token, data.user)

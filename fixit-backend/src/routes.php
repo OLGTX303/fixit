@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use FixIt\Controllers\AdminController;
 use FixIt\Controllers\AuthController;
+use FixIt\Controllers\CaptchaController;
 use FixIt\Controllers\BookingController;
 use FixIt\Controllers\CategoryController;
 use FixIt\Controllers\CryptoController;
@@ -20,6 +21,7 @@ use Slim\Routing\RouteCollectorProxy;
 
 return function (App $app): void {
     $auth = new AuthController();
+    $captcha = new CaptchaController();
     $categories = new CategoryController();
     $providers = new ProviderController();
     $admin = new AdminController();
@@ -32,10 +34,12 @@ return function (App $app): void {
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $rateLimit
+        $auth, $captcha, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $rateLimit
     ) {
         // Stripe webhook — no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
+        $group->get('/auth/captcha', [$captcha, 'challenge'])->add($rateLimit);
+        $group->post('/auth/captcha/verify', [$captcha, 'verify'])->add($rateLimit);
         $group->post('/auth/register', [$auth, 'register'])->add($rateLimit);
         $group->post('/auth/login', [$auth, 'login'])->add($rateLimit);
         $group->get('/categories', [$categories, 'list']);

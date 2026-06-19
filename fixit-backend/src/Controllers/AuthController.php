@@ -7,6 +7,7 @@ namespace FixIt\Controllers;
 use Firebase\JWT\JWT;
 use FixIt\Models\UserModel;
 use FixIt\Support\ResponseHelper;
+use FixIt\Support\SliderCaptchaService;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -20,9 +21,20 @@ final class AuthController
         $data = (array) $request->getParsedBody();
         $err = Validator::requireFields($data, [
             'name', 'email', 'password', 'role', 'accepted_terms', 'accepted_privacy',
+            'captcha_id', 'captcha_pass_token',
         ]);
         if ($err) {
             return ResponseHelper::error($response, $err, 422);
+        }
+
+        $ip = (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown');
+        $captcha = new SliderCaptchaService();
+        if (!$captcha->consumePassToken(
+            (string) $data['captcha_id'],
+            (string) $data['captcha_pass_token'],
+            $ip
+        )) {
+            return ResponseHelper::error($response, 'Human verification required or expired. Complete the slider puzzle again.', 422);
         }
 
         if (!filter_var($data['accepted_terms'], FILTER_VALIDATE_BOOLEAN)
