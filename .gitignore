@@ -15,9 +15,13 @@ vendor/
 .design-canvas.state.json
 .thumbnail
 
-# Scratch / prompts / reference (not part of shipped project)
+# Scratch / prompts / agent tooling (not part of shipped project)
 .scratch/
+.grok/
 sourcecoderepo/
+AGENTS.md
+CONTEXT-MAP.md
+**/CONTEXT.md
 *Prompt*.md
 FixIt_PR3_*.md
 
