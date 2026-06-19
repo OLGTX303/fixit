@@ -66,6 +66,13 @@ function onIdSelected(e) {
   error.value = ''
 }
 
+function formatRejection(result) {
+  const reasons = result?.rejection_reasons?.length
+    ? result.rejection_reasons
+    : ['Could not verify as a government ID. Use a clear photo with all edges visible.']
+  return reasons.join(' ')
+}
+
 async function runIdRecognition() {
   if (!idFile.value || !myProfile.value) return
   busy.value = true
@@ -74,19 +81,26 @@ async function runIdRecognition() {
   try {
     const result = await analyzeGovernmentId(idFile.value, (m) => { statusMsg.value = m })
     idResult.value = result
-    if (!result.valid) {
-      error.value = 'Could not verify as a government ID. Use a clear photo with all edges visible.'
-      return
-    }
-    kycStatus.value = await api.submitKycIdRecognition(myProfile.value.id, {
+
+    const payload = {
       valid: result.valid,
       document_type: result.document_type,
       confidence: result.confidence,
+      fraud_score: result.fraud_score,
+      ocr_confidence: result.ocr_confidence,
       checks: result.checks,
       filename: idFile.value.name,
       image_hash: result.image_hash,
       extracted_preview: result.extracted_preview,
-    })
+      module_version: result.module_version,
+    }
+
+    if (!result.valid) {
+      error.value = formatRejection(result)
+      return
+    }
+
+    kycStatus.value = await api.submitKycIdRecognition(myProfile.value.id, payload)
     step.value = 2
   } catch (e) {
     error.value = e.message || 'ID recognition failed'
@@ -167,7 +181,7 @@ function retry() {
   <div class="fx-page" style="max-width:560px">
     <h1 class="fw-bold mb-1" style="font-size:20px">Identity Verification</h1>
     <p class="mb-3" style="font-size:13px;color:var(--fx-muted)">
-      Government ID scan + 8-colour reflection face check
+      Production KYC: OCR + MRZ validation + anti-spoof checks, then 8-colour face liveness
     </p>
 
     <div class="fx-card mb-3 d-flex align-items-center gap-2" style="padding:12px">
@@ -197,7 +211,7 @@ function retry() {
     <!-- Step 1: Government ID -->
     <div v-if="step === 1">
       <p style="font-size:13px;color:var(--fx-muted)">
-        Photograph your passport, national ID, or driving licence. Ensure text is readable and all corners are visible.
+        Photograph your passport, national ID, or driving licence. Use a physical card — photos of screens, printouts, or edited images are rejected.
       </p>
       <label class="fx-card d-block text-center mb-3" style="padding:24px;cursor:pointer;border:2px dashed var(--fx-border)">
         <input type="file" accept="image/*" capture="environment" class="d-none" @change="onIdSelected" />
@@ -207,8 +221,22 @@ function retry() {
       <img v-if="idPreview" :src="idPreview" alt="ID preview" class="w-100 mb-3" style="border-radius:12px;max-height:220px;object-fit:contain" />
 
       <div v-if="idResult" class="fx-card mb-3" style="font-size:12px">
-        <div class="fw-semibold mb-1">{{ idResult.document_label }} — {{ idResult.confidence }}% confidence</div>
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-semibold">{{ idResult.document_label }} — {{ idResult.confidence }}% confidence</span>
+          <span class="fx-badge" :style="{
+            color: idResult.valid ? 'var(--fx-success)' : 'var(--fx-error)',
+            background: idResult.valid ? 'var(--fx-success-soft)' : 'var(--fx-error-soft)',
+          }">{{ idResult.valid ? 'Passed' : 'Rejected' }}</span>
+        </div>
+        <div class="d-flex gap-3 mb-2" style="color:var(--fx-muted)">
+          <span>OCR {{ idResult.ocr_confidence }}%</span>
+          <span>Fraud score {{ idResult.fraud_score }}</span>
+          <span v-if="idResult.checks?.mrz?.found">MRZ {{ idResult.checks.mrz.valid ? 'valid' : 'invalid' }}</span>
+        </div>
         <div style="color:var(--fx-muted)">{{ idResult.extracted_preview || 'No text extracted' }}</div>
+        <ul v-if="!idResult.valid && idResult.rejection_reasons?.length" class="mt-2 mb-0 ps-3" style="color:var(--fx-error)">
+          <li v-for="(r, i) in idResult.rejection_reasons" :key="i">{{ r }}</li>
+        </ul>
       </div>
 
       <button class="btn btn-primary w-100" :disabled="!idFile || busy" @click="runIdRecognition">
