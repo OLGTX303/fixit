@@ -3,8 +3,6 @@
  * OCR (Tesseract) + MRZ checksums + anti-spoof forensics + strict scoring.
  */
 
-import { drawToCanvas, fileToImage, imageStats, sha256Hex } from './imageUtils.js'
-import { runForensics } from './forensics.js'
 import { validateMrzFromText } from './mrz.js'
 
 const GOV_KEYWORDS = [
@@ -21,13 +19,227 @@ const ID_ASPECT_RANGES = [
   { type: 'drivers_license', min: 1.50, max: 1.90, label: 'Driving licence' },
 ]
 
-// Production thresholds — tuned to reject fakes while allowing real phone photos.
 const THRESHOLDS = {
   min_confidence: 72,
   min_long_edge: 960,
   min_gov_keywords: 2,
   min_ocr_chars: 24,
   max_fraud_score: 35,
+}
+
+async function fileToImage(file) {
+  const url = URL.createObjectURL(file)
+  try {
+    return await new Promise((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('Could not load image'))
+      el.src = url
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+function drawToCanvas(img, maxEdge = 1600) {
+  const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
+  const w = Math.round(img.width * scale)
+  const h = Math.round(img.height * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(img, 0, 0, w, h)
+  return { canvas, ctx, width: w, height: h }
+}
+
+function imageStats(ctx, w, h) {
+  const data = ctx.getImageData(0, 0, w, h).data
+  let sum = 0
+  let sumSq = 0
+  let edges = 0
+  const step = 4
+  for (let y = 1; y < h - 1; y += step) {
+    for (let x = 1; x < w - 1; x += step) {
+      const i = (y * w + x) * 4
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      sum += lum
+      sumSq += lum * lum
+      const right = (y * w + x + 1) * 4
+      const down = ((y + 1) * w + x) * 4
+      const lumR = 0.299 * data[right] + 0.587 * data[right + 1] + 0.114 * data[right + 2]
+      const lumD = 0.299 * data[down] + 0.587 * data[down + 1] + 0.114 * data[down + 2]
+      if (Math.abs(lum - lumR) + Math.abs(lum - lumD) > 40) edges++
+    }
+  }
+  const samples = Math.floor((w / step) * (h / step))
+  const mean = sum / samples
+  return { mean, variance: sumSq / samples - mean * mean, edgeDensity: edges / samples }
+}
+
+async function sha256Hex(blob) {
+  const hash = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function lumAt(data, w, x, y) {
+  const i = (y * w + x) * 4
+  return 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+}
+
+function detectScreenPattern(ctx, w, h) {
+  const data = ctx.getImageData(0, 0, w, h).data
+  let periodicHits = 0
+  let samples = 0
+  const step = 6
+  for (let y = step * 2; y < h - step * 2; y += step) {
+    for (let x = step * 2; x < w - step * 2; x += step) {
+      const c = lumAt(data, w, x, y)
+      const left = lumAt(data, w, x - step, y)
+      const right = lumAt(data, w, x + step, y)
+      const up = lumAt(data, w, x, y - step)
+      const down = lumAt(data, w, x, y + step)
+      const lap = Math.abs(4 * c - left - right - up - down)
+      if (lap > 18 && Math.abs(left - right) < 4 && Math.abs(up - down) < 4) periodicHits++
+      samples++
+    }
+  }
+  const ratio = samples ? periodicHits / samples : 0
+  return {
+    ratio: Number(ratio.toFixed(4)),
+    pass: ratio < 0.12,
+    flag: ratio >= 0.12 ? 'possible_screen_capture' : null,
+  }
+}
+
+function detectFlatLighting(ctx, w, h) {
+  const regions = [[0.05, 0.05, 0.25, 0.25], [0.75, 0.05, 0.95, 0.25], [0.05, 0.75, 0.25, 0.95], [0.75, 0.75, 0.95, 0.95]]
+  const data = ctx.getImageData(0, 0, w, h).data
+  const variances = []
+  for (const [x0, y0, x1, y1] of regions) {
+    const sx = Math.floor(w * x0)
+    const ex = Math.floor(w * x1)
+    const sy = Math.floor(h * y0)
+    const ey = Math.floor(h * y1)
+    let sum = 0
+    let sumSq = 0
+    let n = 0
+    for (let y = sy; y < ey; y += 3) {
+      for (let x = sx; x < ex; x += 3) {
+        const lum = lumAt(data, w, x, y)
+        sum += lum
+        sumSq += lum * lum
+        n++
+      }
+    }
+    if (n) {
+      const mean = sum / n
+      variances.push(sumSq / n - mean * mean)
+    }
+  }
+  const avgVar = variances.length ? variances.reduce((a, b) => a + b, 0) / variances.length : 0
+  return {
+    corner_variance: Math.round(avgVar),
+    pass: avgVar > 120,
+    flag: avgVar <= 120 ? 'flat_lighting_suspect' : null,
+  }
+}
+
+function detectDocumentBounds(ctx, w, h) {
+  const data = ctx.getImageData(0, 0, w, h).data
+  const edgeBand = Math.max(4, Math.floor(Math.min(w, h) * 0.04))
+  function bandEnergy(horizontal) {
+    let edges = 0
+    let n = 0
+    if (horizontal) {
+      for (const y of [edgeBand, h - edgeBand - 1]) {
+        for (let x = 1; x < w - 1; x += 2) {
+          const a = lumAt(data, w, x, y)
+          const b = lumAt(data, w, x, y + (y < h / 2 ? 1 : -1))
+          if (Math.abs(a - b) > 25) edges++
+          n++
+        }
+      }
+    } else {
+      for (const x of [edgeBand, w - edgeBand - 1]) {
+        for (let y = 1; y < h - 1; y += 2) {
+          const a = lumAt(data, w, x, y)
+          const b = lumAt(data, w, x + (x < w / 2 ? 1 : -1), y)
+          if (Math.abs(a - b) > 25) edges++
+          n++
+        }
+      }
+    }
+    return n ? edges / n : 0
+  }
+  const score = (bandEnergy(true) + bandEnergy(false)) / 2
+  return {
+    border_score: Number(score.toFixed(3)),
+    pass: score > 0.06,
+    flag: score <= 0.06 ? 'no_document_border' : null,
+  }
+}
+
+function detectRecompression(img, ctx, w, h) {
+  const tmp = document.createElement('canvas')
+  tmp.width = w
+  tmp.height = h
+  const tctx = tmp.getContext('2d')
+  tctx.drawImage(img, 0, 0, w, h)
+  const original = ctx.getImageData(0, 0, w, h).data
+  const jpegUrl = tmp.toDataURL('image/jpeg', 0.82)
+  return new Promise((resolve) => {
+    const j = new Image()
+    j.onload = () => {
+      tctx.drawImage(j, 0, 0, w, h)
+      const roundTrip = tctx.getImageData(0, 0, w, h).data
+      let diff = 0
+      let n = 0
+      for (let i = 0; i < original.length; i += 16) {
+        diff += Math.abs(original[i] - roundTrip[i])
+          + Math.abs(original[i + 1] - roundTrip[i + 1])
+          + Math.abs(original[i + 2] - roundTrip[i + 2])
+        n++
+      }
+      const avgDiff = n ? diff / (n * 3) : 0
+      resolve({
+        recompress_delta: Math.round(avgDiff),
+        pass: avgDiff > 2 && avgDiff < 45,
+        flag: avgDiff <= 2 ? 'synthetic_flat_image' : avgDiff >= 45 ? 'heavy_manipulation' : null,
+      })
+    }
+    j.onerror = () => resolve({ recompress_delta: 0, pass: true, flag: null })
+    j.src = jpegUrl
+  })
+}
+
+function checkFileMetadata(file) {
+  const ext = (file.name || '').split('.').pop()?.toLowerCase()
+  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+  const sizeOk = file.size >= 50_000 && file.size <= 15_000_000
+  return {
+    extension: ext,
+    size_bytes: file.size,
+    pass: allowed.includes(ext || '') && sizeOk,
+    flag: !allowed.includes(ext || '') ? 'invalid_file_type'
+      : !sizeOk ? (file.size < 50_000 ? 'file_too_small' : 'file_too_large') : null,
+  }
+}
+
+async function runForensics(file, img, ctx, w, h) {
+  const meta = checkFileMetadata(file)
+  const screen = detectScreenPattern(ctx, w, h)
+  const flat = detectFlatLighting(ctx, w, h)
+  const bounds = detectDocumentBounds(ctx, w, h)
+  const recompress = await detectRecompression(img, ctx, w, h)
+  const flags = [meta, screen, flat, bounds, recompress].map((c) => c.flag).filter(Boolean)
+  const fraudScore = Math.min(100, flags.length * 18 + (flat.pass ? 0 : 15))
+  return {
+    checks: { metadata: meta, screen_pattern: screen, flat_lighting: flat, document_bounds: bounds, recompression: recompress },
+    fraud_flags: flags,
+    fraud_score: fraudScore,
+    anti_spoof_pass: meta.pass && screen.pass && bounds.pass && fraudScore < 40,
+  }
 }
 
 function detectAspectType(width, height) {
@@ -63,9 +275,7 @@ async function runOcr(canvas) {
   const worker = await createWorker('eng', 1, { logger: () => {} })
   try {
     const { data } = await worker.recognize(canvas)
-    const text = data.text || ''
-    const conf = data.confidence ?? 0
-    return { text, confidence: Math.round(conf) }
+    return { text: data.text || '', confidence: Math.round(data.confidence ?? 0) }
   } finally {
     await worker.terminate()
   }
@@ -80,25 +290,18 @@ function computeDecision(checks, fraudScore, ocrConfidence) {
     checks.document_bounds?.pass,
   ]
   const criticalOk = critical.every(Boolean)
-
-  const textualOk = (checks.gov_keywords?.pass || checks.mrz?.pass)
-    && checks.ocr_quality?.pass
-
+  const textualOk = (checks.gov_keywords?.pass || checks.mrz?.pass) && checks.ocr_quality?.pass
   const mrzFailed = checks.mrz?.found && !checks.mrz?.pass
-
   const rejectionReasons = []
   if (!checks.resolution?.pass) rejectionReasons.push('Image resolution too low — use a sharper photo')
   if (!checks.aspect_ratio?.pass) rejectionReasons.push('Document shape not recognized as a government ID')
   if (!checks.anti_spoof?.pass) rejectionReasons.push('Possible fake: screen photo, printout, or tampered image')
-  if (checks.fraud_flags?.length) {
-    rejectionReasons.push(`Fraud signals: ${checks.fraud_flags.join(', ')}`)
-  }
+  if (checks.fraud_flags?.length) rejectionReasons.push(`Fraud signals: ${checks.fraud_flags.join(', ')}`)
   if (!textualOk) rejectionReasons.push('Could not read enough official text from the document')
   if (mrzFailed) rejectionReasons.push('MRZ checksum failed — document may be forged')
   if (ocrConfidence < 45) rejectionReasons.push('OCR confidence too low — improve lighting and focus')
 
-  let confidence = 0
-  confidence += critical.filter(Boolean).length * 10
+  let confidence = critical.filter(Boolean).length * 10
   confidence += textualOk ? 20 : 0
   confidence += checks.mrz?.pass ? 25 : 0
   confidence += Math.min(15, (checks.gov_keywords?.count || 0) * 4)
@@ -106,9 +309,7 @@ function computeDecision(checks, fraudScore, ocrConfidence) {
   confidence -= Math.min(30, fraudScore / 2)
   confidence = Math.max(0, Math.min(100, Math.round(confidence)))
 
-  const valid = criticalOk
-    && textualOk
-    && !mrzFailed
+  const valid = criticalOk && textualOk && !mrzFailed
     && confidence >= THRESHOLDS.min_confidence
     && fraudScore <= THRESHOLDS.max_fraud_score
     && ocrConfidence >= 45
@@ -151,11 +352,7 @@ export async function analyzeGovernmentId(file, onProgress = () => {}) {
       confidence: ocr.confidence,
       pass: ocr.text.length >= THRESHOLDS.min_ocr_chars && ocr.confidence >= 45,
     },
-    gov_keywords: {
-      hits: keywords.hits,
-      count: keywords.count,
-      pass: keywords.count >= THRESHOLDS.min_gov_keywords,
-    },
+    gov_keywords: { hits: keywords.hits, count: keywords.count, pass: keywords.count >= THRESHOLDS.min_gov_keywords },
     dates: { found: dates, pass: dates.length >= 1 },
     mrz: {
       found: mrz.found,
@@ -172,11 +369,7 @@ export async function analyzeGovernmentId(file, onProgress = () => {}) {
     fraud_flags: forensics.fraud_flags,
   }
 
-  const { valid, confidence, rejectionReasons } = computeDecision(
-    checks,
-    forensics.fraud_score,
-    ocr.confidence,
-  )
+  const { valid, confidence, rejectionReasons } = computeDecision(checks, forensics.fraud_score, ocr.confidence)
 
   return {
     valid,

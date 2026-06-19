@@ -13,8 +13,6 @@ export const useBookingsStore = defineStore('bookings', {
     byId: (s) => (id) => s.bookings.find(b => b.id === Number(id)),
     forCustomer: (s) => (customerId) => s.bookings.filter(b => b.customer_id === Number(customerId)),
     forProvider: (s) => (providerId) => s.bookings.filter(b => b.provider_id === Number(providerId)),
-    requestsForProvider: (s) => (providerId) =>
-      s.bookings.filter(b => b.provider_id === Number(providerId) && b.status === 'requested'),
   },
   actions: {
     async load() {

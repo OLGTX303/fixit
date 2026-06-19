@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { useProvidersStore } from './stores/providers'
+import { useBookingsStore } from './stores/bookings'
 import AppIcon from './components/AppIcon.vue'
 import LegalFooter from './components/LegalFooter.vue'
 
@@ -9,7 +11,6 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-// Nav definitions per role: each item maps a tab to a route name.
 const NAVS = {
   customer: [
     { icon: 'home', label: 'Home', to: 'home' },
@@ -21,8 +22,8 @@ const NAVS = {
     { icon: 'grid', label: 'Profile', to: 'pro-profile' },
     { icon: 'shield', label: 'KYC', to: 'pro-kyc' },
     { icon: 'bell', label: 'Requests', to: 'pro-requests' },
-    { icon: 'briefcase', label: 'Jobs', to: 'pro-job', param: 2847 },
-    { icon: 'chat', label: 'Chat', to: 'pro-chat', param: 2847 },
+    { icon: 'briefcase', label: 'Jobs', to: 'pro-job', jobRoute: true },
+    { icon: 'chat', label: 'Chat', to: 'pro-chat', jobRoute: true },
   ],
   admin: [
     { icon: 'shield', label: 'Verify', to: 'admin-verify' },
@@ -36,8 +37,19 @@ const isLegalPage = computed(() => route.name === 'legal-terms' || route.name ==
 const showShell = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
 const navItems = computed(() => NAVS[auth.role] || [])
 
-function go(item) {
-  router.push(item.param ? { name: item.to, params: { id: item.param } } : { name: item.to })
+async function go(item) {
+  if (item.jobRoute) {
+    const bookings = useBookingsStore()
+    const providers = useProvidersStore()
+    await Promise.all([bookings.load(), providers.load()])
+    const profile = providers.providers.find((p) => p.user_id === auth.user?.id)
+    const job = profile
+      ? bookings.forProvider(profile.id).find((b) => b.status !== 'reviewed')
+      : null
+    router.push(job ? { name: item.to, params: { id: job.id } } : { name: 'pro-requests' })
+    return
+  }
+  router.push({ name: item.to })
 }
 function isActive(item) {
   return route.name === item.to
@@ -50,10 +62,8 @@ function logout() {
 
 <template>
   <div class="fx-shell">
-    <!-- Authenticated layout: side nav on desktop, bottom nav on mobile -->
     <template v-if="showShell">
       <div class="fx-layout">
-        <!-- Desktop side nav -->
         <aside class="fx-sidenav">
           <div class="d-flex align-items-center gap-2 mb-4 px-2">
             <div class="d-flex align-items-center justify-content-center"
@@ -79,12 +89,11 @@ function logout() {
         <div class="fx-content">
           <main class="fx-main">
             <router-view />
-            <LegalFooter v-if="!isLegalPage" class="fx-app-legal" />
+            <LegalFooter class="fx-app-legal" />
           </main>
         </div>
       </div>
 
-      <!-- Mobile bottom nav -->
       <nav class="fx-bottomnav">
         <button v-for="item in navItems" :key="item.label"
                 class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
@@ -94,9 +103,9 @@ function logout() {
       </nav>
     </template>
 
-    <!-- Public (login/register/legal) -->
     <main v-else class="fx-main" :style="{ paddingBottom: isLegalPage ? 0 : undefined }">
       <router-view />
+      <LegalFooter v-if="!isLegalPage" class="fx-page" style="padding-top:0" />
     </main>
   </div>
 </template>

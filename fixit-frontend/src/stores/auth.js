@@ -17,9 +17,6 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     init() {
       api.setUnauthorizedHandler(() => this.logoutAndRedirect())
-      if (this.token && this.user) {
-        api.persistSession(this.token, this.user)
-      }
     },
     async login(email, password) {
       this.loading = true

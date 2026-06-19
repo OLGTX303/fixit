@@ -1,24 +1,22 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useProvidersStore } from '../../stores/providers'
-import { useAdminStore } from '../../stores/admin'
+import * as api from '../../services/api'
 import AppIcon from '../../components/AppIcon.vue'
 
 const providersStore = useProvidersStore()
-const adminStore = useAdminStore()
-
 const filter = ref('Pending')
 const expanded = ref(null)
+const decisions = ref({})
 
 onMounted(() => providersStore.load())
 
-// Decision-aware status for each provider (workflow #3).
 function statusOf(p) {
-  const decision = adminStore.decisions[p.id]
-  if (decision === 'rejected') return 'Rejected'
+  if (decisions.value[p.id] === 'rejected') return 'Rejected'
   if (p.is_verified) return 'Approved'
   return 'Pending'
 }
+
 const STATUS_STYLE = {
   Pending: { c: 'var(--fx-warn)', bg: 'var(--fx-warn-soft)' },
   Approved: { c: 'var(--fx-success)', bg: 'var(--fx-success-soft)' },
@@ -27,7 +25,25 @@ const STATUS_STYLE = {
 
 const shown = computed(() =>
   providersStore.providers.filter(p => filter.value === 'All' || statusOf(p) === filter.value))
-const stats = computed(() => adminStore.stats)
+
+const stats = computed(() => {
+  const approved = providersStore.providers.filter(p => p.is_verified).length
+  const rejected = Object.values(decisions.value).filter(d => d === 'rejected').length
+  const pending = providersStore.providers.filter(p => !p.is_verified).length - rejected
+  return { pending: Math.max(0, pending), approved, rejected }
+})
+
+async function approve(id) {
+  await api.setProviderVerification(id, true)
+  providersStore.setVerified(id, true)
+  decisions.value[id] = 'approved'
+}
+
+async function reject(id) {
+  await api.setProviderVerification(id, false)
+  providersStore.setVerified(id, false)
+  decisions.value[id] = 'rejected'
+}
 </script>
 
 <template>
@@ -35,7 +51,6 @@ const stats = computed(() => adminStore.stats)
     <h1 class="fw-bold mb-1" style="font-size:20px">Verifications</h1>
     <div class="mb-3" style="font-size:13px;color:var(--fx-muted)">Admin Dashboard</div>
 
-    <!-- Stats -->
     <div class="d-flex gap-2 mb-3">
       <div class="flex-fill text-center" style="background:var(--fx-warn-soft);border-radius:14px;padding:12px 10px">
         <div style="font-size:24px;font-weight:800;color:var(--fx-warn)">{{ stats.pending }}</div>
@@ -51,7 +66,6 @@ const stats = computed(() => adminStore.stats)
       </div>
     </div>
 
-    <!-- Filter tabs -->
     <div class="d-flex mb-3">
       <div v-for="t in ['All','Pending','Approved','Rejected']" :key="t" role="button"
            class="flex-fill text-center" style="padding:8px 0;font-size:12px;border-bottom:2px solid"
@@ -59,7 +73,6 @@ const stats = computed(() => adminStore.stats)
            @click="filter = t">{{ t }}</div>
     </div>
 
-    <!-- Provider list -->
     <div class="d-flex flex-column gap-2">
       <div v-for="p in shown" :key="p.id" class="fx-card" style="padding:12px">
         <div class="d-flex align-items-start gap-2">
@@ -83,16 +96,13 @@ const stats = computed(() => adminStore.stats)
               <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px;color:var(--fx-blue)">
                 <AppIcon name="shield" :size="14" /> Automated KYC results
               </div>
-              <div style="font-size:12px;color:var(--fx-muted)">
-                Status: <strong>{{ p.kyc_status || 'none' }}</strong>
-              </div>
+              <div style="font-size:12px;color:var(--fx-muted)">Status: <strong>{{ p.kyc_status || 'none' }}</strong></div>
               <div v-if="p.kyc_id_type" style="font-size:12px;color:var(--fx-muted)">
                 ID type: {{ p.kyc_id_type.replace('_', ' ') }} · {{ p.kyc_id_confidence }}% confidence
               </div>
               <div v-if="p.kyc_id_checks?.fraud_score != null" style="font-size:12px;color:var(--fx-muted)">
                 Fraud score: {{ p.kyc_id_checks.fraud_score }}
                 <span v-if="p.kyc_id_checks.ocr_confidence != null"> · OCR {{ p.kyc_id_checks.ocr_confidence }}%</span>
-                <span v-if="p.kyc_id_checks.module_version"> · {{ p.kyc_id_checks.module_version }}</span>
               </div>
               <div v-if="p.kyc_id_checks?.fraud_flags?.length" style="font-size:11px;color:var(--fx-error);margin-top:4px">
                 Flags: {{ p.kyc_id_checks.fraud_flags.join(', ') }}
@@ -100,27 +110,20 @@ const stats = computed(() => adminStore.stats)
               <div v-if="p.kyc_id_checks?.rejection_reasons?.length" style="font-size:11px;color:var(--fx-error);margin-top:4px">
                 Rejected: {{ p.kyc_id_checks.rejection_reasons.join('; ') }}
               </div>
-              <div v-if="p.kyc_id_checks?.server_review && !p.kyc_id_checks.server_review.approved" style="font-size:11px;color:var(--fx-error);margin-top:4px">
-                Server: {{ p.kyc_id_checks.server_review.rejection_reasons?.join('; ') }}
-              </div>
               <div v-if="p.kyc_id_checks?.extracted_preview" style="font-size:11px;color:var(--fx-muted);margin-top:4px">
                 OCR: {{ p.kyc_id_checks.extracted_preview }}
               </div>
               <div v-if="p.kyc_liveness_passed" style="font-size:12px;color:var(--fx-success);margin-top:4px">
                 ✓ 8-colour face liveness passed ({{ p.kyc_liveness_score }}%)
               </div>
-              <div v-else-if="p.kyc_status === 'submitted'" style="font-size:12px;color:var(--fx-warn);margin-top:4px">
-                Liveness pending review
-              </div>
-              <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">{{ p.kyc_doc_url }}</div>
-              <div style="font-size:12px;color:var(--fx-muted)">{{ p.email }} · {{ p.phone }}</div>
+              <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">{{ p.email }} · {{ p.phone }}</div>
             </div>
 
             <div v-if="statusOf(p) === 'Pending'" class="d-flex gap-2 mt-2">
               <button class="btn btn-outline-danger flex-fill" style="border-radius:9px;font-size:12px;padding:7px 0"
-                      @click="adminStore.reject(p.id)">Reject</button>
+                      @click="reject(p.id)">Reject</button>
               <button class="btn btn-primary" style="flex:2;border-radius:9px;font-size:12px;padding:7px 0"
-                      @click="adminStore.approve(p.id)">Review &amp; Approve</button>
+                      @click="approve(p.id)">Review &amp; Approve</button>
             </div>
           </div>
         </div>

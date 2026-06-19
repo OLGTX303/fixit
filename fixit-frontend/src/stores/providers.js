@@ -14,7 +14,6 @@ export const useProvidersStore = defineStore('providers', {
   getters: {
     // Only verified providers are ever shown to customers.
     verified: (s) => s.providers.filter(p => p.is_verified),
-    pending: (s) => s.providers.filter(p => !p.is_verified),
     byId: (s) => (id) => s.providers.find(p => p.id === Number(id)),
   },
   actions: {
@@ -36,6 +35,10 @@ export const useProvidersStore = defineStore('providers', {
     setVerified(providerId, isVerified) {
       const p = this.providers.find(x => x.id === Number(providerId))
       if (p) p.is_verified = isVerified
+    },
+    async reload() {
+      this.loaded = false
+      await this.load()
     },
     resetCache() {
       this.loaded = false

@@ -11,11 +11,11 @@ const CHAR_VALUES = {
 
 const WEIGHTS = [7, 3, 1]
 
-export function mrzCharValue(ch) {
+function mrzCharValue(ch) {
   return CHAR_VALUES[ch] ?? 0
 }
 
-export function mrzCheckDigit(data) {
+function mrzCheckDigit(data) {
   let sum = 0
   for (let i = 0; i < data.length; i++) {
     sum += mrzCharValue(data[i]) * WEIGHTS[i % 3]
@@ -28,7 +28,7 @@ function normalizeMrzLine(line) {
 }
 
 /** Extract TD1/TD2/TD3 style MRZ line candidates from OCR text. */
-export function extractMrzLines(text) {
+function extractMrzLines(text) {
   const lines = text.split(/\r?\n/).map(normalizeMrzLine).filter((l) => l.length >= 28)
   const mrz = lines.filter((l) => (l.match(/</g) || []).length >= 2 && /^[A-Z0-9<]+$/.test(l))
 
@@ -63,7 +63,7 @@ function validateCheckField(data, checkChar) {
 }
 
 /** Validate TD3 (passport) MRZ pair. */
-export function validateTd3(lines) {
+function validateTd3(lines) {
   const [l1, l2] = lines
   if (!l1?.startsWith('P')) return { valid: false, reason: 'not_passport_format' }
 
@@ -88,7 +88,7 @@ export function validateTd3(lines) {
 }
 
 /** Validate TD1 (ID card) MRZ triple. */
-export function validateTd1(lines) {
+function validateTd1(lines) {
   const [l1, l2, l3] = lines
   const checks = {
     doc_number: validateCheckField(l1.slice(5, 14), l1[14]),
