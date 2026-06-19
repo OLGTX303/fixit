@@ -9,9 +9,7 @@ On-demand local home-services marketplace — full-stack PR3 build with Vue 3 fr
 ├── fixit-backend/      PR3 — PHP Slim 4 REST API + MySQL
 ├── fixit-pr2/          PR2 — Vue 3 interim build (mock JSON, no backend)
 ├── fixit/              PR1 — interactive UI mockup (React/JSX design canvas)
-├── docs/               Architecture decisions & agent docs
-├── AGENTS.md           AI agent instructions
-├── CONTEXT-MAP.md      Monorepo context index
+├── docs/               Architecture decision records
 └── SECURITY.md         Security audit & production checklist
 ```
 
@@ -164,7 +162,6 @@ flowchart LR
 | [fixit-pr2/README.md](fixit-pr2/README.md) | PR2 mock-data architecture & migration notes |
 | [SECURITY.md](SECURITY.md) | Audit findings, E2E crypto notes, CSP |
 | [docs/adr/0001-separate-frontend-backend.md](docs/adr/0001-separate-frontend-backend.md) | ADR: split deployment |
-| [AGENTS.md](AGENTS.md) | Agent / contributor conventions |
 
 ## License
 
