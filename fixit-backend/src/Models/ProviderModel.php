@@ -208,6 +208,18 @@ final class ProviderModel
         if (!empty($data['extracted_preview'])) {
             $checks['extracted_preview'] = $data['extracted_preview'];
         }
+        if (isset($data['fraud_score'])) {
+            $checks['fraud_score'] = (float) $data['fraud_score'];
+        }
+        if (isset($data['ocr_confidence'])) {
+            $checks['ocr_confidence'] = (float) $data['ocr_confidence'];
+        }
+        if (!empty($data['rejection_reasons']) && is_array($data['rejection_reasons'])) {
+            $checks['rejection_reasons'] = $data['rejection_reasons'];
+        }
+        if (!empty($data['module_version'])) {
+            $checks['module_version'] = (string) $data['module_version'];
+        }
 
         $stmt = Connection::get()->prepare(
             'UPDATE ProviderProfile SET

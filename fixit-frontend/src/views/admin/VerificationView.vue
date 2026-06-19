@@ -89,6 +89,20 @@ const stats = computed(() => adminStore.stats)
               <div v-if="p.kyc_id_type" style="font-size:12px;color:var(--fx-muted)">
                 ID type: {{ p.kyc_id_type.replace('_', ' ') }} · {{ p.kyc_id_confidence }}% confidence
               </div>
+              <div v-if="p.kyc_id_checks?.fraud_score != null" style="font-size:12px;color:var(--fx-muted)">
+                Fraud score: {{ p.kyc_id_checks.fraud_score }}
+                <span v-if="p.kyc_id_checks.ocr_confidence != null"> · OCR {{ p.kyc_id_checks.ocr_confidence }}%</span>
+                <span v-if="p.kyc_id_checks.module_version"> · {{ p.kyc_id_checks.module_version }}</span>
+              </div>
+              <div v-if="p.kyc_id_checks?.fraud_flags?.length" style="font-size:11px;color:var(--fx-error);margin-top:4px">
+                Flags: {{ p.kyc_id_checks.fraud_flags.join(', ') }}
+              </div>
+              <div v-if="p.kyc_id_checks?.rejection_reasons?.length" style="font-size:11px;color:var(--fx-error);margin-top:4px">
+                Rejected: {{ p.kyc_id_checks.rejection_reasons.join('; ') }}
+              </div>
+              <div v-if="p.kyc_id_checks?.server_review && !p.kyc_id_checks.server_review.approved" style="font-size:11px;color:var(--fx-error);margin-top:4px">
+                Server: {{ p.kyc_id_checks.server_review.rejection_reasons?.join('; ') }}
+              </div>
               <div v-if="p.kyc_id_checks?.extracted_preview" style="font-size:11px;color:var(--fx-muted);margin-top:4px">
                 OCR: {{ p.kyc_id_checks.extracted_preview }}
               </div>

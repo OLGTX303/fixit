@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FixIt\Controllers;
 
 use FixIt\Models\ProviderModel;
+use FixIt\Support\KycValidator;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -67,9 +68,35 @@ final class KycController
         }
 
         $data = (array) $request->getParsedBody();
-        $err = Validator::requireFields($data, ['valid', 'document_type', 'confidence', 'checks']);
+        $err = Validator::requireFields($data, [
+            'valid', 'document_type', 'confidence', 'checks', 'fraud_score', 'ocr_confidence',
+        ]);
         if ($err) {
             return ResponseHelper::error($response, $err, 422);
+        }
+
+        $serverReview = KycValidator::validateIdSubmission($data);
+        if (!$serverReview['approved']) {
+            $model->saveIdRecognition($id, [
+                'valid' => false,
+                'document_type' => (string) ($data['document_type'] ?? 'unknown'),
+                'confidence' => (float) $data['confidence'],
+                'checks' => array_merge((array) $data['checks'], [
+                    'server_review' => $serverReview,
+                ]),
+                'doc_url' => null,
+                'image_hash' => $data['image_hash'] ?? null,
+                'extracted_preview' => $data['extracted_preview'] ?? null,
+                'fraud_score' => (float) ($data['fraud_score'] ?? 100),
+                'ocr_confidence' => (float) ($data['ocr_confidence'] ?? 0),
+                'rejection_reasons' => $serverReview['rejection_reasons'],
+                'module_version' => $data['module_version'] ?? 'kyc-id-v2',
+            ]);
+            return ResponseHelper::error(
+                $response,
+                'ID verification rejected: ' . implode('; ', $serverReview['rejection_reasons']),
+                422
+            );
         }
 
         $docType = (string) $data['document_type'];
@@ -87,21 +114,23 @@ final class KycController
             return ResponseHelper::error($response, 'checks must be an object', 422);
         }
 
-        $valid = (bool) $data['valid'];
         $filename = basename((string) ($data['filename'] ?? 'government_id.jpg'));
         $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'government_id.jpg';
         $docUrl = '/uploads/kyc/' . $id . '_' . $filename;
 
         $summary = $model->saveIdRecognition($id, [
-            'valid' => $valid,
+            'valid' => true,
             'document_type' => $docType,
             'confidence' => $confidence,
-            'checks' => $checks,
+            'checks' => array_merge($checks, ['server_review' => $serverReview]),
             'doc_url' => $docUrl,
             'image_hash' => isset($data['image_hash']) ? (string) $data['image_hash'] : null,
             'extracted_preview' => isset($data['extracted_preview'])
                 ? Validator::cleanText((string) $data['extracted_preview'], 500)
                 : null,
+            'fraud_score' => (float) $data['fraud_score'],
+            'ocr_confidence' => (float) $data['ocr_confidence'],
+            'module_version' => $data['module_version'] ?? 'kyc-id-v2',
         ]);
 
         return ResponseHelper::json($response, self::kycPayload($summary));
