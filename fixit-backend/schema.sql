@@ -13,7 +13,10 @@ CREATE TABLE User (
   stripe_test_default_payment_method_id VARCHAR(255) NULL,
   stripe_test_payment_method_last4 VARCHAR(4) NULL,
   stripe_test_payment_method_brand VARCHAR(32) NULL,
-  stripe_test_payment_method_created_at DATETIME NULL
+  stripe_test_payment_method_created_at DATETIME NULL,
+  terms_accepted_at DATETIME NULL,
+  privacy_accepted_at DATETIME NULL,
+  legal_policy_version VARCHAR(20) NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE ServiceCategory (

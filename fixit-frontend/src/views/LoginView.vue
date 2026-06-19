@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import AppIcon from '../components/AppIcon.vue'
+import LegalFooter from '../components/LegalFooter.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -55,5 +56,7 @@ async function submit() {
     <p style="font-size:12px;color:var(--fx-muted);text-align:center;margin-top:8px">
       Demo: alex@email.com · marcus@email.com · admin@fixit.com (password123)
     </p>
+
+    <LegalFooter class="mt-4" />
   </div>
 </template>

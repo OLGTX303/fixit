@@ -256,6 +256,13 @@ function startReplace() {
         Your test card is saved. Book a service to pay with it.
       </div>
 
+      <p class="mt-3 mb-0" style="font-size:11px;color:var(--fx-muted);text-align:center">
+        Payments are subject to our
+        <router-link :to="{ name: 'legal-terms' }" class="text-accent text-decoration-none">Terms of Service</router-link>
+        and
+        <router-link :to="{ name: 'legal-privacy' }" class="text-accent text-decoration-none">Privacy Policy</router-link>.
+      </p>
+
       <div class="mt-3 p-3" style="font-size:11px;color:var(--fx-muted);background:var(--fx-border-soft);border-radius:10px">
         <strong>Security:</strong> Only Stripe IDs (cus_, pm_) are stored. Raw card numbers, expiry, and CVC never touch our database.
       </div>

@@ -3,19 +3,27 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import AppIcon from '../components/AppIcon.vue'
+import LegalFooter from '../components/LegalFooter.vue'
+import { LEGAL_VERSION } from '../content/legal.js'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const form = ref({ name: '', email: '', password: '', role: 'customer' })
+const acceptedTerms = ref(false)
+const acceptedPrivacy = ref(false)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
 async function submit() {
+  if (!acceptedTerms.value || !acceptedPrivacy.value) return
   const user = await auth.register({
     name: form.value.name,
     email: form.value.email,
     password: form.value.password,
     role: form.value.role,
+    accepted_terms: true,
+    accepted_privacy: true,
+    legal_policy_version: LEGAL_VERSION,
   })
   router.push({ name: landing[user.role] || 'home' })
 }
@@ -49,7 +57,24 @@ async function submit() {
         </div>
       </div>
 
-      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading">
+      <div class="fx-card" style="padding:14px;background:var(--fx-border-soft);box-shadow:none">
+        <label class="form-check mb-2">
+          <input v-model="acceptedTerms" type="checkbox" class="form-check-input" required />
+          <span class="form-check-label" style="font-size:13px">
+            I agree to the
+            <router-link :to="{ name: 'legal-terms' }" class="text-accent fw-semibold text-decoration-none" target="_blank">Terms of Service</router-link>
+          </span>
+        </label>
+        <label class="form-check m-0">
+          <input v-model="acceptedPrivacy" type="checkbox" class="form-check-input" required />
+          <span class="form-check-label" style="font-size:13px">
+            I agree to the
+            <router-link :to="{ name: 'legal-privacy' }" class="text-accent fw-semibold text-decoration-none" target="_blank">Privacy Policy</router-link>
+          </span>
+        </label>
+      </div>
+
+      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy">
         {{ auth.loading ? 'Creating…' : 'Create Account' }}
       </button>
     </form>
@@ -58,5 +83,7 @@ async function submit() {
       Already have an account?
       <router-link :to="{ name: 'login' }" class="text-accent fw-semibold text-decoration-none">Sign in</router-link>
     </div>
+
+    <LegalFooter class="mt-4" />
   </div>
 </template>

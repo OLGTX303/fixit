@@ -194,3 +194,12 @@ body {
 
 .fx-page { max-width: 640px; margin: 0 auto; padding: 12px 20px; }
 @media (min-width: 992px) { .fx-page { max-width: 820px; padding: 24px 32px; } }
+
+.fx-app-legal {
+  max-width: 640px;
+  margin: 24px auto 0;
+  padding: 0 20px 16px;
+}
+@media (min-width: 992px) {
+  .fx-app-legal { max-width: 820px; padding: 0 32px 8px; }
+}
