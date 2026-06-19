@@ -1,6 +1,6 @@
 # FixIt Security Review
 
-Review date: 2026-06-19. Scope: `fixit-backend/` + `fixit-frontend/`.
+Review date: 2026-06-19. Scope: `fixit-pr3/fixit-backend/` + `fixit-pr3/fixit-frontend/`.
 
 ## Summary
 
@@ -43,7 +43,7 @@ Review date: 2026-06-19. Scope: `fixit-backend/` + `fixit-frontend/`.
 
 ## Production checklist
 
-### Backend (`fixit-backend`)
+### Backend (`fixit-pr3/fixit-backend`)
 
 - [ ] Set `APP_DEBUG=false`
 - [ ] Generate `JWT_SECRET` ≥ 32 random bytes (`openssl rand -base64 48`)
@@ -54,7 +54,7 @@ Review date: 2026-06-19. Scope: `fixit-backend/` + `fixit-frontend/`.
 - [ ] Restrict `composer install --no-dev` in production
 - [ ] Enable PHP `opcache` and disable `display_errors`
 
-### Frontend (`fixit-frontend`)
+### Frontend (`fixit-pr3/fixit-frontend`)
 
 - [ ] Set `VITE_API_URL` to HTTPS API URL at build time
 - [ ] Serve `dist/` with CSP headers (see below)

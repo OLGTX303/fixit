@@ -76,7 +76,7 @@ Use any future expiry and any 3-digit CVC.
 
 ## Test steps
 
-1. Set Stripe test keys in `fixit-backend/.env`.
+1. Set Stripe test keys in `.env` (this backend folder).
 2. Run migration `004_stripe_payments.sql`.
 3. Start backend + frontend.
 4. Log in as customer (`alex@email.com` / `password123`).
