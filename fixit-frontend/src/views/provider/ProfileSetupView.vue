@@ -1,8 +1,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
 import AppIcon from '../../components/AppIcon.vue'
+
+const router = useRouter()
 
 const providersStore = useProvidersStore()
 const auth = useAuthStore()
@@ -44,6 +47,24 @@ function save() {
 <template>
   <div class="fx-page" style="max-width:560px">
     <h1 class="fw-bold mb-4" style="font-size:20px">My Profile</h1>
+
+    <div v-if="myProfile && !myProfile.is_verified" class="fx-card mb-4" style="background:var(--fx-warn-soft);padding:14px">
+      <div class="d-flex align-items-start gap-2">
+        <AppIcon name="shield" :size="20" />
+        <div class="flex-grow-1">
+          <div class="fw-semibold" style="font-size:14px">Identity verification required</div>
+          <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">
+            Upload a government ID and complete the 8-colour face reflection check before admin approval.
+          </div>
+          <div v-if="myProfile.kyc_status" style="font-size:12px;margin-top:6px">
+            KYC status: <strong>{{ myProfile.kyc_status }}</strong>
+          </div>
+          <button class="btn btn-primary btn-sm mt-2" style="border-radius:8px" @click="router.push({ name: 'pro-kyc' })">
+            Start KYC verification
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="text-center mb-4">
       <div class="position-relative d-inline-block">

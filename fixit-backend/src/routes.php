@@ -7,6 +7,7 @@ use FixIt\Controllers\AuthController;
 use FixIt\Controllers\BookingController;
 use FixIt\Controllers\CategoryController;
 use FixIt\Controllers\CryptoController;
+use FixIt\Controllers\KycController;
 use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ReviewController;
@@ -25,10 +26,11 @@ return function (App $app): void {
     $reviews = new ReviewController();
     $messages = new MessageController();
     $crypto = new CryptoController();
+    $kyc = new KycController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $rateLimit
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $rateLimit
     ) {
         $group->post('/auth/register', [$auth, 'register'])->add($rateLimit);
         $group->post('/auth/login', [$auth, 'login'])->add($rateLimit);
@@ -37,7 +39,7 @@ return function (App $app): void {
         $group->get('/providers/{id}', [$providers, 'get']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc
         ) {
             $secure->get('/crypto/status', [$crypto, 'status']);
             $secure->get('/crypto/pin/salt', [$crypto, 'getPinSalt']);
@@ -56,6 +58,12 @@ return function (App $app): void {
             $secure->delete('/providers/{id}', [$providers, 'delete'])
                 ->add(new RoleGuard(['provider', 'admin']));
             $secure->post('/providers/{id}/kyc', [$providers, 'uploadKyc'])
+                ->add(new RoleGuard(['provider']));
+            $secure->get('/providers/{id}/kyc', [$kyc, 'status'])
+                ->add(new RoleGuard(['provider', 'admin']));
+            $secure->post('/providers/{id}/kyc/id-recognition', [$kyc, 'submitIdRecognition'])
+                ->add(new RoleGuard(['provider']));
+            $secure->post('/providers/{id}/kyc/liveness', [$kyc, 'submitLiveness'])
                 ->add(new RoleGuard(['provider']));
 
             $secure->get('/admin/providers', [$admin, 'allProviders'])

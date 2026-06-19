@@ -75,16 +75,30 @@ const stats = computed(() => adminStore.stats)
             </div>
             <div style="font-size:12px;color:var(--fx-muted);margin-top:2px">{{ p.category_names.join(', ') }} · {{ p.location }}</div>
 
-            <!-- KYC reference (mock) -->
             <button class="btn btn-link p-0 mt-1" style="font-size:12px;text-decoration:none"
                     @click="expanded = expanded === p.id ? null : p.id">
-              {{ expanded === p.id ? 'Hide' : 'View' }} KYC reference
+              {{ expanded === p.id ? 'Hide' : 'View' }} KYC details
             </button>
             <div v-if="expanded === p.id" class="fx-card mt-2" style="background:var(--fx-blue-soft);box-shadow:none">
-              <div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px;color:var(--fx-blue)">
-                <AppIcon name="shield" :size="14" /> Mock KYC document
+              <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px;color:var(--fx-blue)">
+                <AppIcon name="shield" :size="14" /> Automated KYC results
               </div>
-              <div style="font-size:12px;color:var(--fx-muted)">{{ p.kyc_doc_url }}</div>
+              <div style="font-size:12px;color:var(--fx-muted)">
+                Status: <strong>{{ p.kyc_status || 'none' }}</strong>
+              </div>
+              <div v-if="p.kyc_id_type" style="font-size:12px;color:var(--fx-muted)">
+                ID type: {{ p.kyc_id_type.replace('_', ' ') }} · {{ p.kyc_id_confidence }}% confidence
+              </div>
+              <div v-if="p.kyc_id_checks?.extracted_preview" style="font-size:11px;color:var(--fx-muted);margin-top:4px">
+                OCR: {{ p.kyc_id_checks.extracted_preview }}
+              </div>
+              <div v-if="p.kyc_liveness_passed" style="font-size:12px;color:var(--fx-success);margin-top:4px">
+                ✓ 8-colour face liveness passed ({{ p.kyc_liveness_score }}%)
+              </div>
+              <div v-else-if="p.kyc_status === 'submitted'" style="font-size:12px;color:var(--fx-warn);margin-top:4px">
+                Liveness pending review
+              </div>
+              <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">{{ p.kyc_doc_url }}</div>
               <div style="font-size:12px;color:var(--fx-muted)">{{ p.email }} · {{ p.phone }}</div>
             </div>
 

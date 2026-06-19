@@ -18,6 +18,7 @@ const NAVS = {
   ],
   provider: [
     { icon: 'grid', label: 'Profile', to: 'pro-profile' },
+    { icon: 'shield', label: 'KYC', to: 'pro-kyc' },
     { icon: 'bell', label: 'Requests', to: 'pro-requests' },
     { icon: 'briefcase', label: 'Jobs', to: 'pro-job', param: 2847 },
     { icon: 'chat', label: 'Chat', to: 'pro-chat', param: 2847 },

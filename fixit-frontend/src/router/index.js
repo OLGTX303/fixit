@@ -16,6 +16,7 @@ const routes = [
 
   // Provider
   { path: '/pro/profile', name: 'pro-profile', component: () => import('../views/provider/ProfileSetupView.vue'), meta: { role: 'provider' } },
+  { path: '/pro/kyc', name: 'pro-kyc', component: () => import('../views/provider/KycVerificationView.vue'), meta: { role: 'provider' } },
   { path: '/pro/requests', name: 'pro-requests', component: () => import('../views/provider/BookingRequestsView.vue'), meta: { role: 'provider' } },
   { path: '/pro/jobs/:id', name: 'pro-job', component: () => import('../views/provider/JobStatusView.vue'), meta: { role: 'provider' } },
   { path: '/pro/chat/:id', name: 'pro-chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'provider' } },

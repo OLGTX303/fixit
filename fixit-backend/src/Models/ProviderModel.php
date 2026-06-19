@@ -138,6 +138,15 @@ final class ProviderModel
             'base_rate' => (float) $row['base_rate'],
             'is_verified' => (bool) $row['is_verified'],
             'kyc_doc_url' => $row['kyc_doc_url'],
+            'kyc_status' => $row['kyc_status'] ?? 'none',
+            'kyc_id_type' => $row['kyc_id_type'] ?? null,
+            'kyc_id_confidence' => isset($row['kyc_id_confidence']) ? (float) $row['kyc_id_confidence'] : null,
+            'kyc_id_checks' => $this->decodeJson($row['kyc_id_checks'] ?? null),
+            'kyc_liveness_passed' => (bool) ($row['kyc_liveness_passed'] ?? false),
+            'kyc_liveness_score' => isset($row['kyc_liveness_score']) ? (float) $row['kyc_liveness_score'] : null,
+            'kyc_color_sequence_hash' => $row['kyc_color_sequence_hash'] ?? null,
+            'kyc_liveness_checks' => $this->decodeJson($row['kyc_liveness_checks'] ?? null),
+            'kyc_submitted_at' => $row['kyc_submitted_at'] ?? null,
             'avg_rating' => (float) $row['avg_rating'],
             'latitude' => (float) $row['latitude'],
             'longitude' => (float) $row['longitude'],
@@ -230,6 +239,104 @@ final class ProviderModel
         $stmt = Connection::get()->prepare('UPDATE ProviderProfile SET kyc_doc_url = :url WHERE id = :id');
         $stmt->execute(['id' => $id, 'url' => $url]);
         return $this->getEnriched($id);
+    }
+
+    public function getKycSummary(int $id): ?array
+    {
+        $provider = $this->getEnriched($id);
+        if (!$provider) {
+            return null;
+        }
+        return [
+            'provider_id' => $provider['id'],
+            'kyc_status' => $provider['kyc_status'],
+            'kyc_doc_url' => $provider['kyc_doc_url'],
+            'kyc_id_type' => $provider['kyc_id_type'],
+            'kyc_id_confidence' => $provider['kyc_id_confidence'],
+            'kyc_id_checks' => $provider['kyc_id_checks'],
+            'kyc_liveness_passed' => $provider['kyc_liveness_passed'],
+            'kyc_liveness_score' => $provider['kyc_liveness_score'],
+            'kyc_color_sequence_hash' => $provider['kyc_color_sequence_hash'],
+            'kyc_liveness_checks' => $provider['kyc_liveness_checks'],
+            'kyc_submitted_at' => $provider['kyc_submitted_at'],
+            'is_verified' => $provider['is_verified'],
+        ];
+    }
+
+    /** @param array<string,mixed> $data */
+    public function saveIdRecognition(int $id, array $data): ?array
+    {
+        $status = $data['valid'] ? 'id_passed' : 'failed';
+        $checks = $data['checks'];
+        if (!empty($data['image_hash'])) {
+            $checks['image_hash'] = $data['image_hash'];
+        }
+        if (!empty($data['extracted_preview'])) {
+            $checks['extracted_preview'] = $data['extracted_preview'];
+        }
+
+        $stmt = Connection::get()->prepare(
+            'UPDATE ProviderProfile SET
+             kyc_doc_url = :url,
+             kyc_status = :status,
+             kyc_id_type = :type,
+             kyc_id_confidence = :confidence,
+             kyc_id_checks = :checks,
+             kyc_liveness_passed = 0,
+             kyc_liveness_score = NULL,
+             kyc_color_sequence_hash = NULL,
+             kyc_liveness_checks = NULL,
+             kyc_submitted_at = NULL
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'url' => $data['doc_url'],
+            'status' => $status,
+            'type' => $data['document_type'],
+            'confidence' => $data['confidence'],
+            'checks' => json_encode($checks),
+        ]);
+
+        return $this->getKycSummary($id);
+    }
+
+    /** @param array<string,mixed> $data */
+    public function saveLivenessCheck(int $id, array $data): ?array
+    {
+        $status = $data['passed'] ? 'submitted' : 'failed';
+        $submittedAt = $data['passed'] ? date('Y-m-d H:i:s') : null;
+
+        $stmt = Connection::get()->prepare(
+            'UPDATE ProviderProfile SET
+             kyc_status = :status,
+             kyc_liveness_passed = :passed,
+             kyc_liveness_score = :score,
+             kyc_color_sequence_hash = :hash,
+             kyc_liveness_checks = :checks,
+             kyc_submitted_at = :submitted
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'status' => $status,
+            'passed' => $data['passed'] ? 1 : 0,
+            'score' => $data['score'],
+            'hash' => $data['color_sequence_hash'],
+            'checks' => json_encode($data['checks']),
+            'submitted' => $submittedAt,
+        ]);
+
+        return $this->getKycSummary($id);
+    }
+
+    private function decodeJson(?string $raw): ?array
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
     }
 
     public function delete(int $id): bool
