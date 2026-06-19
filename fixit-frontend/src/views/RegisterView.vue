@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import AppIcon from '../components/AppIcon.vue'
 import LegalFooter from '../components/LegalFooter.vue'
+import SliderPuzzleCaptcha from '../components/SliderPuzzleCaptcha.vue'
 import { LEGAL_VERSION } from '../content/legal.js'
 
 const auth = useAuthStore()
@@ -12,20 +13,37 @@ const router = useRouter()
 const form = ref({ name: '', email: '', password: '', role: 'customer' })
 const acceptedTerms = ref(false)
 const acceptedPrivacy = ref(false)
+const captchaProof = ref(null)
+const captchaRef = ref(null)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
+function onCaptchaVerified(proof) {
+  captchaProof.value = proof
+}
+
+function onCaptchaReset() {
+  captchaProof.value = null
+}
+
 async function submit() {
-  if (!acceptedTerms.value || !acceptedPrivacy.value) return
-  const user = await auth.register({
-    name: form.value.name,
-    email: form.value.email,
-    password: form.value.password,
-    role: form.value.role,
-    accepted_terms: true,
-    accepted_privacy: true,
-    legal_policy_version: LEGAL_VERSION,
-  })
-  router.push({ name: landing[user.role] || 'home' })
+  if (!acceptedTerms.value || !acceptedPrivacy.value || !captchaProof.value) return
+  try {
+    const user = await auth.register({
+      name: form.value.name,
+      email: form.value.email,
+      password: form.value.password,
+      role: form.value.role,
+      accepted_terms: true,
+      accepted_privacy: true,
+      legal_policy_version: LEGAL_VERSION,
+      captcha_id: captchaProof.value.captcha_id,
+      captcha_pass_token: captchaProof.value.captcha_pass_token,
+    })
+    router.push({ name: landing[user.role] || 'home' })
+  } catch {
+    captchaProof.value = null
+    captchaRef.value?.reload?.()
+  }
 }
 </script>
 
@@ -57,6 +75,8 @@ async function submit() {
         </div>
       </div>
 
+      <SliderPuzzleCaptcha ref="captchaRef" @verified="onCaptchaVerified" @reset="onCaptchaReset" />
+
       <div class="fx-card" style="padding:14px;background:var(--fx-border-soft);box-shadow:none">
         <label class="form-check mb-2">
           <input v-model="acceptedTerms" type="checkbox" class="form-check-input" required />
@@ -74,7 +94,7 @@ async function submit() {
         </label>
       </div>
 
-      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy">
+      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy || !captchaProof">
         {{ auth.loading ? 'Creating…' : 'Create Account' }}
       </button>
     </form>
