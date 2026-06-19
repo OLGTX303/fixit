@@ -36,7 +36,7 @@ Review date: 2026-06-19. Scope: `fixit-backend/` + `fixit-frontend/`.
 ### Medium (documented / acceptable for demo)
 
 11. **JWT in sessionStorage** — Vulnerable to XSS; Vue escapes template output by default. For hardened production, migrate to httpOnly secure cookies + CSRF token.
-12. **No refresh token rotation** — 7-day JWT; reduce `JWT exp` in `JwtService.php` for production.
+12. **No refresh token rotation** — 7-day JWT; reduce `JWT exp` in `AuthController::issueToken()` for production.
 13. **File-based rate limit** — Works on single server; use Redis/Memcached behind load balancer.
 14. **No audit logging** — Add structured logs for auth failures and admin actions in production.
 15. **KYC upload is metadata-only** — No real file storage; implement virus scanning + private object storage before production KYC.

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace FixIt\Controllers;
 
+use Firebase\JWT\JWT;
 use FixIt\Models\UserModel;
-use FixIt\Support\JwtService;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -50,7 +50,7 @@ final class AuthController
             isset($data['phone']) ? Validator::cleanText((string) $data['phone'], 32) : null
         );
 
-        $token = JwtService::issue($user);
+        $token = self::issueToken($user);
         return ResponseHelper::json($response, ['token' => $token, 'user' => $user], 201);
     }
 
@@ -69,7 +69,21 @@ final class AuthController
         }
 
         unset($user['password_hash']);
-        $token = JwtService::issue($user);
+        $token = self::issueToken($user);
         return ResponseHelper::json($response, ['token' => $token, 'user' => $user]);
+    }
+
+    private static function issueToken(array $user): string
+    {
+        $now = time();
+        return JWT::encode([
+            'iss' => 'fixit-api',
+            'iat' => $now,
+            'exp' => $now + 86400 * 7,
+            'sub' => (int) $user['id'],
+            'role' => $user['role'],
+            'email' => $user['email'],
+            'name' => $user['name'],
+        ], $_ENV['JWT_SECRET'] ?? 'dev-secret', 'HS256');
     }
 }

@@ -51,10 +51,6 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
-    async loginAs(role) {
-      const emails = { customer: 'alex@email.com', provider: 'marcus@email.com', admin: 'admin@fixit.com' }
-      return this.login(emails[role], 'password123')
-    },
     logout() {
       api.logout()
       this.user = null

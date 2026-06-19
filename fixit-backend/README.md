@@ -49,4 +49,4 @@ Base URL: `/api`
 
 Auth: `Authorization: Bearer <token>`
 
-Import `../fixit-frontend/fixit.postman_collection.json` for full endpoint tests.
+Use `GET /api/health` to verify the API is running.

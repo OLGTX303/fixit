@@ -18,15 +18,10 @@ async function submit() {
     router.push({ name: landing[user.role] })
   } catch { /* error surfaced via auth.error */ }
 }
-async function demo(role) {
-  await auth.loginAs(role)
-  router.push({ name: landing[role] })
-}
 </script>
 
 <template>
   <div class="fx-page" style="max-width:420px;padding-top:24px">
-    <!-- Logo -->
     <div class="mb-4">
       <div class="d-flex align-items-center gap-2 mb-2">
         <div class="d-flex align-items-center justify-content-center"
@@ -38,7 +33,6 @@ async function demo(role) {
       <div style="font-size:14px;color:var(--fx-muted)">Your home, perfectly maintained.</div>
     </div>
 
-    <!-- Tabs -->
     <div class="d-flex mb-4" style="background:var(--fx-border-soft);border-radius:12px;padding:4px">
       <div class="flex-fill text-center" style="padding:9px 0;border-radius:9px;font-weight:600;font-size:14px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1)">Login</div>
       <router-link :to="{ name: 'register' }" class="flex-fill text-center text-decoration-none"
@@ -58,16 +52,8 @@ async function demo(role) {
       </button>
     </form>
 
-    <div class="d-flex align-items-center gap-2 my-3">
-      <div class="flex-fill" style="height:1px;background:var(--fx-border)"></div>
-      <span style="font-size:13px;color:var(--fx-muted-soft)">or try a demo role</span>
-      <div class="flex-fill" style="height:1px;background:var(--fx-border)"></div>
-    </div>
-
-    <div class="d-flex gap-2">
-      <button class="btn btn-outline-primary flex-fill" @click="demo('customer')">Customer</button>
-      <button class="btn btn-outline-primary flex-fill" @click="demo('provider')">Provider</button>
-      <button class="btn btn-outline-primary flex-fill" @click="demo('admin')">Admin</button>
-    </div>
+    <p style="font-size:12px;color:var(--fx-muted);text-align:center;margin-top:8px">
+      Demo: alex@email.com · marcus@email.com · admin@fixit.com (password123)
+    </p>
   </div>
 </template>
