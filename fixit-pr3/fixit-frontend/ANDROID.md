@@ -16,13 +16,21 @@ cp .env.android.example .env.production.local
 # Edit VITE_API_URL:
 #   Emulator:  http://10.0.2.2:8080/api
 #   Real device: http://YOUR_LAN_IP:8080/api
-#   Production:  https://your-api.example.com/api
+#   Production:  https://fixit.olgtx.com/api
 ```
 
-Update `../fixit-backend/.env` `CORS_ORIGIN` to include Capacitor's origin or use `capacitor://localhost` patterns as needed. For local dev, set:
+Capacitor Android serves the WebView from **`https://localhost`**. The backend must allow that origin or login/API calls fail with a CORS preflight error.
+
+Update server `fixit-backend/.env` `CORS_ORIGIN` (comma-separated, no spaces):
 
 ```
-CORS_ORIGIN=http://localhost:5173,capacitor://localhost,http://localhost
+CORS_ORIGIN=https://fixit.olgtx.com,http://fixit.olgtx.com,https://localhost,capacitor://localhost,http://localhost,http://localhost:5173
+```
+
+After changing `.env` on the server, restart PHP-FPM:
+
+```bash
+/etc/init.d/php-fpm-85 restart
 ```
 
 ## Build workflow

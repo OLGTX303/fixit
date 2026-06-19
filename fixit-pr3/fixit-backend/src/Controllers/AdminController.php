@@ -15,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class AdminController
 {
-    public function allProviders(Response $response): Response
+    public function allProviders(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new ProviderModel())->listEnriched(false, []));
     }
@@ -37,17 +37,17 @@ final class AdminController
         return ResponseHelper::json($response, $provider);
     }
 
-    public function listUsers(Response $response): Response
+    public function listUsers(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new UserModel())->listAll());
     }
 
-    public function listReviews(Response $response): Response
+    public function listReviews(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new ReviewModel())->all());
     }
 
-    public function listHarmReviews(Response $response): Response
+    public function listHarmReviews(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new HarmReviewModel())->listPending());
     }
