@@ -173,3 +173,14 @@ export async function updateProvider(id, payload) {
 export async function deleteBooking(bookingId) {
   return unwrap(http.delete(`/bookings/${bookingId}`))
 }
+
+// ── KYC (government ID + 8-colour reflection liveness) ───────────────────────
+export const getKycStatus = (providerId) => unwrap(http.get(`/providers/${providerId}/kyc`))
+
+export async function submitKycIdRecognition(providerId, payload) {
+  return unwrap(http.post(`/providers/${providerId}/kyc/id-recognition`, payload))
+}
+
+export async function submitKycLiveness(providerId, payload) {
+  return unwrap(http.post(`/providers/${providerId}/kyc/liveness`, payload))
+}
