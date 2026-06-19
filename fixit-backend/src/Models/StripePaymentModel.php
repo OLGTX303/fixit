@@ -36,12 +36,4 @@ final class StripePaymentModel
         ]);
     }
 
-    public function markSetupIntentStatus(string $setupIntentId, string $status): void
-    {
-        $stmt = Connection::get()->prepare(
-            'UPDATE StripePayment SET status = :status, updated_at = NOW()
-             WHERE stripe_setup_intent_id = :si'
-        );
-        $stmt->execute(['si' => $setupIntentId, 'status' => $status]);
-    }
 }

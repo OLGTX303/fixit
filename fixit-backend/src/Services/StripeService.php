@@ -247,9 +247,6 @@ final class StripeService
             case 'setup_intent.succeeded':
                 $this->onSetupIntentSucceeded($event->data->object);
                 break;
-            case 'payment_method.attached':
-                $this->onPaymentMethodAttached($event->data->object);
-                break;
             case 'payment_intent.succeeded':
                 $this->onPaymentIntentSucceeded($event->data->object);
                 break;
@@ -270,14 +267,6 @@ final class StripeService
                 // Frontend may have already saved; webhook is idempotent backup.
             }
         }
-        if ($setupIntent->id) {
-            $this->payments->markSetupIntentStatus((string) $setupIntent->id, 'succeeded');
-        }
-    }
-
-    private function onPaymentMethodAttached(object $pm): void
-    {
-        // Ownership sync handled via setup_intent.succeeded / save-payment-method endpoint.
     }
 
     private function onPaymentIntentSucceeded(object $intent): void

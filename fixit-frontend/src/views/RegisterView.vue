@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import AppIcon from '../components/AppIcon.vue'
-import LegalFooter from '../components/LegalFooter.vue'
+
 import SliderPuzzleCaptcha from '../components/SliderPuzzleCaptcha.vue'
 import { LEGAL_VERSION } from '../content/legal.js'
 
@@ -104,6 +104,5 @@ async function submit() {
       <router-link :to="{ name: 'login' }" class="text-accent fw-semibold text-decoration-none">Sign in</router-link>
     </div>
 
-    <LegalFooter class="mt-4" />
   </div>
 </template>

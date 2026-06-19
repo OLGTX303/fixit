@@ -6,9 +6,7 @@ import { useAuthStore } from '../../stores/auth'
 import { useChatCryptoStore } from '../../stores/chatCrypto'
 import * as api from '../../services/api'
 import * as harmReview from '../../services/harmReview'
-import * as deviceCrypto from '../../services/crypto'
-import PinSetupModal from '../../components/PinSetupModal.vue'
-import PinUnlockModal from '../../components/PinUnlockModal.vue'
+import PinModal from '../../components/PinModal.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
 const route = useRoute()
@@ -37,7 +35,7 @@ onMounted(async () => {
     showPinSetup.value = true
     return
   }
-  if (!deviceCrypto.isUnlockedThisSession()) {
+  if (!chatCrypto.unlocked) {
     showPinUnlock.value = true
     return
   }
@@ -108,8 +106,8 @@ function timeOf(iso) {
 </script>
 
 <template>
-  <PinSetupModal v-if="showPinSetup" @done="onPinReady" />
-  <PinUnlockModal v-else-if="showPinUnlock" @done="onPinReady" />
+  <PinModal v-if="showPinSetup" mode="setup" @done="onPinReady" />
+  <PinModal v-else-if="showPinUnlock" mode="unlock" @done="onPinReady" />
 
   <div class="d-flex flex-column" style="height:calc(100vh - 88px)">
     <div class="d-flex align-items-center gap-3 px-3 py-2" style="border-bottom:1px solid var(--fx-border)">

@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
+import * as api from '../../services/api'
 import AppIcon from '../../components/AppIcon.vue'
 
 const router = useRouter()
@@ -16,6 +17,8 @@ const form = ref({ name: '', bio: '', location: '', base_rate: 45, available: tr
 const allServices = ['Pipe Repair', 'Drain Cleaning', 'Leak Detection', 'Installation', 'Boiler Service']
 const selectedServices = ref([])
 const saved = ref(false)
+const saving = ref(false)
+const saveError = ref('')
 
 const myProfile = computed(() =>
   providersStore.providers.find(p => p.user_id === auth.user?.id))
@@ -38,9 +41,27 @@ function toggleService(s) {
   const i = selectedServices.value.indexOf(s)
   i === -1 ? selectedServices.value.push(s) : selectedServices.value.splice(i, 1)
 }
-function save() {
-  saved.value = true
-  setTimeout(() => (saved.value = false), 2000)
+async function save() {
+  if (!myProfile.value) return
+  saving.value = true
+  saveError.value = ''
+  try {
+    await api.updateProvider(myProfile.value.id, {
+      bio: form.value.bio,
+      location: form.value.location,
+      base_rate: form.value.base_rate,
+      latitude: myProfile.value.latitude,
+      longitude: myProfile.value.longitude,
+      services: selectedServices.value,
+    })
+    await providersStore.reload()
+    saved.value = true
+    setTimeout(() => (saved.value = false), 2000)
+  } catch (e) {
+    saveError.value = e.message || 'Save failed'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -124,8 +145,9 @@ function save() {
       </div>
     </div>
 
-    <button class="btn btn-primary w-100 mt-4" @click="save">
-      {{ saved ? '✓ Saved' : 'Save Changes' }}
+    <div v-if="saveError" class="alert alert-danger py-2 mt-3" style="font-size:13px">{{ saveError }}</div>
+    <button class="btn btn-primary w-100 mt-4" :disabled="saving || !myProfile" @click="save">
+      {{ saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Changes' }}
     </button>
   </div>
 </template>

@@ -89,6 +89,43 @@ final class AuthController
         return ResponseHelper::json($response, ['token' => $token, 'user' => $user], 201);
     }
 
+    public function captchaChallenge(Request $request, Response $response): Response
+    {
+        $ip = (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown');
+        try {
+            return ResponseHelper::json($response, (new SliderCaptchaService())->create($ip));
+        } catch (\Throwable) {
+            return ResponseHelper::error($response, 'Captcha unavailable', 503);
+        }
+    }
+
+    public function captchaVerify(Request $request, Response $response): Response
+    {
+        $data = (array) $request->getParsedBody();
+        $err = Validator::requireFields($data, ['captcha_id', 'captcha_x', 'drag_ms']);
+        if ($err) {
+            return ResponseHelper::error($response, $err, 422);
+        }
+
+        $ip = (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown');
+        $result = (new SliderCaptchaService())->verify(
+            (string) $data['captcha_id'],
+            (int) $data['captcha_x'],
+            $ip,
+            (int) $data['drag_ms']
+        );
+
+        if (!$result['verified']) {
+            return ResponseHelper::error($response, (string) $result['error'], 422);
+        }
+
+        return ResponseHelper::json($response, [
+            'verified' => true,
+            'captcha_id' => $data['captcha_id'],
+            'captcha_pass_token' => $result['pass_token'],
+        ]);
+    }
+
     public function login(Request $request, Response $response): Response
     {
         $data = (array) $request->getParsedBody();
