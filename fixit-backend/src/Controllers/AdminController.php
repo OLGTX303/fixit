@@ -20,13 +20,6 @@ final class AdminController
         return ResponseHelper::json($response, (new ProviderModel())->listEnriched(false, []));
     }
 
-    public function pendingProviders(Response $response): Response
-    {
-        $all = (new ProviderModel())->listEnriched(false, []);
-        $pending = array_values(array_filter($all, fn ($p) => !$p['is_verified']));
-        return ResponseHelper::json($response, $pending);
-    }
-
     public function verifyProvider(Request $request, Response $response, array $args): Response
     {
         $data = (array) $request->getParsedBody();

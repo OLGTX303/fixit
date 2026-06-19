@@ -46,29 +46,10 @@ final class ProviderModel
             $params['category'] = (int) $filters['category'];
         }
 
-        if (isset($filters['minPrice'])) {
-            $sql .= ' AND p.base_rate >= :minPrice';
-            $params['minPrice'] = (float) $filters['minPrice'];
-        }
-
-        if (isset($filters['maxPrice'])) {
-            $sql .= ' AND p.base_rate <= :maxPrice';
-            $params['maxPrice'] = (float) $filters['maxPrice'];
-        }
-
-        if (isset($filters['minRating'])) {
-            $sql .= ' AND p.avg_rating >= :minRating';
-            $params['minRating'] = (float) $filters['minRating'];
-        }
-
         $sql .= ' ORDER BY p.id';
         $stmt = Connection::get()->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
-
-        $lat = isset($filters['lat']) ? (float) $filters['lat'] : 51.5074;
-        $lng = isset($filters['lng']) ? (float) $filters['lng'] : -0.1278;
-        $maxDistance = isset($filters['maxDistance']) ? (float) $filters['maxDistance'] : null;
 
         $categoryModel = new CategoryModel();
         $categories = $categoryModel->all();
@@ -77,20 +58,7 @@ final class ProviderModel
             $catById[(int) $c['id']] = $c;
         }
 
-        $result = [];
-        foreach ($rows as $row) {
-            $enriched = $this->enrichRow($row, $catById);
-            if ($maxDistance !== null) {
-                $dist = $this->haversineKm($lat, $lng, (float) $row['latitude'], (float) $row['longitude']);
-                if ($dist > $maxDistance) {
-                    continue;
-                }
-                $enriched['_distance'] = round($dist, 2);
-            }
-            $result[] = $enriched;
-        }
-
-        return $result;
+        return array_map(fn ($row) => $this->enrichRow($row, $catById), $rows);
     }
 
     public function getEnriched(int $id): ?array
@@ -113,11 +81,6 @@ final class ProviderModel
             $catById[(int) $c['id']] = $c;
         }
         return $this->enrichRow($row, $catById);
-    }
-
-    public function listPending(): array
-    {
-        return $this->listEnriched(false, []);
     }
 
     /** @param array<string,mixed> $row */
@@ -234,35 +197,6 @@ final class ProviderModel
         return $this->getEnriched($id);
     }
 
-    public function setKycUrl(int $id, string $url): ?array
-    {
-        $stmt = Connection::get()->prepare('UPDATE ProviderProfile SET kyc_doc_url = :url WHERE id = :id');
-        $stmt->execute(['id' => $id, 'url' => $url]);
-        return $this->getEnriched($id);
-    }
-
-    public function getKycSummary(int $id): ?array
-    {
-        $provider = $this->getEnriched($id);
-        if (!$provider) {
-            return null;
-        }
-        return [
-            'provider_id' => $provider['id'],
-            'kyc_status' => $provider['kyc_status'],
-            'kyc_doc_url' => $provider['kyc_doc_url'],
-            'kyc_id_type' => $provider['kyc_id_type'],
-            'kyc_id_confidence' => $provider['kyc_id_confidence'],
-            'kyc_id_checks' => $provider['kyc_id_checks'],
-            'kyc_liveness_passed' => $provider['kyc_liveness_passed'],
-            'kyc_liveness_score' => $provider['kyc_liveness_score'],
-            'kyc_color_sequence_hash' => $provider['kyc_color_sequence_hash'],
-            'kyc_liveness_checks' => $provider['kyc_liveness_checks'],
-            'kyc_submitted_at' => $provider['kyc_submitted_at'],
-            'is_verified' => $provider['is_verified'],
-        ];
-    }
-
     /** @param array<string,mixed> $data */
     public function saveIdRecognition(int $id, array $data): ?array
     {
@@ -298,7 +232,7 @@ final class ProviderModel
             'checks' => json_encode($checks),
         ]);
 
-        return $this->getKycSummary($id);
+        return $this->getEnriched($id);
     }
 
     /** @param array<string,mixed> $data */
@@ -327,7 +261,7 @@ final class ProviderModel
             'submitted' => $submittedAt,
         ]);
 
-        return $this->getKycSummary($id);
+        return $this->getEnriched($id);
     }
 
     private function decodeJson(?string $raw): ?array
@@ -358,12 +292,4 @@ final class ProviderModel
         }
     }
 
-    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $r = 6371;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-        return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
-    }
 }

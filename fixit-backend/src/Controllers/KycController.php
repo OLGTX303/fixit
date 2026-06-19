@@ -27,7 +27,30 @@ final class KycController
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 
-        return ResponseHelper::json($response, $model->getKycSummary($id));
+        $provider = $model->getEnriched($id);
+        if (!$provider) {
+            return ResponseHelper::error($response, 'Provider not found', 404);
+        }
+        return ResponseHelper::json($response, self::kycPayload($provider));
+    }
+
+    /** @param array<string,mixed> $provider */
+    private static function kycPayload(array $provider): array
+    {
+        return [
+            'provider_id' => $provider['id'],
+            'kyc_status' => $provider['kyc_status'],
+            'kyc_doc_url' => $provider['kyc_doc_url'],
+            'kyc_id_type' => $provider['kyc_id_type'],
+            'kyc_id_confidence' => $provider['kyc_id_confidence'],
+            'kyc_id_checks' => $provider['kyc_id_checks'],
+            'kyc_liveness_passed' => $provider['kyc_liveness_passed'],
+            'kyc_liveness_score' => $provider['kyc_liveness_score'],
+            'kyc_color_sequence_hash' => $provider['kyc_color_sequence_hash'],
+            'kyc_liveness_checks' => $provider['kyc_liveness_checks'],
+            'kyc_submitted_at' => $provider['kyc_submitted_at'],
+            'is_verified' => $provider['is_verified'],
+        ];
     }
 
     public function submitIdRecognition(Request $request, Response $response, array $args): Response
@@ -81,7 +104,7 @@ final class KycController
                 : null,
         ]);
 
-        return ResponseHelper::json($response, $summary);
+        return ResponseHelper::json($response, self::kycPayload($summary));
     }
 
     public function submitLiveness(Request $request, Response $response, array $args): Response
@@ -129,6 +152,6 @@ final class KycController
             'checks' => $checks,
         ]);
 
-        return ResponseHelper::json($response, $summary);
+        return ResponseHelper::json($response, self::kycPayload($summary));
     }
 }

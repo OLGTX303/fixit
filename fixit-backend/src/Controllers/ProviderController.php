@@ -15,28 +15,7 @@ final class ProviderController
     public function list(Request $request, Response $response): Response
     {
         $params = $request->getQueryParams();
-        $filters = [];
-        if (!empty($params['category'])) {
-            $filters['category'] = (int) $params['category'];
-        }
-        if (isset($params['minPrice'])) {
-            $filters['minPrice'] = (float) $params['minPrice'];
-        }
-        if (isset($params['maxPrice'])) {
-            $filters['maxPrice'] = (float) $params['maxPrice'];
-        }
-        if (isset($params['minRating'])) {
-            $filters['minRating'] = (float) $params['minRating'];
-        }
-        if (isset($params['maxDistance'])) {
-            $filters['maxDistance'] = (float) $params['maxDistance'];
-        }
-        if (isset($params['lat'])) {
-            $filters['lat'] = (float) $params['lat'];
-        }
-        if (isset($params['lng'])) {
-            $filters['lng'] = (float) $params['lng'];
-        }
+        $filters = !empty($params['category']) ? ['category' => (int) $params['category']] : [];
 
         $providers = (new ProviderModel())->listEnriched(true, $filters);
         return ResponseHelper::json($response, $providers);
@@ -122,24 +101,4 @@ final class ProviderController
         return ResponseHelper::json($response, ['deleted' => true]);
     }
 
-    public function uploadKyc(Request $request, Response $response, array $args): Response
-    {
-        $user = $request->getAttribute('user');
-        $id = (int) $args['id'];
-        $model = new ProviderModel();
-        $existing = $model->findRaw($id);
-        if (!$existing) {
-            return ResponseHelper::error($response, 'Provider not found', 404);
-        }
-        if ((int) $existing['user_id'] !== (int) $user['id']) {
-            return ResponseHelper::error($response, 'Forbidden', 403);
-        }
-
-        $data = (array) $request->getParsedBody();
-        $filename = basename((string) ($data['filename'] ?? 'kyc_document.pdf'));
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'kyc_document.pdf';
-        $url = '/uploads/kyc/' . $id . '_' . $filename;
-        $provider = $model->setKycUrl($id, $url);
-        return ResponseHelper::json($response, $provider);
-    }
 }

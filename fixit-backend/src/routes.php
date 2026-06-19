@@ -67,8 +67,6 @@ return function (App $app): void {
                 ->add(new RoleGuard(['provider', 'admin']));
             $secure->delete('/providers/{id}', [$providers, 'delete'])
                 ->add(new RoleGuard(['provider', 'admin']));
-            $secure->post('/providers/{id}/kyc', [$providers, 'uploadKyc'])
-                ->add(new RoleGuard(['provider']));
             $secure->get('/providers/{id}/kyc', [$kyc, 'status'])
                 ->add(new RoleGuard(['provider', 'admin']));
             $secure->post('/providers/{id}/kyc/id-recognition', [$kyc, 'submitIdRecognition'])
@@ -77,8 +75,6 @@ return function (App $app): void {
                 ->add(new RoleGuard(['provider']));
 
             $secure->get('/admin/providers', [$admin, 'allProviders'])
-                ->add(new RoleGuard(['admin']));
-            $secure->get('/admin/providers/pending', [$admin, 'pendingProviders'])
                 ->add(new RoleGuard(['admin']));
             $secure->patch('/admin/providers/{id}/verify', [$admin, 'verifyProvider'])
                 ->add(new RoleGuard(['admin']));

@@ -1,16 +1,10 @@
-// PR3: Slim REST API + JWT. Signatures unchanged so stores/views need no rewrites.
-
-import axios from 'axios'
+// PR3: Slim REST API + JWT via fetch (no axios).
 
 const TOKEN_KEY = 'fixit_token'
 const USER_KEY = 'fixit_user'
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
-  withCredentials: false,
-})
+let onUnauthorized = null
 
 function safeParseUser(raw) {
   if (!raw) return null
@@ -34,78 +28,72 @@ export function getStoredUser() {
 export function persistSession(token, user) {
   sessionStorage.setItem(TOKEN_KEY, token)
   sessionStorage.setItem(USER_KEY, JSON.stringify(user))
-  http.defaults.headers.common.Authorization = `Bearer ${token}`
 }
 
 export function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(USER_KEY)
-  delete http.defaults.headers.common.Authorization
 }
 
-const token = getStoredToken()
-if (token) {
-  http.defaults.headers.common.Authorization = `Bearer ${token}`
-}
-
-let onUnauthorized = null
 export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn
 }
 
-http.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err.response?.status === 401 && onUnauthorized) {
-      onUnauthorized()
-    }
-    const message = err.response?.data?.error || err.message
-    return Promise.reject(new Error(message))
-  },
-)
+async function request(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' }
+  const token = getStoredToken()
+  if (token) headers.Authorization = `Bearer ${token}`
 
-function unwrap(promise) {
-  return promise.then((r) => r.data)
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+
+  let data = null
+  const text = await res.text()
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      data = { error: text }
+    }
+  }
+
+  if (res.status === 401 && onUnauthorized) onUnauthorized()
+  if (!res.ok) throw new Error(data?.error || res.statusText || 'Request failed')
+  return data
 }
+
+const get = (path) => request('GET', path)
+const post = (path, body) => request('POST', path, body)
+const put = (path, body) => request('PUT', path, body)
+const patch = (path, body) => request('PATCH', path, body)
+const del = (path) => request('DELETE', path)
 
 // ── Reads ───────────────────────────────────────────────────────────────────
-export const getUsers = () => unwrap(http.get('/admin/users'))
-
-export const getCategories = () => unwrap(http.get('/categories'))
+export const getUsers = () => get('/admin/users')
+export const getCategories = () => get('/categories')
 
 export async function getProviders() {
-  const role = getStoredUser()?.role
-  if (role === 'admin') {
-    return unwrap(http.get('/admin/providers'))
-  }
-  return unwrap(http.get('/providers'))
+  return getStoredUser()?.role === 'admin' ? get('/admin/providers') : get('/providers')
 }
 
-export async function getProvider(id) {
-  return unwrap(http.get(`/providers/${id}`))
-}
-
-export const getBookings = () => unwrap(http.get('/bookings'))
-
-export const getReviews = () => unwrap(http.get('/admin/reviews'))
-
-export async function getReviewsForProvider(providerId) {
-  return unwrap(http.get(`/providers/${providerId}/reviews`))
-}
-
-export async function getMessagesForJob(jobId) {
-  return unwrap(http.get(`/jobs/${jobId}/messages`))
-}
+export const getProvider = (id) => get(`/providers/${id}`)
+export const getBookings = () => get('/bookings')
+export const getReviews = () => get('/admin/reviews')
+export const getReviewsForProvider = (providerId) => get(`/providers/${providerId}/reviews`)
+export const getMessagesForJob = (jobId) => get(`/jobs/${jobId}/messages`)
 
 // ── Auth ────────────────────────────────────────────────────────────────────
 export async function register(payload) {
-  const { data } = await http.post('/auth/register', payload)
+  const data = await post('/auth/register', payload)
   persistSession(data.token, data.user)
   return data
 }
 
 export async function login(email, password) {
-  const { data } = await http.post('/auth/login', { email, password })
+  const data = await post('/auth/login', { email, password })
   persistSession(data.token, data.user)
   return data
 }
@@ -126,72 +114,52 @@ function toServerDatetime(value) {
 export async function createBooking(payload) {
   const scheduled = payload.scheduled_at
     || (payload.date && payload.time ? `${payload.date}T${payload.time}` : null)
-  return unwrap(http.post('/bookings', {
+  return post('/bookings', {
     provider_id: payload.provider_id,
     category_id: payload.category_id,
     scheduled_at: toServerDatetime(scheduled),
     address: payload.address,
     total: payload.total,
     notes: payload.notes,
-  }))
+  })
 }
 
-export async function setProviderVerification(providerId, isVerified) {
-  return unwrap(http.patch(`/admin/providers/${providerId}/verify`, { is_verified: isVerified }))
-}
+export const setProviderVerification = (providerId, isVerified) =>
+  patch(`/admin/providers/${providerId}/verify`, { is_verified: isVerified })
 
-export async function updateBookingStatus(bookingId, status) {
-  return unwrap(http.patch(`/bookings/${bookingId}/status`, { status }))
-}
+export const updateBookingStatus = (bookingId, status) =>
+  patch(`/bookings/${bookingId}/status`, { status })
 
-export async function createReview(payload) {
-  return unwrap(http.post('/reviews', payload))
-}
+export const createReview = (payload) => post('/reviews', payload)
+export const sendMessage = (jobId, payload) => post(`/jobs/${jobId}/messages`, payload)
 
-export async function sendMessage(jobId, payload) {
-  return unwrap(http.post(`/jobs/${jobId}/messages`, payload))
-}
+export const getCryptoStatus = () => get('/crypto/status')
+export const fetchPinSalt = () => get('/crypto/pin/salt')
+export const getMyPublicKey = () => get('/crypto/public-key')
+export const setupPin = (payload) => post('/crypto/pin/setup', payload)
+export const verifyPin = (payload) => post('/crypto/pin/verify', payload)
+export const getJobPeers = (jobId) => get(`/jobs/${jobId}/crypto/peers`)
+export const getUserPublicKey = (userId) => get(`/users/${userId}/crypto/public-key`)
+export const getJobCryptoKey = (jobId) => get(`/jobs/${jobId}/crypto/key`)
+export const saveJobCryptoKey = (jobId, payload) => put(`/jobs/${jobId}/crypto/key`, payload)
+export const getHarmReviews = () => get('/admin/harm-reviews')
+export const reviewHarmMessage = (id, payload) => patch(`/admin/harm-reviews/${id}`, payload)
+export const updateProvider = (id, payload) => put(`/providers/${id}`, payload)
+export const deleteBooking = (bookingId) => del(`/bookings/${bookingId}`)
 
-export const getCryptoStatus = () => unwrap(http.get('/crypto/status'))
-export const fetchPinSalt = () => unwrap(http.get('/crypto/pin/salt'))
-export const getMyPublicKey = () => unwrap(http.get('/crypto/public-key'))
-export const setupPin = (payload) => unwrap(http.post('/crypto/pin/setup', payload))
-export const verifyPin = (payload) => unwrap(http.post('/crypto/pin/verify', payload))
-export const getJobPeers = (jobId) => unwrap(http.get(`/jobs/${jobId}/crypto/peers`))
-export const getUserPublicKey = (userId) => unwrap(http.get(`/users/${userId}/crypto/public-key`))
-export const getJobCryptoKey = (jobId) => unwrap(http.get(`/jobs/${jobId}/crypto/key`))
-export const saveJobCryptoKey = (jobId, payload) =>
-  unwrap(http.put(`/jobs/${jobId}/crypto/key`, payload))
-export const getHarmReviews = () => unwrap(http.get('/admin/harm-reviews'))
-export const reviewHarmMessage = (id, payload) =>
-  unwrap(http.patch(`/admin/harm-reviews/${id}`, payload))
+// ── KYC ─────────────────────────────────────────────────────────────────────
+export const getKycStatus = (providerId) => get(`/providers/${providerId}/kyc`)
+export const submitKycIdRecognition = (providerId, payload) =>
+  post(`/providers/${providerId}/kyc/id-recognition`, payload)
+export const submitKycLiveness = (providerId, payload) =>
+  post(`/providers/${providerId}/kyc/liveness`, payload)
 
-export async function updateProvider(id, payload) {
-  return unwrap(http.put(`/providers/${id}`, payload))
-}
-
-export async function deleteBooking(bookingId) {
-  return unwrap(http.delete(`/bookings/${bookingId}`))
-}
-
-// ── KYC (government ID + 8-colour reflection liveness) ───────────────────────
-export const getKycStatus = (providerId) => unwrap(http.get(`/providers/${providerId}/kyc`))
-
-export async function submitKycIdRecognition(providerId, payload) {
-  return unwrap(http.post(`/providers/${providerId}/kyc/id-recognition`, payload))
-}
-
-export async function submitKycLiveness(providerId, payload) {
-  return unwrap(http.post(`/providers/${providerId}/kyc/liveness`, payload))
-}
-
-// ── Stripe test-mode payments (no raw card data) ────────────────────────────
-export const getStripeConfig = () => unwrap(http.get('/payments/stripe/config'))
-export const ensureStripeCustomer = () => unwrap(http.post('/payments/stripe/customer'))
-export const createStripeSetupIntent = () => unwrap(http.post('/payments/stripe/setup-intent'))
+// ── Stripe test-mode payments ───────────────────────────────────────────────
+export const getStripeConfig = () => get('/payments/stripe/config')
+export const ensureStripeCustomer = () => post('/payments/stripe/customer')
+export const createStripeSetupIntent = () => post('/payments/stripe/setup-intent')
 export const saveStripePaymentMethod = (paymentMethodId) =>
-  unwrap(http.post('/payments/stripe/save-payment-method', { payment_method_id: paymentMethodId }))
+  post('/payments/stripe/save-payment-method', { payment_method_id: paymentMethodId })
 export const payWithStripeSavedMethod = (payload) =>
-  unwrap(http.post('/payments/stripe/pay-with-saved-method', payload))
-export const removeStripeSavedPaymentMethod = () =>
-  unwrap(http.delete('/payments/stripe/saved-payment-method'))
+  post('/payments/stripe/pay-with-saved-method', payload)
+export const removeStripeSavedPaymentMethod = () => del('/payments/stripe/saved-payment-method')
