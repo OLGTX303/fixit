@@ -19,7 +19,7 @@ cp .env.android.example .env.production.local
 #   Production:  https://your-api.example.com/api
 ```
 
-Update `fixit-backend/.env` `CORS_ORIGIN` to include Capacitor's origin or use `capacitor://localhost` patterns as needed. For local dev, set:
+Update `../fixit-backend/.env` `CORS_ORIGIN` to include Capacitor's origin or use `capacitor://localhost` patterns as needed. For local dev, set:
 
 ```
 CORS_ORIGIN=http://localhost:5173,capacitor://localhost,http://localhost

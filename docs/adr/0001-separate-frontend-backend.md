@@ -10,8 +10,8 @@ PR3 requires Vue SPA + PHP API + MySQL. Docker was removed per project preferenc
 
 ## Decision
 
-- `fixit-frontend/` — static Vue build, env `VITE_API_URL`
-- `fixit-backend/` — PHP Slim API, env `DB_*`, `JWT_SECRET`, `CORS_ORIGIN`
+- `fixit-pr3/fixit-frontend/` — static Vue build, env `VITE_API_URL`
+- `fixit-pr3/fixit-backend/` — PHP Slim API, env `DB_*`, `JWT_SECRET`, `CORS_ORIGIN`
 - Deploy independently; CORS links them
 
 ## Consequences

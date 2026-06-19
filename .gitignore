@@ -36,13 +36,13 @@ Thumbs.db
 .capacitor/
 
 # Android build artifacts
-fixit-frontend/android/.gradle/
-fixit-frontend/android/app/build/
-fixit-frontend/android/build/
-fixit-frontend/android/local.properties
+fixit-pr3/fixit-frontend/android/.gradle/
+fixit-pr3/fixit-frontend/android/app/build/
+fixit-pr3/fixit-frontend/android/build/
+fixit-pr3/fixit-frontend/android/local.properties
 *.apk
 *.aab
 
 # PHP / logs
 *.log
-fixit-backend/storage/
+fixit-pr3/fixit-backend/storage/

@@ -1,6 +1,6 @@
 # FixIt Frontend
 
-Vue 3 + Vite SPA. Talks to `fixit-backend` via `src/services/api.js`.
+Vue 3 + Vite SPA (PR3). Talks to `../fixit-backend` via `src/services/api.js`.
 
 ## Setup
 
