@@ -184,3 +184,14 @@ export async function submitKycIdRecognition(providerId, payload) {
 export async function submitKycLiveness(providerId, payload) {
   return unwrap(http.post(`/providers/${providerId}/kyc/liveness`, payload))
 }
+
+// ── Stripe test-mode payments (no raw card data) ────────────────────────────
+export const getStripeConfig = () => unwrap(http.get('/payments/stripe/config'))
+export const ensureStripeCustomer = () => unwrap(http.post('/payments/stripe/customer'))
+export const createStripeSetupIntent = () => unwrap(http.post('/payments/stripe/setup-intent'))
+export const saveStripePaymentMethod = (paymentMethodId) =>
+  unwrap(http.post('/payments/stripe/save-payment-method', { payment_method_id: paymentMethodId }))
+export const payWithStripeSavedMethod = (payload) =>
+  unwrap(http.post('/payments/stripe/pay-with-saved-method', payload))
+export const removeStripeSavedPaymentMethod = () =>
+  unwrap(http.delete('/payments/stripe/saved-payment-method'))

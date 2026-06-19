@@ -14,7 +14,7 @@ const NAVS = {
     { icon: 'home', label: 'Home', to: 'home' },
     { icon: 'search', label: 'Explore', to: 'search' },
     { icon: 'calendar', label: 'Bookings', to: 'job-tracker' },
-    { icon: 'user', label: 'Profile', to: 'home' },
+    { icon: 'shield', label: 'Payment', to: 'payment' },
   ],
   provider: [
     { icon: 'grid', label: 'Profile', to: 'pro-profile' },

@@ -13,6 +13,7 @@ const routes = [
   { path: '/book/:id', name: 'booking-form', component: () => import('../views/customer/BookingFormView.vue'), meta: { role: 'customer' } },
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },
+  { path: '/payment', name: 'payment', component: () => import('../views/customer/PaymentView.vue'), meta: { role: 'customer' } },
 
   // Provider
   { path: '/pro/profile', name: 'pro-profile', component: () => import('../views/provider/ProfileSetupView.vue'), meta: { role: 'provider' } },
