@@ -13,12 +13,34 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class AuthController
 {
+    private const LEGAL_POLICY_VERSION = '2026-06-19';
+
     public function register(Request $request, Response $response): Response
     {
         $data = (array) $request->getParsedBody();
-        $err = Validator::requireFields($data, ['name', 'email', 'password', 'role']);
+        $err = Validator::requireFields($data, [
+            'name', 'email', 'password', 'role', 'accepted_terms', 'accepted_privacy',
+        ]);
         if ($err) {
             return ResponseHelper::error($response, $err, 422);
+        }
+
+        if (!filter_var($data['accepted_terms'], FILTER_VALIDATE_BOOLEAN)
+            || !filter_var($data['accepted_privacy'], FILTER_VALIDATE_BOOLEAN)) {
+            return ResponseHelper::error(
+                $response,
+                'You must accept the Terms of Service and Privacy Policy to register',
+                422
+            );
+        }
+
+        $policyVersion = (string) ($data['legal_policy_version'] ?? self::LEGAL_POLICY_VERSION);
+        if ($policyVersion !== self::LEGAL_POLICY_VERSION) {
+            return ResponseHelper::error(
+                $response,
+                'Legal policy version mismatch. Please refresh and accept the current policies.',
+                422
+            );
         }
 
         $role = (string) $data['role'];
@@ -47,7 +69,8 @@ final class AuthController
             $email,
             $hash,
             $role,
-            isset($data['phone']) ? Validator::cleanText((string) $data['phone'], 32) : null
+            isset($data['phone']) ? Validator::cleanText((string) $data['phone'], 32) : null,
+            $policyVersion
         );
 
         $token = self::issueToken($user);

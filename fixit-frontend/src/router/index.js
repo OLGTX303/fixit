@@ -5,6 +5,8 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true } },
   { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { public: true } },
+  { path: '/legal/terms', name: 'legal-terms', component: () => import('../views/legal/LegalDocumentView.vue'), meta: { public: true, legalKey: 'terms' } },
+  { path: '/legal/privacy', name: 'legal-privacy', component: () => import('../views/legal/LegalDocumentView.vue'), meta: { public: true, legalKey: 'privacy' } },
 
   // Customer
   { path: '/home', name: 'home', component: () => import('../views/customer/HomeView.vue'), meta: { role: 'customer' } },

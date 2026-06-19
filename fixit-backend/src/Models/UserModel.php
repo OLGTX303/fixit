@@ -73,11 +73,19 @@ final class UserModel
         $stmt->execute(['id' => $userId]);
     }
 
-    public function create(string $name, string $email, string $passwordHash, string $role, ?string $phone): array
-    {
+    public function create(
+        string $name,
+        string $email,
+        string $passwordHash,
+        string $role,
+        ?string $phone,
+        ?string $legalPolicyVersion = null
+    ): array {
         $pdo = Connection::get();
         $stmt = $pdo->prepare(
-            'INSERT INTO User (name, email, password_hash, role, phone) VALUES (:name, :email, :hash, :role, :phone)'
+            'INSERT INTO User
+             (name, email, password_hash, role, phone, terms_accepted_at, privacy_accepted_at, legal_policy_version)
+             VALUES (:name, :email, :hash, :role, :phone, NOW(), NOW(), :legal_version)'
         );
         $stmt->execute([
             'name' => $name,
@@ -85,6 +93,7 @@ final class UserModel
             'hash' => $passwordHash,
             'role' => $role,
             'phone' => $phone,
+            'legal_version' => $legalPolicyVersion,
         ]);
         return $this->findById((int) $pdo->lastInsertId()) ?? [];
     }

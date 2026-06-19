@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import AppIcon from './components/AppIcon.vue'
+import LegalFooter from './components/LegalFooter.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -31,7 +32,8 @@ const NAVS = {
   ],
 }
 
-const showShell = computed(() => auth.isAuthenticated && !route.meta.public)
+const isLegalPage = computed(() => route.name === 'legal-terms' || route.name === 'legal-privacy')
+const showShell = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
 const navItems = computed(() => NAVS[auth.role] || [])
 
 function go(item) {
@@ -77,6 +79,7 @@ function logout() {
         <div class="fx-content">
           <main class="fx-main">
             <router-view />
+            <LegalFooter v-if="!isLegalPage" class="fx-app-legal" />
           </main>
         </div>
       </div>
@@ -91,8 +94,8 @@ function logout() {
       </nav>
     </template>
 
-    <!-- Public (login/register) -->
-    <main v-else class="fx-main" style="padding-bottom:0">
+    <!-- Public (login/register/legal) -->
+    <main v-else class="fx-main" :style="{ paddingBottom: isLegalPage ? 0 : undefined }">
       <router-view />
     </main>
   </div>
