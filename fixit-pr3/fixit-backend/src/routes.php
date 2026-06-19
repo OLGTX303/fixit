@@ -111,4 +111,12 @@ return function (App $app): void {
         $response->getBody()->write(json_encode(['status' => 'ok']));
         return $response->withHeader('Content-Type', 'application/json');
     });
+
+    $app->get('/api', function ($request, $response) {
+        $response->getBody()->write(json_encode([
+            'name' => 'FixIt API',
+            'health' => '/api/health',
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
 };

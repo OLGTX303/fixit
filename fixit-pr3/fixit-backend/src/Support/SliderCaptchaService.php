@@ -144,8 +144,6 @@ final class SliderCaptchaService
         imagecopy($piece, $pieceStrip, 0, $pieceY, 0, $pieceY, $ps, $ps);
         imagerectangle($piece, 0, $pieceY, $ps - 1, $pieceY + $ps - 1, $borderColor);
 
-        imagedestroy($pieceStrip);
-
         return [$this->toDataUri($bg), $this->toDataUri($piece)];
     }
 
@@ -189,7 +187,6 @@ final class SliderCaptchaService
         ob_start();
         imagepng($img);
         $raw = (string) ob_get_clean();
-        imagedestroy($img);
         return 'data:image/png;base64,' . base64_encode($raw);
     }
 

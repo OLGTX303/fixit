@@ -53,7 +53,7 @@ cp .env.android.example .env.production.local
 npm run cap:sync && npm run cap:android
 ```
 
-See [fixit-frontend/ANDROID.md](fixit-frontend/ANDROID.md) and [fixit-backend/README.md](fixit-backend/README.md).
+See [fixit-frontend/ANDROID.md](fixit-frontend/ANDROID.md) and [fixit-backend/README.md](fixit-backend/README.md) (includes **aaPanel / nginx production deploy**).
 
 ## Demo accounts
 

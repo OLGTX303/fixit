@@ -145,13 +145,18 @@ flowchart LR
 
 1. Read [SECURITY.md](SECURITY.md) and complete both checklists (backend + frontend).
 2. Set `APP_DEBUG=false`, strong `JWT_SECRET`, and exact `CORS_ORIGIN`.
-3. Build frontend with production API URL:
+3. **Backend** — deploy behind nginx + PHP-FPM (see [fixit-pr3/fixit-backend/README.md](fixit-pr3/fixit-backend/README.md#production--aapanel--nginx--php-fpm)):
+   - Upload to `/www/wwwroot/<domain>/`
+   - Nginx `root` must be `.../public` with Slim `try_files` rewrite
+   - `composer install --no-dev` once; **do not** run `composer start` on the server
+   - Start stack: `/etc/init.d/php-fpm-85 start` and `nginx -t && /etc/init.d/nginx reload`
+   - Disable aaPanel’s `fixit.olgtx.com.service` if it runs `php composer start`
+4. Build frontend with production API URL:
    ```bash
    cd fixit-pr3/fixit-frontend
-   VITE_API_URL=https://your-api.example.com/api npm run build
+   VITE_API_URL=https://fixit.olgtx.com/api npm run build
    ```
-4. Serve `fixit-pr3/fixit-frontend/dist/` from any static host (nginx, Netlify, Render, S3).
-5. Run backend behind HTTPS with `composer install --no-dev`.
+5. Serve `fixit-pr3/fixit-frontend/dist/` from any static host (nginx, Netlify, Render, S3).
 
 ## Earlier milestones
 
