@@ -5,14 +5,17 @@ On-demand local home-services marketplace — full-stack PR3 build with Vue 3 fr
 ## Repository layout
 
 ```
-fixit/
-├── fixit-frontend/     Vue 3 + Vite SPA + Capacitor Android
-├── fixit-backend/      PHP Slim 4 REST API + MySQL
+├── fixit-frontend/     PR3 — Vue 3 + Vite SPA + Capacitor Android (live API)
+├── fixit-backend/      PR3 — PHP Slim 4 REST API + MySQL
+├── fixit-pr2/          PR2 — Vue 3 interim build (mock JSON, no backend)
+├── fixit/              PR1 — interactive UI mockup (React/JSX design canvas)
 ├── docs/               Architecture decisions & agent docs
 ├── AGENTS.md           AI agent instructions
 ├── CONTEXT-MAP.md      Monorepo context index
 └── SECURITY.md         Security audit & production checklist
 ```
+
+**PR3** (`fixit-frontend` + `fixit-backend`) is the current full-stack app. **PR2** and **PR1** folders are kept as earlier milestones for reference.
 
 Frontend and backend deploy separately. No Docker required.
 
@@ -145,12 +148,20 @@ flowchart LR
 4. Serve `fixit-frontend/dist/` from any static host (nginx, Netlify, Render, S3).
 5. Run backend behind HTTPS with `composer install --no-dev`.
 
+## Earlier milestones
+
+| Folder | Milestone | Run |
+|--------|-----------|-----|
+| [fixit/](fixit/) | PR1 UI mockup | Open `fixit/FixIt.html` or run `node fixit/server.js` |
+| [fixit-pr2/](fixit-pr2/) | PR2 Vue interim (mock data) | `cd fixit-pr2 && npm install && npm run dev` |
+
 ## Development docs
 
 | Document | Purpose |
 |----------|---------|
 | [fixit-frontend/README.md](fixit-frontend/README.md) | SPA setup, build, demo logins |
 | [fixit-backend/README.md](fixit-backend/README.md) | API setup, MySQL, Composer |
+| [fixit-pr2/README.md](fixit-pr2/README.md) | PR2 mock-data architecture & migration notes |
 | [SECURITY.md](SECURITY.md) | Audit findings, E2E crypto notes, CSP |
 | [docs/adr/0001-separate-frontend-backend.md](docs/adr/0001-separate-frontend-backend.md) | ADR: split deployment |
 | [AGENTS.md](AGENTS.md) | Agent / contributor conventions |
