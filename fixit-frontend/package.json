@@ -19,6 +19,7 @@
     "@capacitor/core": "^8.4.1",
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/status-bar": "^8.0.2",
+    "@stripe/stripe-js": "^5.10.0",
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "leaflet": "^1.9.4",

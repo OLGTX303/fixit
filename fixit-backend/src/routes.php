@@ -11,6 +11,7 @@ use FixIt\Controllers\KycController;
 use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ReviewController;
+use FixIt\Controllers\StripePaymentController;
 use FixIt\Middleware\JwtAuth;
 use FixIt\Middleware\RateLimitMiddleware;
 use FixIt\Middleware\RoleGuard;
@@ -27,11 +28,14 @@ return function (App $app): void {
     $messages = new MessageController();
     $crypto = new CryptoController();
     $kyc = new KycController();
+    $stripe = new StripePaymentController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $rateLimit
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $rateLimit
     ) {
+        // Stripe webhook — no JWT; verified via Stripe-Signature
+        $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
         $group->post('/auth/register', [$auth, 'register'])->add($rateLimit);
         $group->post('/auth/login', [$auth, 'login'])->add($rateLimit);
         $group->get('/categories', [$categories, 'list']);
@@ -39,8 +43,14 @@ return function (App $app): void {
         $group->get('/providers/{id}', [$providers, 'get']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe
         ) {
+            $secure->get('/payments/stripe/config', [$stripe, 'config']);
+            $secure->post('/payments/stripe/customer', [$stripe, 'ensureCustomer']);
+            $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent']);
+            $secure->post('/payments/stripe/save-payment-method', [$stripe, 'savePaymentMethod']);
+            $secure->post('/payments/stripe/pay-with-saved-method', [$stripe, 'payWithSavedMethod']);
+            $secure->delete('/payments/stripe/saved-payment-method', [$stripe, 'removeSavedPaymentMethod']);
             $secure->get('/crypto/status', [$crypto, 'status']);
             $secure->get('/crypto/pin/salt', [$crypto, 'getPinSalt']);
             $secure->get('/crypto/public-key', [$crypto, 'myPublicKey']);

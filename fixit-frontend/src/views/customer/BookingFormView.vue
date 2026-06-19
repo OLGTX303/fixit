@@ -49,7 +49,10 @@ async function confirm() {
     total: total.value,
   })
   submitting.value = false
-  router.push({ name: 'job-tracker', query: { id: booking.id } })
+  router.push({
+    name: 'payment',
+    query: { booking_id: booking.id, amount: total.value.toFixed(2) },
+  })
 }
 </script>
 
@@ -129,7 +132,7 @@ async function confirm() {
     </div>
 
     <button class="btn btn-primary w-100" :disabled="!canSubmit || submitting" @click="confirm">
-      {{ submitting ? 'Confirming…' : 'Confirm Booking' }}
+      {{ submitting ? 'Confirming…' : 'Confirm & Pay' }}
     </button>
   </div>
 

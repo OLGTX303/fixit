@@ -18,6 +18,17 @@ BootValidator::assert();
 
 $app = AppFactory::create();
 $app->setBasePath('');
+
+// Preserve raw body for Stripe webhook signature verification
+$app->add(function ($request, $handler) {
+    $path = $request->getUri()->getPath();
+    if (str_ends_with($path, '/payments/stripe/webhook')) {
+        $raw = (string) $request->getBody();
+        return $handler->handle($request->withAttribute('stripe_raw_body', $raw));
+    }
+    return $handler->handle($request);
+});
+
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->add(new SecurityHeaders());
