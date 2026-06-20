@@ -3,198 +3,177 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import * as api from '../services/api'
-import AppIcon from '../components/AppIcon.vue'
 
-const auth = useAuthStore()
+const auth   = useAuthStore()
 const router = useRouter()
 
-const user = computed(() => auth.user || {})
-const initials = computed(() => {
-  const n = user.value.name || '?'
-  return n.split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase()
-})
-const roleLabel = computed(() => {
-  const r = auth.role
-  return r ? r.charAt(0).toUpperCase() + r.slice(1) : ''
-})
+const user      = computed(() => auth.user || {})
+const initials  = computed(() => (user.value.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
+const roleLabel = computed(() => { const r = auth.role; return r ? r.charAt(0).toUpperCase()+r.slice(1) : '' })
 
-// ── Editable profile (name + phone; email is OTP-verified on its own page) ────
-const editing = ref(false)
-const form = ref({ name: '', phone: '' })
+const editing       = ref(false)
+const form          = ref({ name:'', phone:'' })
 const savingProfile = ref(false)
-const profileError = ref('')
-const profileMsg = ref('')
+const profileError  = ref('')
+const profileMsg    = ref('')
 
 function startEdit() {
-  form.value = { name: user.value.name || '', phone: user.value.phone || '' }
-  profileError.value = ''
-  profileMsg.value = ''
-  editing.value = true
+  form.value = { name: user.value.name||'', phone: user.value.phone||'' }
+  profileError.value = ''; profileMsg.value = ''; editing.value = true
 }
-
 async function saveProfile() {
-  savingProfile.value = true
-  profileError.value = ''
+  savingProfile.value = true; profileError.value = ''
   try {
-    const { user: updated } = await api.updateProfile({
-      name: form.value.name,
-      phone: form.value.phone,
-    })
-    auth.setUser(updated)
-    editing.value = false
-    profileMsg.value = 'Profile updated'
-  } catch (e) {
-    profileError.value = e.message
-  } finally {
-    savingProfile.value = false
-  }
+    const { user: updated } = await api.updateProfile({ name: form.value.name, phone: form.value.phone })
+    auth.setUser(updated); editing.value = false; profileMsg.value = 'Profile updated'
+  } catch (e) { profileError.value = e.message }
+  finally { savingProfile.value = false }
 }
 
-// ── Avatar ──────────────────────────────────────────────────────────────────
-const fileInput = ref(null)
+const fileInput      = ref(null)
 const uploadingAvatar = ref(false)
-const avatarError = ref('')
+const avatarError    = ref('')
 
-function pickAvatar() {
-  avatarError.value = ''
-  fileInput.value?.click()
-}
-
+function pickAvatar() { avatarError.value = ''; fileInput.value?.click() }
 async function onAvatarSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
-  if (!file.type.startsWith('image/')) {
-    avatarError.value = 'Please choose an image file'
-    return
-  }
-  if (file.size > 4 * 1024 * 1024) {
-    avatarError.value = 'Image too large (max 4 MB)'
-    return
-  }
+  if (!file.type.startsWith('image/')) { avatarError.value = 'Please choose an image file'; return }
+  if (file.size > 4*1024*1024) { avatarError.value = 'Image too large (max 4 MB)'; return }
   uploadingAvatar.value = true
   try {
-    const dataUrl = await new Promise((resolve, reject) => {
-      const r = new FileReader()
-      r.onload = () => resolve(r.result)
-      r.onerror = reject
-      r.readAsDataURL(file)
-    })
+    const dataUrl = await new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file) })
     const { user: updated } = await api.uploadAvatar(dataUrl)
     auth.setUser(updated)
-  } catch (err) {
-    avatarError.value = err.message
-  } finally {
-    uploadingAvatar.value = false
-    if (fileInput.value) fileInput.value.value = ''
-  }
+  } catch (err) { avatarError.value = err.message }
+  finally { uploadingAvatar.value = false; if (fileInput.value) fileInput.value.value='' }
 }
 
-function logout() {
-  auth.logout()
-  router.push({ name: 'login' })
-}
+function logout() { auth.logout(); router.push({ name:'login' }) }
 </script>
 
 <template>
   <div class="fx-page" style="max-width:520px">
-    <h1 class="fw-bold mb-3" style="font-size:20px">Profile</h1>
+    <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:20px">Profile</h1>
 
-    <!-- Avatar + identity -->
-    <div class="fx-card mb-3 d-flex align-items-center gap-3">
-      <div class="position-relative" style="flex-shrink:0">
+    <!-- Avatar card -->
+    <div class="fx-card" style="margin-bottom:12px;display:flex;align-items:center;gap:16px">
+      <div style="position:relative;flex-shrink:0">
         <img v-if="user.avatar_url" :src="user.avatar_url" alt="avatar"
-             style="width:64px;height:64px;border-radius:50%;object-fit:cover" />
-        <div v-else class="fx-avatar" style="width:64px;height:64px;font-size:22px">{{ initials }}</div>
-        <button class="btn btn-primary rounded-circle"
-                style="position:absolute;bottom:-4px;right:-4px;width:26px;height:26px;padding:0"
-                :disabled="uploadingAvatar" @click="pickAvatar" title="Change photo">
-          <AppIcon name="tool" :size="12" />
+             style="width:68px;height:68px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.70)" />
+        <div v-else class="fx-avatar" style="width:68px;height:68px;font-size:22px">{{ initials }}</div>
+        <button class="ac-cam-btn glossy-primary" :disabled="uploadingAvatar" @click="pickAvatar">
+          <span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1">photo_camera</span>
         </button>
-        <input ref="fileInput" type="file" accept="image/*" class="d-none" @change="onAvatarSelected" />
+        <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onAvatarSelected" />
       </div>
       <div>
-        <div class="fw-bold" style="font-size:18px">{{ user.name || 'Unknown user' }}</div>
-        <span class="fx-badge bg-accent-soft text-accent" style="font-size:11px">{{ roleLabel }}</span>
-        <div v-if="uploadingAvatar" style="font-size:11px;color:var(--fx-muted);margin-top:4px">Uploading photo…</div>
+        <div style="font-size:18px;font-weight:700">{{ user.name || 'Unknown user' }}</div>
+        <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--fx-accent-soft);color:var(--fx-accent);margin-top:4px">
+          {{ roleLabel }}
+        </span>
+        <div v-if="uploadingAvatar" style="font-size:11px;color:var(--fx-muted);margin-top:4px">Uploading…</div>
       </div>
     </div>
-    <div v-if="avatarError" class="alert alert-danger py-2 mb-3" style="font-size:13px">{{ avatarError }}</div>
+    <div v-if="avatarError" class="alert alert-danger" style="font-size:12px;padding:8px 12px;margin-bottom:10px">{{ avatarError }}</div>
 
-    <!-- Account details (name + phone) -->
-    <div class="fx-card mb-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div class="fx-label m-0">Account details</div>
+    <!-- Account details card -->
+    <div class="fx-card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="fx-label-caps">Account Details</span>
         <button v-if="!editing" class="btn btn-link" style="font-size:13px" @click="startEdit">Edit</button>
       </div>
 
       <template v-if="!editing">
-        <div class="d-flex flex-column gap-3 mt-1">
+        <div style="display:flex;flex-direction:column;gap:12px">
           <div>
-            <div style="font-size:11px;color:var(--fx-muted)">Name</div>
-            <div style="font-size:14px">{{ user.name || '—' }}</div>
+            <div style="font-size:11px;color:var(--fx-muted);margin-bottom:2px">Name</div>
+            <div style="font-size:14px;font-weight:600">{{ user.name || '—' }}</div>
           </div>
           <div>
-            <div style="font-size:11px;color:var(--fx-muted)">Phone</div>
-            <div style="font-size:14px">{{ user.phone || '—' }}</div>
+            <div style="font-size:11px;color:var(--fx-muted);margin-bottom:2px">Phone</div>
+            <div style="font-size:14px;font-weight:600">{{ user.phone || '—' }}</div>
           </div>
         </div>
-        <div v-if="profileMsg" class="mt-2" style="font-size:12px;color:var(--fx-success)">{{ profileMsg }}</div>
+        <div v-if="profileMsg" style="font-size:12px;color:var(--fx-success);margin-top:10px">✓ {{ profileMsg }}</div>
       </template>
 
       <template v-else>
-        <div class="d-flex flex-column gap-2">
+        <div style="display:flex;flex-direction:column;gap:10px">
           <div>
-            <label class="fx-label">Name</label>
-            <input v-model="form.name" class="fx-input" placeholder="Your name" />
+            <div class="fx-label-caps" style="margin-bottom:6px">Name</div>
+            <div class="fx-input"><input v-model="form.name" placeholder="Your name" /></div>
           </div>
           <div>
-            <label class="fx-label">Phone</label>
-            <input v-model="form.phone" class="fx-input" placeholder="+60 12-345 6789" />
+            <div class="fx-label-caps" style="margin-bottom:6px">Phone</div>
+            <div class="fx-input"><input v-model="form.phone" placeholder="+60 12-345 6789" /></div>
           </div>
         </div>
-        <div v-if="profileError" class="alert alert-danger py-2 mt-2 mb-0" style="font-size:13px">{{ profileError }}</div>
-        <div class="d-flex gap-2 mt-3">
-          <button class="btn btn-primary flex-fill" :disabled="savingProfile" @click="saveProfile">
+        <div v-if="profileError" class="alert alert-danger" style="font-size:12px;padding:8px 12px;margin-top:10px">{{ profileError }}</div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-primary" style="flex:1" :disabled="savingProfile" @click="saveProfile">
             {{ savingProfile ? 'Saving…' : 'Save' }}
           </button>
-          <button class="btn btn-outline-secondary" :disabled="savingProfile" @click="editing = false">Cancel</button>
+          <button class="btn btn-outline-secondary" :disabled="savingProfile" @click="editing=false">Cancel</button>
         </div>
       </template>
     </div>
 
-    <!-- Email (managed on its own OTP-verified page) -->
-    <button class="fx-card mb-3 w-100 d-flex align-items-center gap-3"
-            style="border:none;text-align:left;cursor:pointer"
-            @click="router.push({ name: 'account-email' })">
-      <AppIcon name="send" :size="20" />
-      <div class="flex-fill">
-        <div class="fw-semibold" style="font-size:14px">Email</div>
-        <div style="font-size:13px;color:var(--fx-muted)">{{ user.email }}</div>
+    <!-- Email row -->
+    <button class="fx-card ac-row-btn" style="margin-bottom:10px" @click="router.push({ name:'account-email' })">
+      <div class="ac-row-icon">
+        <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-accent);font-variation-settings:'FILL' 1">mail</span>
       </div>
-      <span style="color:var(--fx-muted-soft);font-size:18px">›</span>
-    </button>
-
-    <!-- Payment methods (own page) -->
-    <button class="fx-card mb-3 w-100 d-flex align-items-center gap-3"
-            style="border:none;text-align:left;cursor:pointer"
-            @click="router.push({ name: 'account-billing' })">
-      <AppIcon name="shield" :size="20" />
-      <div class="flex-fill">
-        <div class="fw-semibold" style="font-size:14px">Payment methods</div>
-        <div style="font-size:13px;color:var(--fx-muted)">Manage your saved card</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">Email</div>
+        <div style="font-size:12px;color:var(--fx-muted)">{{ user.email }}</div>
       </div>
-      <span style="color:var(--fx-muted-soft);font-size:18px">›</span>
+      <span class="material-symbols-outlined" style="font-size:18px;color:rgba(142,112,104,0.45)">chevron_right</span>
     </button>
 
-    <button class="btn btn-outline-danger w-100" @click="logout">
-      <AppIcon name="logout" :size="18" />
-      <span class="ms-2">Log out</span>
+    <!-- Payment row -->
+    <button class="fx-card ac-row-btn" style="margin-bottom:20px" @click="router.push({ name:'account-billing' })">
+      <div class="ac-row-icon">
+        <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-accent);font-variation-settings:'FILL' 1">credit_card</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">Payment methods</div>
+        <div style="font-size:12px;color:var(--fx-muted)">Manage your saved card</div>
+      </div>
+      <span class="material-symbols-outlined" style="font-size:18px;color:rgba(142,112,104,0.45)">chevron_right</span>
     </button>
 
-    <p class="mt-3 mb-0 text-center" style="font-size:11px;color:var(--fx-muted)">
-      <router-link :to="{ name: 'legal-terms' }" class="text-accent text-decoration-none">Terms</router-link>
+    <!-- Logout -->
+    <button class="btn btn-outline-danger w-100" style="height:50px;font-size:14px" @click="logout">
+      <span class="material-symbols-outlined" style="font-size:18px;margin-right:6px">logout</span>
+      Log out
+    </button>
+
+    <p style="text-align:center;font-size:11px;color:var(--fx-muted);margin-top:16px">
+      <router-link :to="{ name:'legal-terms' }"   style="color:var(--fx-accent);text-decoration:none">Terms</router-link>
       ·
-      <router-link :to="{ name: 'legal-privacy' }" class="text-accent text-decoration-none">Privacy</router-link>
+      <router-link :to="{ name:'legal-privacy' }" style="color:var(--fx-accent);text-decoration:none">Privacy</router-link>
     </p>
   </div>
 </template>
+
+<style scoped>
+.ac-cam-btn {
+  position: absolute; bottom: -4px; right: -4px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255,255,255,0.70);
+}
+.ac-row-btn {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  border: none; text-align: left; cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.ac-row-btn:hover  { transform: translateX(3px); }
+.ac-row-btn:active { transform: scale(0.98); }
+.ac-row-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  background: var(--fx-accent-soft);
+  display: flex; align-items: center; justify-content: center;
+}
+</style>

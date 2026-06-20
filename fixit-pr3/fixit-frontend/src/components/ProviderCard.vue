@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import RatingStars from './RatingStars.vue'
 
-// Reusable provider list card. Emits 'select' so parents control navigation.
 const props = defineProps({
   provider: { type: Object, required: true },
   distance: { type: Number, default: null },
@@ -10,25 +9,46 @@ const props = defineProps({
 defineEmits(['select'])
 
 const initials = computed(() =>
-  (props.provider.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())
+  (props.provider.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
 const roleLabel = computed(() => props.provider.category_names?.join(', ') || 'Provider')
 </script>
 
 <template>
-  <div class="fx-card d-flex align-items-center gap-3" role="button" @click="$emit('select', provider)">
-    <div class="fx-avatar" style="width:46px;height:46px;font-size:16px">{{ initials }}</div>
-    <div class="flex-grow-1" style="min-width:0">
-      <div class="d-flex justify-content-between align-items-start">
-        <div class="fw-semibold" style="font-size:14px">{{ provider.name }}</div>
-        <div class="fw-bold text-accent" style="font-size:14px">RM{{ provider.base_rate }}/hr</div>
+  <div class="pc-card liquid-glass" role="button" @click="$emit('select', provider)">
+    <div class="pc-avatar">{{ initials }}</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+        <span style="font-size:14px;font-weight:700;color:var(--fx-text)">{{ provider.name }}</span>
+        <span style="font-size:14px;font-weight:800;color:var(--fx-accent)">RM{{ provider.base_rate }}/hr</span>
       </div>
-      <div style="font-size:12px;color:var(--fx-muted)">{{ roleLabel }}</div>
-      <div class="d-flex align-items-center gap-2 mt-1">
+      <div style="font-size:12px;color:var(--fx-muted);margin-bottom:5px">{{ roleLabel }}</div>
+      <div style="display:flex;align-items:center;gap:6px">
         <RatingStars :rating="provider.avg_rating" :size="12" />
-        <span style="font-size:12px;font-weight:600">{{ provider.avg_rating.toFixed(1) }}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--fx-text)">{{ provider.avg_rating.toFixed(1) }}</span>
         <span style="font-size:11px;color:var(--fx-muted)">({{ provider.review_count }})</span>
         <span v-if="distance != null" style="font-size:11px;color:var(--fx-muted)">• {{ distance.toFixed(1) }}km</span>
       </div>
     </div>
+    <span class="material-symbols-outlined" style="font-size:18px;color:rgba(142,112,104,0.45);flex-shrink:0">chevron_right</span>
   </div>
 </template>
+
+<style scoped>
+.pc-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 20px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.pc-card:hover { transform: translateY(-2px); }
+.pc-card:active { transform: scale(0.97); }
+.pc-avatar {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800;
+  background: linear-gradient(135deg, rgba(255,102,53,0.18), rgba(255,181,159,0.14));
+  color: var(--fx-accent);
+  border: 2px solid rgba(255,255,255,0.65);
+  box-shadow: 0 2px 8px rgba(255,102,53,0.12);
+}
+</style>
