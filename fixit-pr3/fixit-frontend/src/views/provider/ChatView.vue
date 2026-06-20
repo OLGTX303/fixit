@@ -7,6 +7,7 @@ import { useChatCryptoStore } from '../../stores/chatCrypto'
 import * as api from '../../services/api'
 import * as harmReview from '../../services/harmReview'
 import PinModal from '../../components/PinModal.vue'
+import { E2E_ENABLED } from '../../config'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,8 +39,15 @@ const otherInitials = computed(() =>
 
 onMounted(async () => {
   await bookingsStore.load()
-  await chatCrypto.loadStatus()
 
+  // ── Debug: E2E disabled → skip PIN, load/send plain text ──────────────────
+  if (!E2E_ENABLED) {
+    await initChat()
+    return
+  }
+
+  // ── E2E enabled → PIN setup / unlock then decrypt ─────────────────────────
+  await chatCrypto.loadStatus()
   if (!chatCrypto.pinConfigured) {
     showPinSetup.value = true
     return
@@ -59,22 +67,25 @@ async function onPinReady() {
 
 async function initChat() {
   try {
-    await chatCrypto.ensureJobKey(jobId.value)
+    if (E2E_ENABLED) await chatCrypto.ensureJobKey(jobId.value)
     const raw = await api.getMessagesForJob(route.params.id)
     messages.value = raw
     await decryptAll(raw)
     ready.value = true
     scrollToEnd()
   } catch (e) {
-    chatCrypto.error = e.message
-    showPinUnlock.value = true
+    if (E2E_ENABLED) {
+      chatCrypto.error = e.message
+      showPinUnlock.value = true
+    }
   }
 }
 
 async function decryptAll(msgs) {
   const bodies = {}
   for (const m of msgs) {
-    bodies[m.id] = await chatCrypto.decryptMessage(m)
+    // With E2E off, just show the stored plain-text body.
+    bodies[m.id] = E2E_ENABLED ? await chatCrypto.decryptMessage(m) : (m.body || '')
   }
   displayBodies.value = bodies
 }
@@ -92,15 +103,27 @@ async function send() {
   harmWarning.value = review.message
   if (!review.allowed) return
 
-  const encrypted = await chatCrypto.encryptForJob(jobId.value, text)
-  const msg = await api.sendMessage(jobId.value, {
-    is_encrypted: true,
-    ciphertext: encrypted.ciphertext,
-    iv: encrypted.iv,
-    content_hash: encrypted.content_hash,
-    harm_status: review.status,
-    harm_categories: review.categories,
-  })
+  let payload
+  if (E2E_ENABLED) {
+    const encrypted = await chatCrypto.encryptForJob(jobId.value, text)
+    payload = {
+      is_encrypted: true,
+      ciphertext: encrypted.ciphertext,
+      iv: encrypted.iv,
+      content_hash: encrypted.content_hash,
+      harm_status: review.status,
+      harm_categories: review.categories,
+    }
+  } else {
+    payload = {
+      is_encrypted: false,
+      body: text,
+      harm_status: review.status,
+      harm_categories: review.categories,
+    }
+  }
+
+  const msg = await api.sendMessage(jobId.value, payload)
 
   messages.value.push(msg)
   displayBodies.value[msg.id] = text
@@ -129,17 +152,20 @@ function timeOf(iso) {
       </div>
       <div class="flex-grow-1">
         <div class="fw-bold" style="font-size:15px">{{ otherName }}</div>
-        <div style="font-size:12px;color:var(--fx-success);font-weight:500">
+        <div v-if="E2E_ENABLED" style="font-size:12px;color:var(--fx-success);font-weight:500">
           🔒 E2E encrypted · #{{ route.params.id }}
         </div>
+        <div v-else style="font-size:12px;color:var(--fx-muted);font-weight:500">
+          Job #{{ route.params.id }}
+        </div>
       </div>
-      <button class="glass-btn" style="border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700" @click="chatCrypto.lock(); showPinUnlock = true">
+      <button v-if="E2E_ENABLED" class="glass-btn" style="border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700" @click="chatCrypto.lock(); showPinUnlock = true">
         Lock
       </button>
     </div>
 
     <div v-if="!ready" class="flex-grow-1 d-flex align-items-center justify-content-center text-muted" style="font-size:13px">
-      Unlock with PIN to view messages…
+      {{ E2E_ENABLED ? 'Unlock with PIN to view messages…' : 'Loading messages…' }}
     </div>
 
     <div v-else ref="listEl" class="flex-grow-1 d-flex flex-column gap-2 px-3 py-3" style="overflow-y:auto">
