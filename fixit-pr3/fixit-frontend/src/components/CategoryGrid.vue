@@ -1,30 +1,36 @@
 <script setup>
+// 3D glass category icons (imported so Vite bundles + fingerprints them,
+// which keeps them working under Capacitor's file:// origin on Android).
+import plumbing   from '../assets/category-icons/plumbing.png'
+import electrical from '../assets/category-icons/electrical.png'
+import cleaning   from '../assets/category-icons/cleaning.png'
+import gardening  from '../assets/category-icons/gardening.png'
+import acService  from '../assets/category-icons/ac-service.png'
+import moving     from '../assets/category-icons/moving.png'
+
 defineProps({ categories: { type: Array, default: () => [] } })
 defineEmits(['select'])
 
-const cats = {
-  Plumbing:   { icon: 'plumbing',      color: '#1D4ED8' },
-  Electrical: { icon: 'electrical_services', color: '#B45309' },
-  Cleaning:   { icon: 'cleaning_services',   color: '#15803D' },
-  Gardening:  { icon: 'yard',          color: '#166534' },
-  'AC Service':{ icon: 'ac_unit',      color: '#1E40AF' },
-  Moving:     { icon: 'local_shipping',color: '#FF6635' },
+const ICONS = {
+  Plumbing:     plumbing,
+  Electrical:   electrical,
+  Cleaning:     cleaning,
+  Gardening:    gardening,
+  'AC Service': acService,
+  Moving:       moving,
 }
-const catFor = (name) => cats[name] || { icon: 'build', color: '#FF6635' }
+const iconFor = (name) => ICONS[name] || null
 </script>
 
 <template>
   <div class="cg-grid">
     <div v-for="c in categories" :key="c.id"
          class="cg-tile liquid-glass" role="button" @click="$emit('select', c)">
-      <div class="cg-icon-wrap" :style="{ color: catFor(c.name).color }">
-        <span class="material-symbols-outlined"
-              style="font-size:26px;font-variation-settings:'FILL' 1">
-          {{ catFor(c.name).icon }}
-        </span>
-        <span v-if="!cats[c.name]" style="font-size:24px">{{ c.icon_url }}</span>
+      <div class="cg-icon-stage">
+        <img v-if="iconFor(c.name)" :src="iconFor(c.name)" :alt="c.name" class="cg-icon-img" />
+        <span v-else style="font-size:30px">{{ c.icon_url }}</span>
       </div>
-      <span class="cg-label" :style="{ color: catFor(c.name).color }">{{ c.name }}</span>
+      <span class="cg-label">{{ c.name }}</span>
     </div>
   </div>
 </template>
@@ -32,28 +38,30 @@ const catFor = (name) => cats[name] || { icon: 'build', color: '#FF6635' }
 <style scoped>
 .cg-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
 .cg-tile {
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 8px;
-  padding: 16px 8px; border-radius: 20px;
+  justify-content: center; gap: 6px;
+  padding: 20px 12px 16px; border-radius: 24px;
   cursor: pointer;
-  transition: transform 0.18s ease;
-  min-height: 90px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .cg-tile:hover  { transform: translateY(-3px); }
-.cg-tile:active { transform: scale(0.94); }
-.cg-icon-wrap {
-  width: 44px; height: 44px; border-radius: 14px;
-  background: rgba(255,255,255,0.45);
+.cg-tile:active { transform: scale(0.96); }
+.cg-icon-stage {
+  width: 96px; height: 96px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,255,255,0.55);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.60);
+  margin-bottom: 6px;
+}
+.cg-icon-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.10));
 }
 .cg-label {
-  font-size: 11px; font-weight: 700; text-align: center;
-  letter-spacing: 0.02em; line-height: 1.3;
+  font-size: 15px; font-weight: 600; text-align: center;
+  color: var(--fx-text); letter-spacing: -0.01em;
 }
 </style>
