@@ -57,8 +57,19 @@ npm run android:release
 ```
 
 Release signing is intentionally not committed. To create a Play Store-ready APK,
-sign the release artifact with your private keystore or configure local Gradle
-signing credentials outside version control.
+copy `android/signing.properties.example` to `android/signing.properties` and
+fill in your private keystore passwords:
+
+```properties
+storeFile=fixit-release-key.jks
+storePassword=your-keystore-password
+keyAlias=fixit
+keyPassword=your-key-password
+```
+
+Then run `npm run android:release` again. With `signing.properties` present,
+Gradle signs the release APK locally. Do not commit `*.jks` or
+`signing.properties`.
 
 ## Features enabled
 

@@ -1,0 +1,4 @@
+storeFile=fixit-release-key.jks
+storePassword=replace-with-keystore-password
+keyAlias=fixit
+keyPassword=replace-with-key-password
