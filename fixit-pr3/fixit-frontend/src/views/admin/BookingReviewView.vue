@@ -67,7 +67,7 @@ const label = (s) => s.replace('_', ' ')
       <div v-for="b in shown" :key="b.id" class="fx-card" style="padding:12px">
         <div class="d-flex justify-content-between align-items-start mb-1">
           <span class="fw-bold" style="font-size:13px">#{{ b.id }}</span>
-          <span class="fw-bold" style="font-size:15px">${{ b.total }}</span>
+          <span class="fw-bold" style="font-size:15px">RM{{ b.total }}</span>
         </div>
         <div class="d-flex justify-content-between align-items-center">
           <div>

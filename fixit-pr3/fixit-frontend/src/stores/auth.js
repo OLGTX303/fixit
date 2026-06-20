@@ -48,6 +48,10 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
+    setUser(user) {
+      this.user = user
+      api.persistSession(this.token, user)
+    },
     logout() {
       api.logout()
       this.user = null

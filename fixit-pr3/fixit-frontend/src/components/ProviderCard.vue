@@ -20,7 +20,7 @@ const roleLabel = computed(() => props.provider.category_names?.join(', ') || 'P
     <div class="flex-grow-1" style="min-width:0">
       <div class="d-flex justify-content-between align-items-start">
         <div class="fw-semibold" style="font-size:14px">{{ provider.name }}</div>
-        <div class="fw-bold text-accent" style="font-size:14px">${{ provider.base_rate }}/hr</div>
+        <div class="fw-bold text-accent" style="font-size:14px">RM{{ provider.base_rate }}/hr</div>
       </div>
       <div style="font-size:12px;color:var(--fx-muted)">{{ roleLabel }}</div>
       <div class="d-flex align-items-center gap-2 mt-1">

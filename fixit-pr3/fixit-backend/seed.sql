@@ -1,4 +1,5 @@
 -- FixIt PR3 — seed data (password for all users: password123)
+-- Localised for Johor Bahru, Malaysia (coordinates, addresses, phones in MYR market).
 USE fixit;
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -15,17 +16,17 @@ SET FOREIGN_KEY_CHECKS = 1;
 SET @pw = '$2b$10$W8uJ9XXqGA48SFIvvC7qjOTKzlUlJWrmaUQtjli4z6EfMsHDDM2Nu';
 
 INSERT INTO User (id, name, email, password_hash, role, phone) VALUES
-(1,  'Alex Chen',     'alex@email.com',    @pw, 'customer', '+44 7700 900001'),
-(2,  'Sandra Mills',  'sandra@email.com',  @pw, 'customer', '+44 7700 900002'),
-(3,  'David Kim',     'david@email.com',   @pw, 'customer', '+44 7700 900003'),
-(4,  'Marcus Rivera', 'marcus@email.com',  @pw, 'provider', '+44 7700 900004'),
-(5,  'Priya Sharma',  'priya@email.com',   @pw, 'provider', '+44 7700 900005'),
-(6,  'Tom Walsh',     'tom@email.com',     @pw, 'provider', '+44 7700 900006'),
-(7,  'Leon Mendez',   'leon@email.com',    @pw, 'provider', '+44 7700 900007'),
-(8,  'James Okoye',   'james@email.com',   @pw, 'provider', '+44 7700 900008'),
-(9,  'Rosa Tan',      'rosa@email.com',    @pw, 'provider', '+44 7700 900009'),
-(10, 'Admin One',     'admin@fixit.com',   @pw, 'admin',    '+44 7700 900010'),
-(11, 'Admin Two',     'ops@fixit.com',     @pw, 'admin',    '+44 7700 900011');
+(1,  'Alex Chen',      'alex@email.com',    @pw, 'customer', '+60 12-345 6701'),
+(2,  'Siti Nuraina',   'sandra@email.com',  @pw, 'customer', '+60 13-456 7802'),
+(3,  'David Kim',      'david@email.com',   @pw, 'customer', '+60 16-567 8903'),
+(4,  'Razak Ibrahim',  'marcus@email.com',  @pw, 'provider', '+60 17-678 9004'),
+(5,  'Lim Mei Ling',   'priya@email.com',   @pw, 'provider', '+60 12-789 0105'),
+(6,  'Kumar Raj',      'tom@email.com',     @pw, 'provider', '+60 19-890 1206'),
+(7,  'Hafiz Rahman',   'leon@email.com',    @pw, 'provider', '+60 11-2345 6707'),
+(8,  'Wong Ah Kau',    'james@email.com',   @pw, 'provider', '+60 14-901 2308'),
+(9,  'Nurul Aina',     'rosa@email.com',    @pw, 'provider', '+60 18-012 3409'),
+(10, 'Admin One',      'admin@fixit.com',   @pw, 'admin',    '+60 12-000 0010'),
+(11, 'Admin Two',      'ops@fixit.com',     @pw, 'admin',    '+60 12-000 0011');
 
 INSERT INTO ServiceCategory (id, name, description, icon_url) VALUES
 (1, 'Plumbing',   'Pipe repair, leaks, installations', '🔧'),
@@ -35,32 +36,33 @@ INSERT INTO ServiceCategory (id, name, description, icon_url) VALUES
 (5, 'AC Service', 'Install, repair and maintenance',     '❄️'),
 (6, 'Moving',     'Local moves and heavy lifting',       '📦');
 
+-- Provider locations are spread across Johor Bahru within ~10 km of the city centre.
 INSERT INTO ProviderProfile (id, user_id, bio, location, base_rate, is_verified, kyc_doc_url, avg_rating, latitude, longitude, services_json) VALUES
-(1, 4, 'Master plumber with 8+ years experience. Specialising in residential repairs and installations.', 'Greenfield District, Metro City', 45.00, 1, '/uploads/kyc/marcus_id.jpg', 4.90, 51.51010000, -0.13400000, '["Pipe Repair","Drain Cleaning","Leak Detection","Installation"]'),
-(2, 5, 'Certified electrician. Domestic rewiring, fault finding and smart-home installs.', 'Riverside, Metro City', 52.00, 1, '/uploads/kyc/priya_id.jpg', 4.80, 51.50500000, -0.11900000, '["Wiring","Fuse Box","Lighting","Fault Finding"]'),
-(3, 6, 'Reliable deep-clean specialist. End-of-tenancy and regular home cleaning.', 'Old Town, Metro City', 35.00, 1, '/uploads/kyc/tom_id.jpg', 4.70, 51.50360000, -0.14100000, '["Deep Clean","End of Tenancy","Regular Clean","Carpets"]'),
-(4, 7, 'Gardener and landscaper. Lawn care, hedge trimming and seasonal tidy-ups.', 'Hillcrest, Metro City', 40.00, 1, '/uploads/kyc/leon_id.jpg', 4.60, 51.51200000, -0.11100000, '["Lawn Care","Hedge Trimming","Planting","Clearance"]'),
-(5, 8, 'Electrician specialising in AC units and ventilation. Awaiting verification.', 'Riverside, Metro City', 48.00, 0, '/uploads/kyc/james_id.jpg', 0.00, 51.49900000, -0.12500000, '["AC Install","AC Repair","Ventilation"]'),
-(6, 9, 'Home cleaner offering eco-friendly products. Awaiting verification.', 'Old Town, Metro City', 30.00, 0, '/uploads/kyc/rosa_id.jpg', 0.00, 51.50750000, -0.13000000, '["Regular Clean","Eco Clean","Ironing"]');
+(1, 4, 'Master plumber with 8+ years experience. Specialising in residential repairs and installations.', 'Kempas, Johor Bahru', 45.00, 1, '/uploads/kyc/marcus_id.jpg', 4.90, 1.53600000, 103.71800000, '["Pipe Repair","Drain Cleaning","Leak Detection","Installation"]'),
+(2, 5, 'Certified electrician. Domestic rewiring, fault finding and smart-home installs.', 'Taman Pelangi, Johor Bahru', 52.00, 1, '/uploads/kyc/priya_id.jpg', 4.80, 1.48550000, 103.76200000, '["Wiring","Fuse Box","Lighting","Fault Finding"]'),
+(3, 6, 'Reliable deep-clean specialist. End-of-tenancy and regular home cleaning.', 'Taman Molek, Johor Bahru', 35.00, 1, '/uploads/kyc/tom_id.jpg', 4.70, 1.52760000, 103.76000000, '["Deep Clean","End of Tenancy","Regular Clean","Carpets"]'),
+(4, 7, 'Gardener and landscaper. Lawn care, hedge trimming and seasonal tidy-ups.', 'Johor Bahru City Centre', 40.00, 1, '/uploads/kyc/leon_id.jpg', 4.60, 1.46550000, 103.75780000, '["Lawn Care","Hedge Trimming","Planting","Clearance"]'),
+(5, 8, 'Electrician specialising in AC units and ventilation. Awaiting verification.', 'Permas Jaya, Johor Bahru', 48.00, 0, '/uploads/kyc/james_id.jpg', 0.00, 1.48890000, 103.73000000, '["AC Install","AC Repair","Ventilation"]'),
+(6, 9, 'Home cleaner offering eco-friendly products. Awaiting verification.', 'Setia Tropika, Johor Bahru', 30.00, 0, '/uploads/kyc/rosa_id.jpg', 0.00, 1.51000000, 103.72500000, '["Regular Clean","Eco Clean","Ironing"]');
 
 INSERT INTO ProviderCategory (provider_id, category_id) VALUES
 (1, 1), (2, 2), (3, 3), (4, 4), (5, 2), (5, 5), (6, 3);
 
 INSERT INTO Job (id, customer_id, provider_id, category_id, status, scheduled_at, address, total, notes) VALUES
-(2847, 1, 1, 1, 'in_progress', '2026-06-11 14:00:00', '14 Maple Street, Apt 3', 95.00, 'Leaking pipe under kitchen sink. Customer reports water damage to cabinet floor.'),
-(2846, 2, 2, 2, 'completed',   '2026-06-08 10:00:00', '8 Oak Avenue', 120.00, 'Replace consumer unit and test circuits.'),
-(2845, 3, 3, 3, 'reviewed',    '2026-06-05 13:00:00', '22 Pine Road', 60.00, 'End-of-tenancy deep clean, two-bed flat.'),
-(2848, 1, 4, 4, 'requested',   '2026-06-15 09:00:00', '14 Maple Street, Apt 3', 80.00, 'Front lawn overgrown, needs cut and hedge trim.');
+(2847, 1, 1, 1, 'in_progress', '2026-06-11 14:00:00', 'No. 14, Jalan Setia Tropika 1/5, Taman Setia Tropika, Johor Bahru', 95.00, 'Leaking pipe under kitchen sink. Customer reports water damage to cabinet floor.'),
+(2846, 2, 2, 2, 'completed',   '2026-06-08 10:00:00', '8, Jalan Molek 2/3, Taman Molek, Johor Bahru', 120.00, 'Replace consumer unit and test circuits.'),
+(2845, 3, 3, 3, 'reviewed',    '2026-06-05 13:00:00', '22, Jalan Pelangi 5, Taman Pelangi, Johor Bahru', 60.00, 'End-of-tenancy deep clean, two-bed unit.'),
+(2848, 1, 4, 4, 'requested',   '2026-06-15 09:00:00', 'No. 14, Jalan Setia Tropika 1/5, Taman Setia Tropika, Johor Bahru', 80.00, 'Front lawn overgrown, needs cut and hedge trim.');
 
 INSERT INTO Review (id, job_id, rating, comment, created_at) VALUES
 (1, 2845, 5, 'End-of-tenancy clean was spotless. Got my full deposit back!', '2026-06-05 18:30:00'),
-(2, 2846, 5, 'Priya rewired the kitchen safely and tidily. Highly recommended.', '2026-06-08 16:10:00'),
+(2, 2846, 5, 'Mei Ling rewired the kitchen safely and tidily. Highly recommended.', '2026-06-08 16:10:00'),
 (3, 2846, 4, 'Great work, fair price. Arrived a little late but kept me informed.', '2026-06-09 09:05:00'),
 (4, 2845, 5, 'Fixed our burst pipe in under an hour. Incredibly professional!', '2026-06-06 11:20:00'),
 (5, 2845, 5, 'Friendly, on time, and left the place cleaner than before.', '2026-06-07 14:45:00');
 
 INSERT INTO Message (id, job_id, sender_id, body, sent_at) VALUES
-(1, 2847, 1, 'Hi Marcus, when will you arrive?', '2026-06-11 13:42:00'),
+(1, 2847, 1, 'Hi Razak, when will you arrive?', '2026-06-11 13:42:00'),
 (2, 2847, 4, 'On my way now, about 10 minutes!', '2026-06-11 13:44:00'),
 (3, 2847, 1, 'Great, the front door is open for you.', '2026-06-11 13:45:00'),
 (4, 2847, 4, 'Perfect, see you soon 👍', '2026-06-11 13:46:00'),

@@ -11,7 +11,7 @@ final class UserModel
 {
     public function findByEmail(string $email): ?array
     {
-        $stmt = Connection::get()->prepare('SELECT id, name, email, password_hash, role, phone FROM User WHERE email = :email LIMIT 1');
+        $stmt = Connection::get()->prepare('SELECT id, name, email, password_hash, role, phone, avatar_url FROM User WHERE email = :email LIMIT 1');
         $stmt->execute(['email' => $email]);
         $row = $stmt->fetch();
         return $row ?: null;
@@ -20,7 +20,7 @@ final class UserModel
     public function findById(int $id): ?array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT id, name, email, role, phone,
+            'SELECT id, name, email, role, phone, avatar_url,
                     stripe_test_customer_id,
                     stripe_test_default_payment_method_id,
                     stripe_test_payment_method_last4,
@@ -100,7 +100,37 @@ final class UserModel
 
     public function listAll(): array
     {
-        $stmt = Connection::get()->query('SELECT id, name, email, role, phone FROM User ORDER BY id');
+        $stmt = Connection::get()->query('SELECT id, name, email, role, phone, avatar_url FROM User ORDER BY id');
         return $stmt->fetchAll();
+    }
+
+    /** True if another user (not $excludeId) already uses this email. */
+    public function emailTakenByOther(string $email, int $excludeId): bool
+    {
+        $stmt = Connection::get()->prepare('SELECT id FROM User WHERE email = :email AND id <> :id LIMIT 1');
+        $stmt->execute(['email' => $email, 'id' => $excludeId]);
+        return (bool) $stmt->fetch();
+    }
+
+    /**
+     * Update editable profile fields. Only keys present in $fields are written.
+     * @param array{name?:string,email?:string,phone?:?string,avatar_url?:string} $fields
+     */
+    public function updateProfile(int $userId, array $fields): ?array
+    {
+        $allowed = ['name', 'email', 'phone', 'avatar_url'];
+        $set = [];
+        $params = ['id' => $userId];
+        foreach ($allowed as $col) {
+            if (array_key_exists($col, $fields)) {
+                $set[] = "$col = :$col";
+                $params[$col] = $fields[$col];
+            }
+        }
+        if ($set) {
+            $sql = 'UPDATE User SET ' . implode(', ', $set) . ' WHERE id = :id';
+            Connection::get()->prepare($sql)->execute($params);
+        }
+        return $this->findById($userId);
     }
 }

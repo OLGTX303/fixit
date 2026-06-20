@@ -2,7 +2,7 @@
 
 const TOKEN_KEY = 'fixit_token'
 const USER_KEY = 'fixit_user'
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+const BASE = import.meta.env.VITE_API_URL || 'https://fixit.olgtx.com/api'
 
 let onUnauthorized = null
 
@@ -39,6 +39,22 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn
 }
 
+// Extract the first balanced JSON object/array from a string that may have
+// extra (non-JSON) content before or after it — e.g. PHP warning HTML.
+function salvageJson(text) {
+  const start = text.search(/[{[]/)
+  if (start === -1) return null
+  const open = text[start]
+  const close = open === '{' ? '}' : ']'
+  const end = text.lastIndexOf(close)
+  if (end <= start) return null
+  try {
+    return JSON.parse(text.slice(start, end + 1))
+  } catch {
+    return null
+  }
+}
+
 async function request(method, path, body) {
   const headers = { 'Content-Type': 'application/json' }
   const token = getStoredToken()
@@ -56,7 +72,10 @@ async function request(method, path, body) {
     try {
       data = JSON.parse(text)
     } catch {
-      data = { error: text }
+      // Some PHP hosts append deprecation/notice HTML around the JSON body,
+      // which breaks a strict parse. Salvage the embedded JSON object/array
+      // so a valid response (e.g. Stripe client_secret) is never dropped.
+      data = salvageJson(text) ?? { error: text }
     }
   }
 
@@ -74,6 +93,7 @@ const del = (path) => request('DELETE', path)
 // ── Reads ───────────────────────────────────────────────────────────────────
 export const getUsers = () => get('/admin/users')
 export const getCategories = () => get('/categories')
+export const getMapsConfig = () => get('/config/maps')
 
 export async function getProviders() {
   return getStoredUser()?.role === 'admin' ? get('/admin/providers') : get('/providers')
@@ -135,6 +155,12 @@ export const updateBookingStatus = (bookingId, status) =>
 
 export const createReview = (payload) => post('/reviews', payload)
 export const sendMessage = (jobId, payload) => post(`/jobs/${jobId}/messages`, payload)
+
+// ── Profile ─────────────────────────────────────────────────────────────────
+export const updateProfile = (payload) => patch('/users/me', payload)
+export const uploadAvatar = (dataUrl) => post('/users/me/avatar', { image: dataUrl })
+export const requestEmailOtp = (email) => post('/users/me/email/otp', { email })
+export const verifyEmailOtp = (email, otp) => post('/users/me/email/verify', { email, otp })
 
 export const getCryptoStatus = () => get('/crypto/status')
 export const fetchPinSalt = () => get('/crypto/pin/salt')

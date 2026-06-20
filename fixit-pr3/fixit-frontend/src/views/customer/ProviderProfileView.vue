@@ -46,7 +46,7 @@ const initials = computed(() =>
         </div>
       </div>
       <div class="text-end">
-        <div style="font-size:22px;font-weight:800;color:var(--fx-accent)">${{ provider.base_rate }}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--fx-accent)">RM{{ provider.base_rate }}</div>
         <div style="font-size:12px;color:var(--fx-muted)">/hour</div>
       </div>
     </div>
@@ -75,7 +75,7 @@ const initials = computed(() =>
     <div v-if="!reviews.length" class="text-muted mb-3" style="font-size:13px">No reviews yet.</div>
 
     <button class="btn btn-primary w-100 mt-2" @click="router.push({ name: 'booking-form', params: { id: provider.id } })">
-      Book Now — ${{ provider.base_rate }}/hr
+      Book Now — RM{{ provider.base_rate }}/hr
     </button>
   </div>
 
