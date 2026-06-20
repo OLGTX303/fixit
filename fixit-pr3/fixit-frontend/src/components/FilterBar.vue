@@ -39,7 +39,7 @@ const emit = defineEmits([
                @input="emit('update:modelMaxDistance', Number($event.target.value))" />
       </div>
       <div class="col-12 col-md-4">
-        <label class="fx-label">Max price: ${{ modelMaxPrice }}/hr</label>
+        <label class="fx-label">Max price: RM{{ modelMaxPrice }}/hr</label>
         <input type="range" class="form-range" min="20" max="100" step="5"
                :value="modelMaxPrice"
                @input="emit('update:modelMaxPrice', Number($event.target.value))" />

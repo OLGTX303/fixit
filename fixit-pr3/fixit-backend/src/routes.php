@@ -13,6 +13,7 @@ use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ReviewController;
 use FixIt\Controllers\StripePaymentController;
+use FixIt\Controllers\UserController;
 use FixIt\Middleware\JwtAuth;
 use FixIt\Middleware\RateLimitMiddleware;
 use FixIt\Middleware\RoleGuard;
@@ -31,12 +32,13 @@ return function (App $app): void {
     $crypto = new CryptoController();
     $kyc = new KycController();
     $stripe = new StripePaymentController();
+    $users = new UserController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $rateLimit
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit
     ) {
-        // Stripe webhook â€” no JWT; verified via Stripe-Signature
+        // Stripe webhook â€?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
         $group->get('/auth/captcha', [$auth, 'captchaChallenge'])->add($rateLimit);
         $group->post('/auth/captcha/verify', [$auth, 'captchaVerify'])->add($rateLimit);
@@ -45,10 +47,16 @@ return function (App $app): void {
         $group->get('/categories', [$categories, 'list']);
         $group->get('/providers', [$providers, 'list']);
         $group->get('/providers/{id}', [$providers, 'get']);
+        // Public avatar proxy â€?streams the image object from R2 by key.
+        $group->get('/avatars/{key:.+}', [$users, 'serveAvatar']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users
         ) {
+            $secure->patch('/users/me', [$users, 'updateMe']);
+            $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
+            $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp']);
+            $secure->post('/users/me/email/verify', [$users, 'verifyEmailOtp']);
             $secure->get('/payments/stripe/config', [$stripe, 'config']);
             $secure->post('/payments/stripe/customer', [$stripe, 'ensureCustomer']);
             $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent']);
@@ -109,6 +117,18 @@ return function (App $app): void {
 
     $app->get('/api/health', function ($request, $response) {
         $response->getBody()->write(json_encode(['status' => 'ok']));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // Public client config â€?the Google Maps JS key is stored server-side in
+    // .env (GOOGLE_MAPS_API_KEY) and fetched at runtime so it never lives in
+    // the committed frontend source. Restrict the key in Google Cloud Console.
+    $app->get('/api/config/maps', function ($request, $response) {
+        $key = $_ENV['GOOGLE_MAPS_API_KEY'] ?? '';
+        $response->getBody()->write(json_encode([
+            'maps_api_key' => $key,
+            'configured' => $key !== '',
+        ]));
         return $response->withHeader('Content-Type', 'application/json');
     });
 

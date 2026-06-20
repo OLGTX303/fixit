@@ -75,7 +75,7 @@ async function confirm() {
         <div style="font-size:12px;color:var(--fx-muted)">{{ provider.category_names.join(', ') }}</div>
       </div>
       <div class="text-end">
-        <div class="fw-bold text-accent">${{ provider.base_rate }}/hr</div>
+        <div class="fw-bold text-accent">RM{{ provider.base_rate }}/hr</div>
         <RatingStars :rating="provider.avg_rating" :size="11" />
       </div>
     </div>
@@ -118,16 +118,16 @@ async function confirm() {
     <div class="fx-card bg-accent-soft mb-3">
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
         <span style="color:var(--fx-muted)">Service fee (est. {{ ESTIMATED_HOURS }} hrs)</span>
-        <span class="fw-semibold">${{ (provider.base_rate * ESTIMATED_HOURS).toFixed(2) }}</span>
+        <span class="fw-semibold">RM{{ (provider.base_rate * ESTIMATED_HOURS).toFixed(2) }}</span>
       </div>
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
         <span style="color:var(--fx-muted)">Platform fee</span>
-        <span class="fw-semibold">${{ platformFee.toFixed(2) }}</span>
+        <span class="fw-semibold">RM{{ platformFee.toFixed(2) }}</span>
       </div>
       <hr style="border-color:rgba(255,102,53,.2)" />
       <div class="d-flex justify-content-between align-items-center">
         <span class="fw-bold" style="font-size:14px">Estimated Total</span>
-        <span class="fw-bold text-accent" style="font-size:16px">${{ total.toFixed(2) }}</span>
+        <span class="fw-bold text-accent" style="font-size:16px">RM{{ total.toFixed(2) }}</span>
       </div>
     </div>
 

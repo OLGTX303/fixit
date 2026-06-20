@@ -64,7 +64,7 @@ export async function mountSaveCardElement(containerEl) {
 }
 
 /** Pay using saved pm_ without re-entering card details. */
-export async function payWithSavedCard({ amountCents, bookingId, currency = 'usd' }) {
+export async function payWithSavedCard({ amountCents, bookingId, currency = 'myr' }) {
   const { stripe } = await getStripe()
   const result = await api.payWithStripeSavedMethod({
     amount_cents: amountCents,

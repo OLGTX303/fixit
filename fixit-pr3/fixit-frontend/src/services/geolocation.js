@@ -1,7 +1,8 @@
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
 
-const DEFAULT_CENTER = [51.5074, -0.1278]
+// Johor Bahru city centre — fallback when device location is unavailable.
+const DEFAULT_CENTER = [1.4927, 103.7414]
 
 export function isNativeApp() {
   return Capacitor.isNativePlatform()

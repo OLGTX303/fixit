@@ -15,18 +15,28 @@ const acceptedTerms = ref(false)
 const acceptedPrivacy = ref(false)
 const captchaProof = ref(null)
 const captchaRef = ref(null)
+const showCaptcha = ref(false)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
-function onCaptchaVerified(proof) {
-  captchaProof.value = proof
-}
-
-function onCaptchaReset() {
+// Submit opens the verification popup; registration runs once the slider passes.
+function submit() {
+  if (!acceptedTerms.value || !acceptedPrivacy.value) return
   captchaProof.value = null
+  showCaptcha.value = true
+  // (Re)load a fresh puzzle each time the popup opens.
+  setTimeout(() => captchaRef.value?.reload?.(), 0)
 }
 
-async function submit() {
-  if (!acceptedTerms.value || !acceptedPrivacy.value || !captchaProof.value) return
+function closeCaptcha() {
+  showCaptcha.value = false
+}
+
+async function onCaptchaVerified(proof) {
+  captchaProof.value = proof
+  await register()
+}
+
+async function register() {
   try {
     const user = await auth.register({
       name: form.value.name,
@@ -39,8 +49,10 @@ async function submit() {
       captcha_id: captchaProof.value.captcha_id,
       captcha_pass_token: captchaProof.value.captcha_pass_token,
     })
+    showCaptcha.value = false
     router.push({ name: landing[user.role] || 'home' })
   } catch {
+    // Registration failed — keep the popup open with a fresh puzzle to retry.
     captchaProof.value = null
     captchaRef.value?.reload?.()
   }
@@ -75,8 +87,6 @@ async function submit() {
         </div>
       </div>
 
-      <SliderPuzzleCaptcha ref="captchaRef" @verified="onCaptchaVerified" @reset="onCaptchaReset" />
-
       <div class="fx-card" style="padding:14px;background:var(--fx-border-soft);box-shadow:none">
         <label class="form-check mb-2">
           <input v-model="acceptedTerms" type="checkbox" class="form-check-input" required />
@@ -94,7 +104,7 @@ async function submit() {
         </label>
       </div>
 
-      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy || !captchaProof">
+      <button class="btn btn-primary w-100" type="submit" :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy">
         {{ auth.loading ? 'Creating…' : 'Create Account' }}
       </button>
     </form>
@@ -104,5 +114,33 @@ async function submit() {
       <router-link :to="{ name: 'login' }" class="text-accent fw-semibold text-decoration-none">Sign in</router-link>
     </div>
 
+    <!-- Verification popup -->
+    <div v-if="showCaptcha" class="fx-modal-backdrop" @click.self="closeCaptcha">
+      <div class="fx-modal">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="fw-bold" style="font-size:16px">Verify you're human</span>
+          <button class="btn btn-light rounded-circle" style="width:30px;height:30px;padding:0" @click="closeCaptcha">✕</button>
+        </div>
+        <SliderPuzzleCaptcha ref="captchaRef" @verified="onCaptchaVerified" />
+        <div v-if="auth.loading" class="text-center mt-2" style="font-size:13px;color:var(--fx-muted)">Creating your account…</div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.fx-modal-backdrop {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.fx-modal {
+  background: var(--fx-surface);
+  border-radius: 16px;
+  padding: 18px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+</style>

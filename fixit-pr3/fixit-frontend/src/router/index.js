@@ -8,6 +8,11 @@ const routes = [
   { path: '/legal/terms', name: 'legal-terms', component: () => import('../views/legal/LegalDocumentView.vue'), meta: { public: true, legalKey: 'terms' } },
   { path: '/legal/privacy', name: 'legal-privacy', component: () => import('../views/legal/LegalDocumentView.vue'), meta: { public: true, legalKey: 'privacy' } },
 
+  // Account / profile — available to every authenticated role
+  { path: '/account', name: 'account', component: () => import('../views/AccountView.vue') },
+  { path: '/account/email', name: 'account-email', component: () => import('../views/EmailEditView.vue') },
+  { path: '/account/billing', name: 'account-billing', component: () => import('../views/BillingView.vue') },
+
   // Customer
   { path: '/home', name: 'home', component: () => import('../views/customer/HomeView.vue'), meta: { role: 'customer' } },
   { path: '/search', name: 'search', component: () => import('../views/customer/SearchView.vue'), meta: { role: 'customer' } },

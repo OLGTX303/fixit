@@ -43,6 +43,16 @@ body {
 .flex-column { flex-direction: column; }
 .flex-fill { flex: 1 1 0; }
 .flex-grow-1 { flex-grow: 1; }
+.flex-wrap { flex-wrap: wrap; }
+
+/* Minimal grid + range utilities (FilterBar relies on these; Bootstrap removed) */
+.row { display: flex; flex-wrap: wrap; }
+.g-3 { gap: 12px; }
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+@media (min-width: 768px) {
+  .col-md-4 { flex: 0 0 calc((100% - 24px) / 3); max-width: calc((100% - 24px) / 3); }
+}
+.form-range { width: 100%; accent-color: var(--fx-accent); }
 .align-items-center { align-items: center; }
 .align-items-start { align-items: flex-start; }
 .justify-content-between { justify-content: space-between; }
@@ -151,17 +161,44 @@ body {
 
 /* App shell: phone-style column that grows to full width on desktop */
 .fx-shell { min-height: 100%; display: flex; flex-direction: column; }
-.fx-main { flex: 1; padding-bottom: 88px; }   /* room for bottom nav on mobile */
+/* Reserve space for the device status bar so page headers aren't clipped.
+   env(safe-area-inset-top) is 0 on web/desktop and the status-bar height on
+   Android/iOS (resolves only because index.html sets viewport-fit=cover). */
+.fx-main {
+  flex: 1;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 88px;   /* room for bottom nav on mobile */
+}
 
-/* Bottom tab nav (mobile-first) */
+/* Plain white strip behind the status bar (no orange bar) so dark status icons
+   stay legible when the WebView draws edge-to-edge (Android 15+). Collapses
+   to 0 height on web/desktop and when Capacitor keeps the bar non-overlaid. */
+.fx-statusbar-bg {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
+  height: env(safe-area-inset-top);
+  background: var(--fx-surface);
+  pointer-events: none;
+}
+
+/* Bottom tab nav (mobile-first). Solid background — backdrop-filter is avoided
+   because the Android WebView fails to composite it on a fixed element, which
+   made the whole nav invisible. */
 .fx-bottomnav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-  background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
+  position: fixed; bottom: 0; left: 0; right: 0;
+  width: 100%; box-sizing: border-box; z-index: 1000;
+  background: #ffffff;
   border-top: 1px solid var(--fx-border);
-  display: flex; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  display: flex; flex-wrap: nowrap; padding: 10px 0;
+}
+/* Add the device safe-area inset only where supported, so an unsupported
+   calc() can't break the nav layout in older WebViews. */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .fx-bottomnav { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
 }
 .fx-bottomnav .nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 1 1 0; min-width: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
   color: var(--fx-muted-soft); font-size: 10px; cursor: pointer;
   background: none; border: none;
 }
@@ -188,8 +225,13 @@ body {
   .fx-content { flex: 1; min-width: 0; }
 }
 
-/* Leaflet map sizing */
-.fx-map { height: 240px; width: 100%; border-radius: 16px; overflow: hidden; z-index: 1; }
+/* Map sizing (Google Maps). position+transform force the map onto its own
+   compositing layer and clip it to its box so its tiles/markers can't bleed
+   over surrounding content while the page scrolls. */
+.fx-map {
+  height: 240px; width: 100%; border-radius: 16px; overflow: hidden;
+  position: relative; transform: translateZ(0); contain: paint;
+}
 @media (min-width: 992px) { .fx-map { height: 420px; } }
 
 .fx-page { max-width: 640px; margin: 0 auto; padding: 12px 20px; }

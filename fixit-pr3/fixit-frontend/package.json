@@ -19,7 +19,6 @@
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/status-bar": "^8.0.2",
     "@stripe/stripe-js": "^5.10.0",
-    "leaflet": "^1.9.4",
     "pinia": "^2.3.0",
     "tesseract.js": "^5.1.1",
     "vue": "^3.5.13",

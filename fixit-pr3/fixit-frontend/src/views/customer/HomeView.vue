@@ -7,9 +7,17 @@ import CategoryGrid from '../../components/CategoryGrid.vue'
 import ProviderCard from '../../components/ProviderCard.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
+import { ref } from 'vue'
+
 const providersStore = useProvidersStore()
 const auth = useAuthStore()
 const router = useRouter()
+
+const search = ref('')
+function runSearch() {
+  const q = search.value.trim()
+  router.push({ name: 'search', query: q ? { q } : {} })
+}
 
 onMounted(() => providersStore.load())
 
@@ -38,9 +46,17 @@ function openProvider(p) {
       </div>
     </div>
 
-    <div class="fx-input mb-4" role="button" @click="router.push({ name: 'search' })">
+    <div class="fx-input mb-4">
       <AppIcon name="search" :size="18" style="color:var(--fx-muted-soft)" />
-      <span style="color:var(--fx-muted-soft)">Search services or providers…</span>
+      <input
+        v-model="search"
+        class="fx-home-search"
+        type="search"
+        placeholder="Search services or providers…"
+        autocomplete="off"
+        @keyup.enter="runSearch"
+      />
+      <button v-if="search" class="fx-home-search-go btn btn-primary btn-sm" type="button" @click="runSearch">Search</button>
     </div>
 
     <div class="fw-bold mb-3" style="font-size:16px">Service Categories</div>
@@ -57,3 +73,13 @@ function openProvider(p) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.fx-home-search {
+  flex: 1; min-width: 0; border: none; background: transparent;
+  outline: none; font-size: 15px; color: var(--fx-text); font-family: inherit;
+}
+.fx-home-search::placeholder { color: var(--fx-muted-soft); }
+.fx-home-search::-webkit-search-cancel-button { display: none; }
+.fx-home-search-go { flex-shrink: 0; }
+</style>

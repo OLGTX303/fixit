@@ -179,7 +179,7 @@ function startReplace() {
       <div v-if="amountDollars" class="fx-card mb-3" style="background:var(--fx-accent-soft)">
         <div class="d-flex justify-content-between align-items-center">
           <span class="fw-semibold" style="font-size:14px">Amount due</span>
-          <span class="fw-bold text-accent" style="font-size:20px">${{ amountDollars.toFixed(2) }}</span>
+          <span class="fw-bold text-accent" style="font-size:20px">RM{{ amountDollars.toFixed(2) }}</span>
         </div>
         <div v-if="bookingId" style="font-size:12px;color:var(--fx-muted);margin-top:4px">
           Booking #{{ bookingId }}

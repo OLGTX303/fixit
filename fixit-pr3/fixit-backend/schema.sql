@@ -9,6 +9,7 @@ CREATE TABLE User (
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('customer','provider','admin') NOT NULL,
   phone VARCHAR(32) NULL,
+  avatar_url VARCHAR(512) NULL,
   stripe_test_customer_id VARCHAR(255) NULL,
   stripe_test_default_payment_method_id VARCHAR(255) NULL,
   stripe_test_payment_method_last4 VARCHAR(4) NULL,

@@ -11,25 +11,27 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
+// Bottom-nav tabs mirror the PR1 mockup (fixit-tokens.jsx CUSTOMER_NAV /
+// PROVIDER_NAV / ADMIN_NAV) — same labels, icons and order.
 const NAVS = {
   customer: [
     { icon: 'home', label: 'Home', to: 'home' },
     { icon: 'search', label: 'Explore', to: 'search' },
     { icon: 'calendar', label: 'Bookings', to: 'job-tracker' },
-    { icon: 'shield', label: 'Payment', to: 'payment' },
+    { icon: 'user', label: 'Profile', to: 'account' },
   ],
   provider: [
-    { icon: 'grid', label: 'Profile', to: 'pro-profile' },
-    { icon: 'shield', label: 'KYC', to: 'pro-kyc' },
+    { icon: 'grid', label: 'Dashboard', to: 'pro-profile' },
     { icon: 'bell', label: 'Requests', to: 'pro-requests' },
     { icon: 'briefcase', label: 'Jobs', to: 'pro-job', jobRoute: true },
     { icon: 'chat', label: 'Chat', to: 'pro-chat', jobRoute: true },
+    { icon: 'user', label: 'Profile', to: 'account' },
   ],
   admin: [
+    { icon: 'grid', label: 'Overview', to: 'admin-harm' },
     { icon: 'shield', label: 'Verify', to: 'admin-verify' },
     { icon: 'user', label: 'Users', to: 'admin-users' },
     { icon: 'calendar', label: 'Bookings', to: 'admin-bookings' },
-    { icon: 'shield', label: 'Safety', to: 'admin-harm' },
   ],
 }
 
@@ -62,6 +64,7 @@ function logout() {
 
 <template>
   <div class="fx-shell">
+    <div class="fx-statusbar-bg" aria-hidden="true"></div>
     <template v-if="showShell">
       <div class="fx-layout">
         <aside class="fx-sidenav">
@@ -94,13 +97,18 @@ function logout() {
         </div>
       </div>
 
-      <nav class="fx-bottomnav">
-        <button v-for="item in navItems" :key="item.label"
-                class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
-          <AppIcon :name="item.icon" :size="22" />
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
+      <!-- Teleported to <body> so the fixed nav is never trapped inside an
+           ancestor stacking context / containing block (e.g. the Google Maps
+           layer), which was making it vanish on the map page. -->
+      <Teleport to="body">
+        <nav class="fx-bottomnav">
+          <button v-for="item in navItems" :key="item.label"
+                  class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
+            <AppIcon :name="item.icon" :size="22" />
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
+      </Teleport>
     </template>
 
     <main v-else class="fx-main" :style="{ paddingBottom: isLegalPage ? 0 : undefined }">

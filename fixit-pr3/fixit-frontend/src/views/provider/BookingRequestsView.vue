@@ -65,7 +65,7 @@ async function decline(b) {
               <div style="font-size:12px;color:var(--fx-muted)">{{ b.category?.name }}</div>
             </div>
           </div>
-          <div class="fw-bold text-accent" style="font-size:16px">${{ b.total }}</div>
+          <div class="fw-bold text-accent" style="font-size:16px">RM{{ b.total }}</div>
         </div>
         <div class="d-flex gap-3 px-3 pb-3" style="font-size:12px;color:var(--fx-muted)">
           <span class="d-flex align-items-center gap-1"><AppIcon name="calendar" :size="14" />{{ new Date(b.scheduled_at).toLocaleString('en', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }}</span>

@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+// Suppress deprecated/notice output — vendor libs (e.g. stripe-php curl_close)
+// emit deprecation notices on PHP 8.4+ which corrupt JSON responses.
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+
 use Dotenv\Dotenv;
 use FixIt\Middleware\CorsMiddleware;
 use FixIt\Middleware\SecurityHeaders;
