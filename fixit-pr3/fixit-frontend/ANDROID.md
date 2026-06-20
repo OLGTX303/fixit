@@ -51,10 +51,14 @@ In Android Studio: **Run ▶** on an emulator or connected device.
 ## CLI build (without Android Studio UI)
 
 ```bash
-cd android
-./gradlew assembleDebug
-# APK: android/app/build/outputs/apk/debug/app-debug.apk
+cd fixit-frontend
+npm run android:release
+# APK: android/app/build/outputs/apk/release/app-release-unsigned.apk
 ```
+
+Release signing is intentionally not committed. To create a Play Store-ready APK,
+sign the release artifact with your private keystore or configure local Gradle
+signing credentials outside version control.
 
 ## Features enabled
 
