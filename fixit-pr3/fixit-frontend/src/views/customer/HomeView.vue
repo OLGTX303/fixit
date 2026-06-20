@@ -93,7 +93,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
 
         <div v-if="providersStore.loading"
              style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">Loading…</div>
-        <div v-else class="hv-rail hide-scrollbar">
+        <div v-else class="hv-stack">
           <ProviderCardWide v-for="p in topRated" :key="p.id" :provider="p" @select="openProvider" />
         </div>
       </section>
@@ -175,14 +175,12 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   font-family: inherit; padding: 0;
 }
 
-/* horizontal snap rail; negative margin lets cards bleed to the screen edge */
-.hv-rail {
-  display: flex; gap: 16px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 4px 20px 8px;
-  margin: 0 -20px;
+/* vertical stack of full-width provider cards */
+.hv-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* make the wide card fill the column when stacked vertically */
+.hv-stack :deep(.pcw) { width: 100%; }
 </style>
