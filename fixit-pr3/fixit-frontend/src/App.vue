@@ -16,7 +16,7 @@ const NAVS = {
     { icon: 'home',     msIcon: 'home',           label: 'Home',     to: 'home' },
     { icon: 'search',   msIcon: 'search',          label: 'Explore',  to: 'search' },
     { icon: 'calendar', msIcon: 'calendar_month',  label: 'Bookings', to: 'job-tracker' },
-    { icon: 'user',     msIcon: 'person',          label: 'Profile',  to: 'account' },
+    { icon: 'chat',     msIcon: 'chat',            label: 'Messages', to: 'chat', messagesRoute: true },
   ],
   provider: [
     { icon: 'grid',      msIcon: 'dashboard',     label: 'Dashboard', to: 'pro-profile' },
@@ -39,6 +39,16 @@ const showShell   = computed(() => auth.isAuthenticated && !route.meta.public &&
 const navItems    = computed(() => NAVS[auth.role] || [])
 
 async function go(item) {
+  // Customer "Messages" tab → open the latest active booking's chat
+  // (falls back to the bookings list when the customer has no jobs yet).
+  if (item.messagesRoute) {
+    const bookings = useBookingsStore()
+    await bookings.load()
+    const mine = bookings.forCustomer(auth.user?.id)
+    const job = mine.find((b) => b.status !== 'reviewed') || mine[0]
+    router.push(job ? { name: 'chat', params: { id: job.id } } : { name: 'job-tracker' })
+    return
+  }
   if (item.jobRoute) {
     const bookings  = useBookingsStore()
     const providers = useProvidersStore()
