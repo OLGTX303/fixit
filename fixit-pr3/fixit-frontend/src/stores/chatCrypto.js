@@ -43,6 +43,7 @@ export const useChatCryptoStore = defineStore('chatCrypto', {
         this.pinKey = pinKey
         this.privateKey = keyPair.privateKey
         this.publicKey = keyPair.publicKey
+        this.jobKeys = {}
         this.pinConfigured = true
         this.unlocked = true
         crypto.markUnlocked()
@@ -96,8 +97,13 @@ export const useChatCryptoStore = defineStore('chatCrypto', {
 
       const remote = await api.getJobCryptoKey(jobId)
       if (remote.encrypted_job_key) {
-        this.jobKeys[jobId] = await crypto.decryptJobKey(this.privateKey, remote.encrypted_job_key)
-        return this.jobKeys[jobId]
+        try {
+          this.jobKeys[jobId] = await crypto.decryptJobKey(this.privateKey, remote.encrypted_job_key)
+          return this.jobKeys[jobId]
+        } catch {
+          // Stored key was wrapped with a previous keypair (e.g. after a PIN
+          // reset) and can't be decrypted — fall through to re-key the job.
+        }
       }
 
       const peers = await api.getJobPeers(jobId)
