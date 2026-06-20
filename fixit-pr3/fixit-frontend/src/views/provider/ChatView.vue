@@ -27,6 +27,16 @@ const ready = ref(false)
 const booking = computed(() => bookingsStore.byId(route.params.id))
 const jobId = computed(() => Number(route.params.id))
 
+// Show the other party: a provider chats with the customer, a customer with the provider.
+const other = computed(() => {
+  const b = booking.value
+  if (!b) return null
+  return auth.role === 'provider' ? b.customer : b.provider
+})
+const otherName = computed(() => other.value?.name || 'Chat')
+const otherInitials = computed(() =>
+  (other.value?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2))
+
 onMounted(async () => {
   await bookingsStore.load()
   await chatCrypto.loadStatus()
@@ -115,10 +125,10 @@ function timeOf(iso) {
         <AppIcon name="back" :size="15" />
       </button>
       <div class="fx-avatar" style="width:40px;height:40px;background:var(--fx-blue-soft);color:var(--fx-blue)">
-        {{ (booking?.customer?.name || '?').split(' ').map(w => w[0]).join('') }}
+        {{ otherInitials }}
       </div>
       <div class="flex-grow-1">
-        <div class="fw-bold" style="font-size:15px">{{ booking?.customer?.name || 'Chat' }}</div>
+        <div class="fw-bold" style="font-size:15px">{{ otherName }}</div>
         <div style="font-size:12px;color:var(--fx-success);font-weight:500">
           🔒 E2E encrypted · #{{ route.params.id }}
         </div>

@@ -66,6 +66,11 @@ const STATUS_BADGE = {
         <StatusTimeline :status="selected.status" />
       </div>
 
+      <button class="btn btn-outline-primary w-100 mt-3"
+              @click="router.push({ name: 'chat', params: { id: selected.id } })">
+        Message {{ selected.provider?.name || 'provider' }}
+      </button>
+
       <button v-if="selected.status === 'completed'" class="btn btn-primary w-100 mt-3"
               @click="router.push({ name: 'rate-review', params: { id: selected.id } })">
         Rate &amp; Review
