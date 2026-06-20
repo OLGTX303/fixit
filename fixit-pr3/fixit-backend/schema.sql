@@ -155,7 +155,19 @@ CREATE TABLE StripePayment (
   UNIQUE KEY uq_stripe_pi (stripe_payment_intent_id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE EmailOtp (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  new_email VARCHAR(180) NOT NULL,
+  otp_hash VARCHAR(255) NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_emailotp_user FOREIGN KEY (user_id) REFERENCES User(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE INDEX idx_provider_verified ON ProviderProfile(is_verified);
+CREATE INDEX idx_emailotp_user ON EmailOtp(user_id);
 CREATE INDEX idx_stripe_payment_user ON StripePayment(user_id);
 CREATE INDEX idx_job_customer ON Job(customer_id);
 CREATE INDEX idx_job_provider ON Job(provider_id);
