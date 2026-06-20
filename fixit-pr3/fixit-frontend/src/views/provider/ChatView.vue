@@ -7,7 +7,6 @@ import { useChatCryptoStore } from '../../stores/chatCrypto'
 import * as api from '../../services/api'
 import * as harmReview from '../../services/harmReview'
 import PinModal from '../../components/PinModal.vue'
-import AppIcon from '../../components/AppIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -119,12 +118,13 @@ function timeOf(iso) {
   <PinModal v-if="showPinSetup" mode="setup" @done="onPinReady" />
   <PinModal v-else-if="showPinUnlock" mode="unlock" @done="onPinReady" />
 
-  <div class="d-flex flex-column" style="height:calc(100vh - 88px)">
-    <div class="d-flex align-items-center gap-3 px-3 py-2" style="border-bottom:1px solid var(--fx-border)">
-      <button class="btn btn-light rounded-circle" style="width:32px;height:32px;padding:0" @click="router.back()">
-        <AppIcon name="back" :size="15" />
+  <div class="d-flex flex-column" style="height:calc(100vh - 100px)">
+    <div class="d-flex align-items-center gap-3 px-3 py-2"
+         style="background:rgba(255,255,255,0.40);backdrop-filter:blur(30px);border-bottom:1px solid rgba(255,255,255,0.35)">
+      <button class="glass-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" @click="router.back()">
+        <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">arrow_back</span>
       </button>
-      <div class="fx-avatar" style="width:40px;height:40px;background:var(--fx-blue-soft);color:var(--fx-blue)">
+      <div class="fx-avatar" style="width:40px;height:40px;font-size:15px;font-weight:800">
         {{ otherInitials }}
       </div>
       <div class="flex-grow-1">
@@ -133,7 +133,7 @@ function timeOf(iso) {
           🔒 E2E encrypted · #{{ route.params.id }}
         </div>
       </div>
-      <button class="btn btn-sm btn-light" @click="chatCrypto.lock(); showPinUnlock = true" title="Lock chat">
+      <button class="glass-btn" style="border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700" @click="chatCrypto.lock(); showPinUnlock = true">
         Lock
       </button>
     </div>
@@ -147,11 +147,18 @@ function timeOf(iso) {
            :style="{ justifyContent: isMine(m) ? 'flex-end' : 'flex-start' }">
         <div style="max-width:72%">
           <div :style="{
-            padding: '10px 13px', borderRadius: '16px', fontSize: '13px', lineHeight: 1.5,
-            background: isMine(m) ? 'var(--fx-accent)' : 'var(--fx-border-soft)',
+            padding: '10px 14px', borderRadius: '18px', fontSize: '13px', lineHeight: 1.55,
+            background: isMine(m)
+              ? 'linear-gradient(180deg,#FF7D54,#FF6635)'
+              : 'rgba(255,255,255,0.45)',
+            backdropFilter: isMine(m) ? 'none' : 'blur(20px)',
+            border: isMine(m) ? 'none' : '1px solid rgba(255,255,255,0.55)',
+            boxShadow: isMine(m)
+              ? 'inset 0 1px 0 rgba(255,255,255,0.30), 0 4px 12px rgba(255,102,53,0.22)'
+              : 'inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05)',
             color: isMine(m) ? '#fff' : 'var(--fx-text)',
-            borderBottomRightRadius: isMine(m) ? '4px' : '16px',
-            borderBottomLeftRadius: isMine(m) ? '16px' : '4px',
+            borderBottomRightRadius: isMine(m) ? '4px' : '18px',
+            borderBottomLeftRadius: isMine(m) ? '18px' : '4px',
           }">{{ displayBodies[m.id] }}</div>
           <div style="font-size:10px;color:var(--fx-muted-soft);margin-top:3px"
                :style="{ textAlign: isMine(m) ? 'right' : 'left' }">
@@ -164,11 +171,15 @@ function timeOf(iso) {
 
     <div v-if="harmWarning" class="px-3 py-1" style="font-size:12px;color:var(--fx-warn)">{{ harmWarning }}</div>
 
-    <form v-if="ready" class="d-flex gap-2 align-items-center px-3 py-2" style="border-top:1px solid var(--fx-border)" @submit.prevent="send">
-      <input class="fx-input" style="border-radius:22px" v-model="draft" placeholder="Type a message…" />
-      <button type="submit" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
-              style="width:40px;height:40px;padding:0;flex-shrink:0">
-        <AppIcon name="send" :size="18" />
+    <form v-if="ready" class="d-flex gap-2 align-items-center px-3 py-2"
+          style="background:rgba(255,255,255,0.40);backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,0.35)"
+          @submit.prevent="send">
+      <div class="fx-input" style="border-radius:999px;flex:1">
+        <input v-model="draft" placeholder="Type a message…" style="width:100%" />
+      </div>
+      <button type="submit" class="glossy-primary"
+              style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0">
+        <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1">send</span>
       </button>
     </form>
   </div>

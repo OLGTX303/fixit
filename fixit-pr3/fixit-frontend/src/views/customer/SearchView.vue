@@ -5,7 +5,6 @@ import { useProvidersStore } from '../../stores/providers'
 import ProviderMap from '../../components/ProviderMap.vue'
 import ProviderCard from '../../components/ProviderCard.vue'
 import FilterBar from '../../components/FilterBar.vue'
-import AppIcon from '../../components/AppIcon.vue'
 import { getUserLocation, distanceKmFrom, isNativeApp } from '../../services/geolocation'
 
 const providersStore = useProvidersStore()
@@ -77,14 +76,14 @@ function clearSearch() {
 
 <template>
   <div class="fx-page">
-    <h1 class="fw-bold mb-1" style="font-size:20px">Find a provider</h1>
-    <div class="mb-3" style="font-size:13px;color:var(--fx-muted)">
+    <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.01em;margin-bottom:2px">Find a provider</h1>
+    <div style="font-size:13px;color:var(--fx-muted);margin-bottom:16px">
       {{ locating ? 'Detecting location…' : `Verified providers near ${locationLabel}` }}
     </div>
 
     <!-- Real text search -->
     <div class="fx-input mb-3">
-      <AppIcon name="search" :size="18" style="color:var(--fx-muted-soft)" />
+      <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted-soft)">search</span>
       <input
         v-model="q"
         class="fx-search-input"
