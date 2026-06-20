@@ -28,10 +28,11 @@ const NAVS = {
     { icon: 'user', label: 'Profile', to: 'account' },
   ],
   admin: [
-    { icon: 'grid', label: 'Overview', to: 'admin-harm' },
     { icon: 'shield', label: 'Verify', to: 'admin-verify' },
-    { icon: 'user', label: 'Users', to: 'admin-users' },
+    { icon: 'grid', label: 'Users', to: 'admin-users' },
     { icon: 'calendar', label: 'Bookings', to: 'admin-bookings' },
+    { icon: 'chat', label: 'Chats', to: 'admin-chats' },
+    { icon: 'user', label: 'Profile', to: 'account' },
   ],
 }
 
