@@ -11,38 +11,36 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-// Bottom-nav tabs mirror the PR1 mockup (fixit-tokens.jsx CUSTOMER_NAV /
-// PROVIDER_NAV / ADMIN_NAV) — same labels, icons and order.
 const NAVS = {
   customer: [
-    { icon: 'home', label: 'Home', to: 'home' },
-    { icon: 'search', label: 'Explore', to: 'search' },
-    { icon: 'calendar', label: 'Bookings', to: 'job-tracker' },
-    { icon: 'user', label: 'Profile', to: 'account' },
+    { icon: 'home',     msIcon: 'home',           label: 'Home',     to: 'home' },
+    { icon: 'search',   msIcon: 'search',          label: 'Explore',  to: 'search' },
+    { icon: 'calendar', msIcon: 'calendar_month',  label: 'Bookings', to: 'job-tracker' },
+    { icon: 'user',     msIcon: 'person',          label: 'Profile',  to: 'account' },
   ],
   provider: [
-    { icon: 'grid', label: 'Dashboard', to: 'pro-profile' },
-    { icon: 'bell', label: 'Requests', to: 'pro-requests' },
-    { icon: 'briefcase', label: 'Jobs', to: 'pro-job', jobRoute: true },
-    { icon: 'chat', label: 'Chat', to: 'pro-chat', jobRoute: true },
-    { icon: 'user', label: 'Profile', to: 'account' },
+    { icon: 'grid',      msIcon: 'dashboard',     label: 'Dashboard', to: 'pro-profile' },
+    { icon: 'bell',      msIcon: 'notifications', label: 'Requests',  to: 'pro-requests' },
+    { icon: 'briefcase', msIcon: 'work',          label: 'Jobs',      to: 'pro-job',   jobRoute: true },
+    { icon: 'chat',      msIcon: 'chat',          label: 'Chat',      to: 'pro-chat',  jobRoute: true },
+    { icon: 'user',      msIcon: 'person',        label: 'Profile',   to: 'account' },
   ],
   admin: [
-    { icon: 'shield', label: 'Verify', to: 'admin-verify' },
-    { icon: 'grid', label: 'Users', to: 'admin-users' },
-    { icon: 'calendar', label: 'Bookings', to: 'admin-bookings' },
-    { icon: 'chat', label: 'Chats', to: 'admin-chats' },
-    { icon: 'user', label: 'Profile', to: 'account' },
+    { icon: 'shield',   msIcon: 'verified_user',  label: 'Verify',   to: 'admin-verify' },
+    { icon: 'grid',     msIcon: 'group',          label: 'Users',    to: 'admin-users' },
+    { icon: 'calendar', msIcon: 'calendar_month', label: 'Bookings', to: 'admin-bookings' },
+    { icon: 'chat',     msIcon: 'forum',          label: 'Chats',    to: 'admin-chats' },
+    { icon: 'user',     msIcon: 'person',         label: 'Profile',  to: 'account' },
   ],
 }
 
 const isLegalPage = computed(() => route.name === 'legal-terms' || route.name === 'legal-privacy')
-const showShell = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
-const navItems = computed(() => NAVS[auth.role] || [])
+const showShell   = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
+const navItems    = computed(() => NAVS[auth.role] || [])
 
 async function go(item) {
   if (item.jobRoute) {
-    const bookings = useBookingsStore()
+    const bookings  = useBookingsStore()
     const providers = useProvidersStore()
     await Promise.all([bookings.load(), providers.load()])
     const profile = providers.providers.find((p) => p.user_id === auth.user?.id)
@@ -54,38 +52,38 @@ async function go(item) {
   }
   router.push({ name: item.to })
 }
-function isActive(item) {
-  return route.name === item.to
-}
-function logout() {
-  auth.logout()
-  router.push({ name: 'login' })
-}
+function isActive(item) { return route.name === item.to }
+function logout() { auth.logout(); router.push({ name: 'login' }) }
 </script>
 
 <template>
   <div class="fx-shell">
+    <!-- Animated gradient mesh — sits behind everything -->
+    <div class="lg-mesh" aria-hidden="true"></div>
+
+    <!-- Status-bar tint strip (Android edge-to-edge) -->
     <div class="fx-statusbar-bg" aria-hidden="true"></div>
+
     <template v-if="showShell">
       <div class="fx-layout">
+        <!-- Glass side-nav (desktop ≥ 992px) -->
         <aside class="fx-sidenav">
-          <div class="d-flex align-items-center gap-2 mb-4 px-2">
-            <div class="d-flex align-items-center justify-content-center"
-                 style="width:38px;height:38px;border-radius:11px;background:var(--fx-accent);color:#fff">
-              <AppIcon name="tool" :size="20" />
+          <div class="d-flex align-items-center gap-2 mb-4" style="padding:0 4px">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(180deg,#FF7D54,#FF6635);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 10px rgba(255,102,53,.28)">
+              <span class="material-symbols-outlined" style="color:#fff;font-size:20px;font-variation-settings:'FILL' 1">build</span>
             </div>
-            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px">FixIt</span>
+            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--fx-text)">FixIt</span>
           </div>
           <button v-for="item in navItems" :key="item.label"
                   class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
-            <AppIcon :name="item.icon" :size="20" />
+            <span class="material-symbols-outlined" style="font-size:20px">{{ item.msIcon }}</span>
             <span>{{ item.label }}</span>
           </button>
           <button class="nav-item mt-auto" @click="logout">
-            <AppIcon name="logout" :size="20" />
+            <span class="material-symbols-outlined" style="font-size:20px">logout</span>
             <span>Log out</span>
           </button>
-          <div class="px-2 mt-2" style="font-size:12px;color:var(--fx-muted)">
+          <div style="padding:0 4px;margin-top:8px;font-size:12px;color:var(--fx-muted)">
             {{ auth.user?.name }} · {{ auth.role }}
           </div>
         </aside>
@@ -98,14 +96,18 @@ function logout() {
         </div>
       </div>
 
-      <!-- Teleported to <body> so the fixed nav is never trapped inside an
-           ancestor stacking context / containing block (e.g. the Google Maps
-           layer), which was making it vanish on the map page. -->
+      <!-- Floating glass dock — Teleported to body so it's never trapped inside
+           any ancestor stacking context (e.g. the Google Maps z-index layer). -->
       <Teleport to="body">
         <nav class="fx-bottomnav">
           <button v-for="item in navItems" :key="item.label"
                   class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
-            <AppIcon :name="item.icon" :size="22" />
+            <div class="nav-icon-wrap">
+              <span class="material-symbols-outlined"
+                    :style="{ fontSize: '22px', fontVariationSettings: isActive(item) ? `'FILL' 1` : `'FILL' 0` }">
+                {{ item.msIcon }}
+              </span>
+            </div>
             <span>{{ item.label }}</span>
           </button>
         </nav>
