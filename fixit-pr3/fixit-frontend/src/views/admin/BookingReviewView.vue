@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 
+const router = useRouter()
 const bookingsStore = useBookingsStore()
 const reviews = ref([])
 const filter = ref('All')
@@ -37,7 +39,10 @@ const label = (s) => s.replace('_', ' ')
 
 <template>
   <div class="fx-page">
-    <h1 class="fw-bold mb-1" style="font-size:20px">Monitoring</h1>
+    <div class="d-flex justify-content-between align-items-start mb-1">
+      <h1 class="fw-bold m-0" style="font-size:20px">Monitoring</h1>
+      <button class="btn btn-sm btn-outline-secondary" @click="router.push({ name: 'admin-harm' })">Safety reviews</button>
+    </div>
     <div class="mb-3" style="font-size:13px;color:var(--fx-muted)">Bookings &amp; Reviews</div>
 
     <!-- KPIs -->
