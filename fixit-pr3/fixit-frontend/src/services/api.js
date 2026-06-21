@@ -138,12 +138,14 @@ export async function createBooking(payload) {
   const scheduled = payload.scheduled_at
     || (payload.date && payload.time ? `${payload.date}T${payload.time}` : null)
   return post('/bookings', {
-    provider_id: payload.provider_id,
-    category_id: payload.category_id,
-    scheduled_at: toServerDatetime(scheduled),
-    address: payload.address,
-    total: payload.total,
-    notes: payload.notes,
+    provider_id:          payload.provider_id,
+    category_id:          payload.category_id,
+    scheduled_at:         toServerDatetime(scheduled),
+    address:              payload.address,
+    total:                payload.total,
+    notes:                payload.notes,
+    recurrence_type:      payload.recurrence_type || 'none',
+    recurrence_end_date:  payload.recurrence_end_date || null,
   })
 }
 
@@ -192,3 +194,11 @@ export const saveStripePaymentMethod = (paymentMethodId) =>
 export const payWithStripeSavedMethod = (payload) =>
   post('/payments/stripe/pay-with-saved-method', payload)
 export const removeStripeSavedPaymentMethod = () => del('/payments/stripe/saved-payment-method')
+
+// ── Availability calendar ────────────────────────────────────────────────────
+export const getProviderAvailability = (id) => get(`/providers/${id}/availability`)
+export const saveProviderAvailability = (id, slots) => put(`/providers/${id}/availability`, { slots })
+
+// ── Admin: priority listing ──────────────────────────────────────────────────
+export const setProviderPriority = (id, isPriority) =>
+  patch(`/admin/providers/${id}/priority`, { is_priority: isPriority })

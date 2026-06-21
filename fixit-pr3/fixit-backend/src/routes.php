@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use FixIt\Controllers\AdminController;
 use FixIt\Controllers\AuthController;
-
+use FixIt\Controllers\AvailabilityController;
 use FixIt\Controllers\BookingController;
 use FixIt\Controllers\CategoryController;
 use FixIt\Controllers\CryptoController;
@@ -33,12 +33,13 @@ return function (App $app): void {
     $kyc = new KycController();
     $stripe = new StripePaymentController();
     $users = new UserController();
+    $availability = new AvailabilityController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability
     ) {
-        // Stripe webhook â€?no JWT; verified via Stripe-Signature
+        // Stripe webhook ï¿½?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
         $group->get('/auth/captcha', [$auth, 'captchaChallenge'])->add($rateLimit);
         $group->post('/auth/captcha/verify', [$auth, 'captchaVerify'])->add($rateLimit);
@@ -47,11 +48,12 @@ return function (App $app): void {
         $group->get('/categories', [$categories, 'list']);
         $group->get('/providers', [$providers, 'list']);
         $group->get('/providers/{id}', [$providers, 'get']);
-        // Public avatar proxy â€?streams the image object from R2 by key.
+        $group->get('/providers/{id}/availability', [$availability, 'get']);
+        // Public avatar proxy ï¿½?streams the image object from R2 by key.
         $group->get('/avatars/{key:.+}', [$users, 'serveAvatar']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability
         ) {
             $secure->patch('/users/me', [$users, 'updateMe']);
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
@@ -85,10 +87,14 @@ return function (App $app): void {
                 ->add(new RoleGuard(['provider']));
             $secure->post('/providers/{id}/kyc/liveness', [$kyc, 'submitLiveness'])
                 ->add(new RoleGuard(['provider']));
+            $secure->put('/providers/{id}/availability', [$availability, 'save'])
+                ->add(new RoleGuard(['provider', 'admin']));
 
             $secure->get('/admin/providers', [$admin, 'allProviders'])
                 ->add(new RoleGuard(['admin']));
             $secure->patch('/admin/providers/{id}/verify', [$admin, 'verifyProvider'])
+                ->add(new RoleGuard(['admin']));
+            $secure->patch('/admin/providers/{id}/priority', [$providers, 'setPriority'])
                 ->add(new RoleGuard(['admin']));
             $secure->get('/admin/users', [$admin, 'listUsers'])
                 ->add(new RoleGuard(['admin']));
@@ -120,7 +126,7 @@ return function (App $app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Public client config â€?the Google Maps JS key is stored server-side in
+    // Public client config ï¿½?the Google Maps JS key is stored server-side in
     // .env (GOOGLE_MAPS_API_KEY) and fetched at runtime so it never lives in
     // the committed frontend source. Restrict the key in Google Cloud Console.
     $app->get('/api/config/maps', function ($request, $response) {

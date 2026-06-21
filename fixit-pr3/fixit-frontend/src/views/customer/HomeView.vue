@@ -108,10 +108,15 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   z-index: 40;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 20px;
-  background: rgba(255,255,255,0.45);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border-bottom: 1px solid rgba(255,255,255,0.35);
+  background:
+    radial-gradient(ellipse 60% 80% at 10% 50%, rgba(255,255,255,0.08) 0%, transparent 70%),
+    rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px) saturate(1.80) brightness(1.04);
+  -webkit-backdrop-filter: blur(10px) saturate(1.80) brightness(1.04);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,255,255,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.70),
+    0 2px 12px rgba(0,0,0,0.04);
 }
 .hv-icon-btn {
   background: none; border: none; cursor: pointer; padding: 6px;

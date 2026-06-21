@@ -11,6 +11,47 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
   </head>
+
+  <!-- ── Liquid Glass SVG filter bank ────────────────────────────────────── -->
+  <!-- chromatic-aberration: simulates per-channel (R/G/B) refraction offset  -->
+  <!-- edge-noise: fractalNoise displacement for the refraction distortion rim -->
+  <svg id="lg-filters" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <defs>
+      <!-- Chromatic dispersion: R shifts −0.6px left, B shifts +0.6px right (mirrors N_R/N_B in shader) -->
+      <filter id="lg-chromatic" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix"
+          values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="r"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="g"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"
+          in="SourceGraphic" result="b"/>
+        <feOffset in="r" dx="-0.3" dy="0"  result="r2"/>
+        <feOffset in="b" dx="0.3"  dy="0"  result="b2"/>
+        <feMerge>
+          <feMergeNode in="r2"/>
+          <feMergeNode in="g"/>
+          <feMergeNode in="b2"/>
+        </feMerge>
+      </filter>
+
+      <!-- Edge refraction noise: subtle fractal displacement at glass boundary -->
+      <filter id="lg-edge-refract" x="-3%" y="-3%" width="106%" height="106%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.007 0.009"
+          numOctaves="2" seed="42" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise"
+          scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+
+      <!-- Blur used on the glass background layer for the interior frosted look -->
+      <filter id="lg-bg-blur" x="-10%" y="-10%" width="120%" height="120%">
+        <feGaussianBlur stdDeviation="18"/>
+      </filter>
+    </defs>
+  </svg>
+
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>

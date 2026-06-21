@@ -21,6 +21,7 @@ const routes = [
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/chat', name: 'chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'customer' } },
+  { path: '/messages', name: 'messages', component: () => import('../views/customer/MessagesView.vue'), meta: { role: 'customer' } },
   { path: '/payment', name: 'payment', component: () => import('../views/customer/PaymentView.vue'), meta: { role: 'customer' } },
 
   // Provider
@@ -29,6 +30,7 @@ const routes = [
   { path: '/pro/requests', name: 'pro-requests', component: () => import('../views/provider/BookingRequestsView.vue'), meta: { role: 'provider' } },
   { path: '/pro/jobs/:id', name: 'pro-job', component: () => import('../views/provider/JobStatusView.vue'), meta: { role: 'provider' } },
   { path: '/pro/chat/:id', name: 'pro-chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'provider' } },
+  { path: '/pro/chats', name: 'pro-chats', component: () => import('../views/provider/ConversationsView.vue'), meta: { role: 'provider' } },
 
   // Admin
   { path: '/admin/verify', name: 'admin-verify', component: () => import('../views/admin/VerificationView.vue'), meta: { role: 'admin' } },

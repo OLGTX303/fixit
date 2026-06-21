@@ -20,6 +20,16 @@ const form = ref({ date: '', time: '', address: '14 Maple Street, Apt 3', notes:
 const times = ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
 const submitting = ref(false)
 
+// Recurring booking (stretch goal)
+const recurring = ref(false)
+const recurrenceType = ref('weekly')
+const recurrenceEndDate = ref('')
+const RECURRENCE_OPTIONS = [
+  { value: 'weekly',   label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly',  label: 'Monthly' },
+]
+
 // Next 5 days as selectable date chips.
 const dates = computed(() => Array.from({ length: 5 }, (_, i) => {
   const d = new Date(); d.setDate(d.getDate() + i)
@@ -40,13 +50,15 @@ const canSubmit = computed(() => form.value.date && form.value.time && form.valu
 async function confirm() {
   submitting.value = true
   const booking = await bookingsStore.create({
-    customer_id: auth.user.id,
-    provider_id: provider.value.id,
-    category_id: provider.value.category_ids[0],
-    scheduled_at: `${form.value.date}T${form.value.time}`,
-    address: form.value.address,
-    notes: form.value.notes,
-    total: total.value,
+    customer_id:          auth.user.id,
+    provider_id:          provider.value.id,
+    category_id:          provider.value.category_ids[0],
+    scheduled_at:         `${form.value.date}T${form.value.time}`,
+    address:              form.value.address,
+    notes:                form.value.notes,
+    total:                total.value,
+    recurrence_type:      recurring.value ? recurrenceType.value : 'none',
+    recurrence_end_date:  recurring.value && recurrenceEndDate.value ? recurrenceEndDate.value : null,
   })
   submitting.value = false
   router.push({
@@ -112,7 +124,31 @@ async function confirm() {
     <!-- Address + notes -->
     <div class="fw-bold mb-2" style="font-size:14px">Service Address</div>
     <input class="fx-input mb-2" v-model="form.address" placeholder="Enter your address" />
-    <input class="fx-input mb-4" v-model="form.notes" placeholder="Add special instructions…" />
+    <input class="fx-input mb-3" v-model="form.notes" placeholder="Add special instructions…" />
+
+    <!-- Recurring booking toggle (stretch goal) -->
+    <div class="fx-card mb-4" style="padding:14px 16px">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div>
+          <div class="fw-semibold" style="font-size:14px">Make it Recurring?</div>
+          <div style="font-size:12px;color:var(--fx-muted)">Auto-schedule the same service periodically</div>
+        </div>
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" v-model="recurring" style="cursor:pointer;width:42px;height:22px" />
+        </div>
+      </div>
+      <template v-if="recurring">
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+          <button v-for="opt in RECURRENCE_OPTIONS" :key="opt.value"
+            class="fx-chip sm" :class="{ active: recurrenceType === opt.value }"
+            @click="recurrenceType = opt.value">{{ opt.label }}</button>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--fx-muted);margin-bottom:4px;display:block">End date (optional)</label>
+          <input class="fx-input" type="date" v-model="recurrenceEndDate" :min="form.date" />
+        </div>
+      </template>
+    </div>
 
     <!-- Price estimate -->
     <div class="fx-card bg-accent-soft mb-3">

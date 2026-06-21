@@ -9,16 +9,18 @@ use PDO;
 
 final class ReviewModel
 {
-    public function create(int $jobId, int $rating, ?string $comment): array
+    public function create(int $jobId, int $rating, ?string $comment, ?float $tipAmount = null): array
     {
         $pdo = Connection::get();
         $stmt = $pdo->prepare(
-            'INSERT INTO Review (job_id, rating, comment) VALUES (:job, :rating, :comment)'
+            'INSERT INTO Review (job_id, rating, comment, tip_amount)
+             VALUES (:job, :rating, :comment, :tip)'
         );
         $stmt->execute([
-            'job' => $jobId,
-            'rating' => $rating,
+            'job'     => $jobId,
+            'rating'  => $rating,
             'comment' => $comment,
+            'tip'     => $tipAmount,
         ]);
         $id = (int) $pdo->lastInsertId();
         $this->recalculateProviderRating($jobId);
@@ -78,10 +80,11 @@ final class ReviewModel
     private function format(array $row): array
     {
         return [
-            'id' => (int) $row['id'],
-            'job_id' => (int) $row['job_id'],
-            'rating' => (int) $row['rating'],
-            'comment' => $row['comment'],
+            'id'         => (int) $row['id'],
+            'job_id'     => (int) $row['job_id'],
+            'rating'     => (int) $row['rating'],
+            'comment'    => $row['comment'],
+            'tip_amount' => isset($row['tip_amount']) ? (float) $row['tip_amount'] : null,
             'created_at' => str_replace(' ', 'T', $row['created_at']),
         ];
     }

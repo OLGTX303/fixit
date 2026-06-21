@@ -1,11 +1,37 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useProvidersStore } from './stores/providers'
 import { useBookingsStore } from './stores/bookings'
 import AppIcon from './components/AppIcon.vue'
 import LegalFooter from './components/LegalFooter.vue'
+
+// ── Liquid cursor blob (mirrors the studio's mouse-spring follower) ──────
+let blobEl = null
+let raf = null
+let bx = window.innerWidth / 2, by = window.innerHeight / 2  // blob position
+let tx = bx, ty = by                                          // target (mouse)
+const SPRING = 0.10
+
+function onMouseMove(e) { tx = e.clientX; ty = e.clientY }
+
+function tick() {
+  bx += (tx - bx) * SPRING
+  by += (ty - by) * SPRING
+  if (blobEl) blobEl.style.transform = `translate(${bx}px,${by}px) translate(-50%,-50%)`
+  raf = requestAnimationFrame(tick)
+}
+
+onMounted(() => {
+  blobEl = document.getElementById('lg-cursor-blob')
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+  raf = requestAnimationFrame(tick)
+})
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onMouseMove)
+  cancelAnimationFrame(raf)
+})
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -16,13 +42,13 @@ const NAVS = {
     { icon: 'home',     msIcon: 'home',           label: 'Home',     to: 'home' },
     { icon: 'search',   msIcon: 'search',          label: 'Explore',  to: 'search' },
     { icon: 'calendar', msIcon: 'calendar_month',  label: 'Bookings', to: 'job-tracker' },
-    { icon: 'chat',     msIcon: 'chat',            label: 'Messages', to: 'chat', messagesRoute: true },
+    { icon: 'chat',     msIcon: 'chat',            label: 'Messages', to: 'messages' },
   ],
   provider: [
     { icon: 'grid',      msIcon: 'dashboard',     label: 'Dashboard', to: 'pro-profile' },
     { icon: 'bell',      msIcon: 'notifications', label: 'Requests',  to: 'pro-requests' },
     { icon: 'briefcase', msIcon: 'work',          label: 'Jobs',      to: 'pro-job',   jobRoute: true },
-    { icon: 'chat',      msIcon: 'chat',          label: 'Chat',      to: 'pro-chat',  jobRoute: true },
+    { icon: 'chat',      msIcon: 'chat',          label: 'Messages',  to: 'pro-chats' },
     { icon: 'user',      msIcon: 'person',        label: 'Profile',   to: 'account' },
   ],
   admin: [
@@ -39,16 +65,6 @@ const showShell   = computed(() => auth.isAuthenticated && !route.meta.public &&
 const navItems    = computed(() => NAVS[auth.role] || [])
 
 async function go(item) {
-  // Customer "Messages" tab → open the latest active booking's chat
-  // (falls back to the bookings list when the customer has no jobs yet).
-  if (item.messagesRoute) {
-    const bookings = useBookingsStore()
-    await bookings.load()
-    const mine = bookings.forCustomer(auth.user?.id)
-    const job = mine.find((b) => b.status !== 'reviewed') || mine[0]
-    router.push(job ? { name: 'chat', params: { id: job.id } } : { name: 'job-tracker' })
-    return
-  }
   if (item.jobRoute) {
     const bookings  = useBookingsStore()
     const providers = useProvidersStore()
@@ -62,7 +78,12 @@ async function go(item) {
   }
   router.push({ name: item.to })
 }
-function isActive(item) { return route.name === item.to }
+const CHAT_CHILD_ROUTES = { messages: ['chat'], 'pro-chats': ['pro-chat'] }
+function isActive(item) {
+  if (route.name === item.to) return true
+  const children = CHAT_CHILD_ROUTES[item.to]
+  return children ? children.includes(route.name) : false
+}
 function logout() { auth.logout(); router.push({ name: 'login' }) }
 </script>
 
@@ -70,6 +91,9 @@ function logout() { auth.logout(); router.push({ name: 'login' }) }
   <div class="fx-shell">
     <!-- Animated gradient mesh — sits behind everything -->
     <div class="lg-mesh" aria-hidden="true"></div>
+
+    <!-- Liquid cursor blob (spring-follows mouse, creates liquid merge effect near glass surfaces) -->
+    <div id="lg-cursor-blob" aria-hidden="true"></div>
 
     <!-- Status-bar tint strip (Android edge-to-edge) -->
     <div class="fx-statusbar-bg" aria-hidden="true"></div>

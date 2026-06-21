@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="cp-head" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D1D5DB"/>
+      <stop offset="50%" stop-color="#9CA3AF"/>
+      <stop offset="100%" stop-color="#374151"/>
+    </linearGradient>
+    <linearGradient id="cp-handle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C4924A"/>
+      <stop offset="50%" stop-color="#92651A"/>
+      <stop offset="100%" stop-color="#5C3D0A"/>
+    </linearGradient>
+    <linearGradient id="cp-plank" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4A96A"/>
+      <stop offset="100%" stop-color="#8B5E2A"/>
+    </linearGradient>
+    <linearGradient id="cp-nail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E5E7EB"/>
+      <stop offset="100%" stop-color="#6B7280"/>
+    </linearGradient>
+    <radialGradient id="cp-glare" cx="28%" cy="20%" r="44%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.72)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <filter id="cp-shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="rgba(92,61,10,0.30)"/>
+    </filter>
+  </defs>
+
+  <!-- Ground shadow -->
+  <ellipse cx="100" cy="192" rx="56" ry="10" fill="rgba(0,0,0,0.13)"/>
+
+  <!-- Wood plank (background) -->
+  <rect x="28" y="138" width="144" height="34" rx="6" fill="url(#cp-plank)" filter="url(#cp-shadow)"/>
+  <!-- Plank wood grain lines -->
+  <line x1="32"  y1="148" x2="168" y2="148" stroke="rgba(0,0,0,0.10)" stroke-width="2"/>
+  <line x1="32"  y1="156" x2="168" y2="156" stroke="rgba(0,0,0,0.10)" stroke-width="2"/>
+  <line x1="32"  y1="164" x2="168" y2="164" stroke="rgba(0,0,0,0.10)" stroke-width="2"/>
+  <!-- Plank highlight -->
+  <rect x="28" y="138" width="144" height="5" rx="2" fill="rgba(255,255,255,0.28)"/>
+
+  <!-- Nails in plank -->
+  <rect x="54"  y="133" width="8" height="22" rx="4" fill="url(#cp-nail)"/>
+  <rect x="138" y="133" width="8" height="22" rx="4" fill="url(#cp-nail)"/>
+  <ellipse cx="58"  cy="133" rx="5" ry="3" fill="#E5E7EB"/>
+  <ellipse cx="142" cy="133" rx="5" ry="3" fill="#E5E7EB"/>
+
+  <!-- Hammer handle (rotated ~−35°, top-left diagonal) -->
+  <g transform="rotate(-35 100 100)">
+    <!-- Handle -->
+    <rect x="88" y="68" width="24" height="100" rx="10" fill="url(#cp-handle)" filter="url(#cp-shadow)"/>
+    <!-- Handle highlight -->
+    <rect x="92" y="70" width="8" height="96" rx="4" fill="rgba(255,255,255,0.20)"/>
+    <!-- Wood grain on handle -->
+    <line x1="90" y1="90"  x2="110" y2="90"  stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+    <line x1="90" y1="108" x2="110" y2="108" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+    <line x1="90" y1="126" x2="110" y2="126" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+    <line x1="90" y1="144" x2="110" y2="144" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+
+    <!-- Hammer head -->
+    <rect x="64" y="38" width="72" height="38" rx="10" fill="url(#cp-head)" filter="url(#cp-shadow)"/>
+    <!-- Head face (striking face) -->
+    <rect x="64" y="42" width="12" height="30" rx="4" fill="#D1D5DB"/>
+    <rect x="124" y="42" width="12" height="30" rx="4" fill="rgba(55,65,81,0.8)"/>
+    <!-- Head glare -->
+    <ellipse cx="88" cy="44" rx="20" ry="6" fill="url(#cp-glare)" opacity="0.8"/>
+  </g>
+</svg>

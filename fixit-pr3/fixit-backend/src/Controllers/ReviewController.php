@@ -40,10 +40,16 @@ final class ReviewController
             return ResponseHelper::error($response, 'Job must be completed before reviewing', 422);
         }
 
+        $tipAmount = null;
+        if (isset($data['tip_amount']) && $data['tip_amount'] !== '' && $data['tip_amount'] !== null) {
+            $tipAmount = max(0.0, (float) $data['tip_amount']);
+        }
+
         $review = (new ReviewModel())->create(
             $jobId,
             $rating,
-            isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null
+            isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null,
+            $tipAmount
         );
 
         if ($booking['status'] === 'completed') {
