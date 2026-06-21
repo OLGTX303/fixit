@@ -17,6 +17,7 @@ const rating = ref(5)
 const tags = ['On Time', 'Professional', 'Quality Work', 'Great Value', 'Friendly', 'Clean']
 const selectedTags = ref(['On Time', 'Professional', 'Quality Work'])
 const comment = ref('')
+const tipAmount = ref('')
 const submitting = ref(false)
 
 onMounted(() => bookingsStore.load())
@@ -29,9 +30,10 @@ function toggleTag(t) {
 async function submit() {
   submitting.value = true
   await api.createReview({
-    job_id: booking.value.id,
-    rating: rating.value,
-    comment: comment.value || selectedTags.value.join(', '),
+    job_id:     booking.value.id,
+    rating:     rating.value,
+    comment:    comment.value || selectedTags.value.join(', '),
+    tip_amount: tipAmount.value !== '' ? parseFloat(tipAmount.value) : null,
   })
   await bookingsStore.advanceStatus(booking.value.id, 'reviewed')
   submitting.value = false
@@ -72,6 +74,19 @@ async function submit() {
     <div class="fw-semibold mb-2" style="font-size:14px">Write a Review</div>
     <textarea class="fx-input mb-4" rows="3" v-model="comment"
               placeholder="Tell others about your experience…" style="resize:none"></textarea>
+
+    <div class="fw-semibold mb-2" style="font-size:14px">Add a Tip <span style="font-weight:400;color:var(--fx-muted)">(optional)</span></div>
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <div class="d-flex gap-2">
+        <button v-for="amt in [2, 5, 10]" :key="amt"
+          class="fx-chip sm" :class="{ active: tipAmount == amt }"
+          @click="tipAmount = tipAmount == amt ? '' : amt">
+          ${{ amt }}
+        </button>
+      </div>
+      <input class="fx-input" type="number" min="0" step="0.5" v-model="tipAmount"
+             placeholder="Custom" style="width:90px;text-align:center" />
+    </div>
 
     <button class="btn btn-primary w-100" :disabled="submitting" @click="submit">
       {{ submitting ? 'Submitting…' : 'Submit Review' }}

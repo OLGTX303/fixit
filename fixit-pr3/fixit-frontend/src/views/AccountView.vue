@@ -49,6 +49,43 @@ async function onAvatarSelected(e) {
   finally { uploadingAvatar.value = false; if (fileInput.value) fileInput.value.value='' }
 }
 
+// ── KYC demo flow ──────────────────────────────────────────────────────────
+const kycStep   = ref(0)   // 0=idle, 1=upload, 2=processing, 3=done, -1=failed
+const kycIdFile = ref(null)
+const kycIdName = ref('')
+const kycBusy   = ref(false)
+
+const kycStatusLabel = computed(() => {
+  if (kycStep.value === 3) return 'Verified'
+  if (kycStep.value === -1) return 'Failed'
+  if (kycStep.value > 0)   return 'In progress'
+  return 'Not verified'
+})
+const kycBadgeStyle = computed(() => {
+  if (kycStep.value === 3)  return { color:'var(--fx-success)', background:'var(--fx-success-soft)' }
+  if (kycStep.value === -1) return { color:'var(--fx-error)',   background:'var(--fx-error-soft)' }
+  if (kycStep.value > 0)   return { color:'var(--fx-warn)',    background:'var(--fx-warn-soft)' }
+  return { color:'var(--fx-muted)', background:'rgba(142,112,104,0.10)' }
+})
+
+function kycPickId(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  kycIdFile.value = file
+  kycIdName.value = file.name
+}
+async function kycSubmit() {
+  if (!kycIdFile.value) return
+  kycBusy.value = true
+  kycStep.value = 2
+  // Simulate a 2-second analysis delay for demo
+  await new Promise(r => setTimeout(r, 2000))
+  // Demo: always pass
+  kycStep.value = 3
+  kycBusy.value = false
+}
+function kycReset() { kycStep.value = 0; kycIdFile.value = null; kycIdName.value = '' }
+
 function logout() { auth.logout(); router.push({ name:'login' }) }
 </script>
 
@@ -119,6 +156,87 @@ function logout() { auth.logout(); router.push({ name:'login' }) }
       </template>
     </div>
 
+    <!-- ── KYC Identity Verification (customer demo) ─────────────────── -->
+    <div class="fx-card kyc-card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="kyc-icon-wrap">
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--fx-accent);font-variation-settings:'FILL' 1">verified_user</span>
+          </div>
+          <span class="fx-label-caps">Identity Verification</span>
+        </div>
+        <span class="fx-badge" :style="kycBadgeStyle">{{ kycStatusLabel }}</span>
+      </div>
+
+      <!-- Idle — not started -->
+      <template v-if="kycStep === 0">
+        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:14px;line-height:1.5">
+          Verify your identity to unlock higher booking limits and priority support.
+          Takes less than 2 minutes.
+        </p>
+        <div class="kyc-steps-row">
+          <div class="kyc-step-pill">
+            <span class="material-symbols-outlined" style="font-size:16px">badge</span>
+            Gov ID
+          </div>
+          <div class="kyc-step-arrow">›</div>
+          <div class="kyc-step-pill">
+            <span class="material-symbols-outlined" style="font-size:16px">check_circle</span>
+            Review
+          </div>
+          <div class="kyc-step-arrow">›</div>
+          <div class="kyc-step-pill">
+            <span class="material-symbols-outlined" style="font-size:16px">verified</span>
+            Done
+          </div>
+        </div>
+        <button class="btn btn-primary w-100" style="margin-top:14px" @click="kycStep=1">
+          Start Verification
+        </button>
+      </template>
+
+      <!-- Step 1 — Upload ID -->
+      <template v-else-if="kycStep === 1">
+        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:12px">
+          Upload a clear photo of your passport, national ID, or driving licence.
+        </p>
+        <label class="kyc-upload-area">
+          <input type="file" accept="image/*" class="d-none" @change="kycPickId" />
+          <span class="material-symbols-outlined" style="font-size:28px;color:var(--fx-accent)">upload_file</span>
+          <span style="font-size:13px;font-weight:600;margin-top:6px">
+            {{ kycIdName || 'Tap to upload ID photo' }}
+          </span>
+          <span style="font-size:11px;color:var(--fx-muted)">JPEG, PNG · max 4 MB</span>
+        </label>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-outline-secondary" @click="kycReset">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" :disabled="!kycIdFile" @click="kycSubmit">
+            Analyse ID
+          </button>
+        </div>
+      </template>
+
+      <!-- Step 2 — Processing -->
+      <template v-else-if="kycStep === 2">
+        <div class="kyc-processing">
+          <div class="kyc-spinner"></div>
+          <div style="font-size:14px;font-weight:600;margin-top:12px">Analysing your document…</div>
+          <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">Running OCR + fraud checks</div>
+        </div>
+      </template>
+
+      <!-- Step 3 — Verified -->
+      <template v-else-if="kycStep === 3">
+        <div class="kyc-success">
+          <div class="kyc-check">
+            <span class="material-symbols-outlined" style="font-size:32px;color:#fff;font-variation-settings:'FILL' 1">verified</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-top:12px">Identity verified</div>
+          <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">Your account is now trusted</div>
+        </div>
+      </template>
+    </div>
+
     <!-- Email row -->
     <button class="fx-card ac-row-btn" style="margin-bottom:10px" @click="router.push({ name:'account-email' })">
       <div class="ac-row-icon">
@@ -175,5 +293,55 @@ function logout() { auth.logout(); router.push({ name:'login' }) }
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   background: var(--fx-accent-soft);
   display: flex; align-items: center; justify-content: center;
+}
+
+/* KYC */
+.kyc-icon-wrap {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--fx-accent-soft);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.kyc-steps-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.kyc-step-pill {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: rgba(255,102,53,0.08); color: var(--fx-accent);
+  flex: 1; justify-content: center;
+}
+.kyc-step-arrow { color: var(--fx-muted-soft); font-size: 16px; }
+
+.kyc-upload-area {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 20px; border-radius: 16px; cursor: pointer;
+  border: 2px dashed rgba(255,102,53,0.30);
+  background: rgba(255,102,53,0.04);
+  transition: background 0.2s ease;
+  width: 100%;
+}
+.kyc-upload-area:hover { background: rgba(255,102,53,0.08); }
+
+.kyc-processing {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 0 16px;
+}
+.kyc-spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 3px solid rgba(255,102,53,0.20);
+  border-top-color: var(--fx-accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.kyc-success {
+  display: flex; flex-direction: column; align-items: center; padding: 20px 0 12px;
+}
+.kyc-check {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(145deg, #34d399, #22c55e);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(34,197,94,0.30);
 }
 </style>

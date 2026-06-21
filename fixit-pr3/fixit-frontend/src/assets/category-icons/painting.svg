@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="pt-roller" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF8F6C"/>
+      <stop offset="50%" stop-color="#FF5533"/>
+      <stop offset="100%" stop-color="#C03018"/>
+    </linearGradient>
+    <linearGradient id="pt-handle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B8834A"/>
+      <stop offset="100%" stop-color="#6B3F18"/>
+    </linearGradient>
+    <linearGradient id="pt-frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D4A870"/>
+      <stop offset="100%" stop-color="#8B5E2A"/>
+    </linearGradient>
+    <radialGradient id="pt-glare" cx="30%" cy="25%" r="45%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.62)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <filter id="pt-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="rgba(180,60,20,0.28)"/>
+    </filter>
+  </defs>
+
+  <!-- Ground shadow -->
+  <ellipse cx="100" cy="190" rx="52" ry="10" fill="rgba(0,0,0,0.13)"/>
+
+  <!-- Vertical handle -->
+  <rect x="91" y="95" width="18" height="88" rx="9" fill="url(#pt-handle)" filter="url(#pt-shadow)"/>
+  <rect x="95" y="98" width="6" height="82" rx="3" fill="rgba(255,255,255,0.18)"/>
+
+  <!-- Horizontal frame bar -->
+  <rect x="55" y="90" width="90" height="12" rx="6" fill="url(#pt-frame)"/>
+  <!-- Frame end caps -->
+  <circle cx="55" cy="96" r="7" fill="#C0873A"/>
+  <circle cx="145" cy="96" r="7" fill="#C0873A"/>
+
+  <!-- Roller body -->
+  <rect x="48" y="52" width="104" height="44" rx="18" fill="url(#pt-roller)" filter="url(#pt-shadow)"/>
+  <!-- Roller texture stripes -->
+  <rect x="48" y="66" width="104" height="5" rx="2" fill="rgba(255,255,255,0.16)"/>
+  <rect x="48" y="77" width="104" height="4" rx="2" fill="rgba(0,0,0,0.10)"/>
+  <!-- Roller glare -->
+  <ellipse cx="90" cy="60" rx="26" ry="8" fill="rgba(255,255,255,0.32)"/>
+  <!-- Roller end caps (3D cylinder look) -->
+  <ellipse cx="48" cy="74" rx="5" ry="22" fill="rgba(0,0,0,0.18)"/>
+  <ellipse cx="152" cy="74" rx="5" ry="22" fill="rgba(255,255,255,0.12)"/>
+
+  <!-- Paint streak on roller (coral paint band) -->
+  <rect x="62" y="52" width="20" height="44" rx="2" fill="rgba(255,200,170,0.32)"/>
+
+  <!-- Paint drip trail below handle -->
+  <path d="M97 183 Q95 195 94 200" stroke="#FF5533" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="93" cy="200" r="5" fill="#FF5533" opacity="0.7"/>
+</svg>

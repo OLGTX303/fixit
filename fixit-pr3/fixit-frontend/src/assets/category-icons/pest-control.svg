@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="pc-can" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6EE86E"/>
+      <stop offset="50%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="pc-cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E0F5E0"/>
+      <stop offset="100%" stop-color="#A8D8A8"/>
+    </linearGradient>
+    <linearGradient id="pc-label" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#CCFFCC" stop-opacity="0.7"/>
+    </linearGradient>
+    <radialGradient id="pc-glare" cx="28%" cy="22%" r="40%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.65)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <filter id="pc-shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="rgba(22,101,52,0.30)"/>
+    </filter>
+  </defs>
+
+  <!-- Ground shadow -->
+  <ellipse cx="100" cy="192" rx="48" ry="9" fill="rgba(0,0,0,0.13)"/>
+
+  <!-- Can body -->
+  <rect x="62" y="58" width="76" height="126" rx="22" fill="url(#pc-can)" filter="url(#pc-shadow)"/>
+
+  <!-- Label band -->
+  <rect x="62" y="100" width="76" height="44" rx="0" fill="url(#pc-label)"/>
+  <rect x="62" y="100" width="76" height="3" fill="rgba(255,255,255,0.5)"/>
+  <rect x="62" y="141" width="76" height="3" fill="rgba(255,255,255,0.5)"/>
+  <!-- Bug icon on label -->
+  <ellipse cx="100" cy="122" rx="12" ry="9" fill="#22C55E"/>
+  <ellipse cx="100" cy="115" rx="7" ry="5" fill="#166534"/>
+  <!-- Bug legs -->
+  <line x1="88" y1="118" x2="78" y2="113" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="88" y1="122" x2="78" y2="122" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="112" y1="118" x2="122" y2="113" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="112" y1="122" x2="122" y2="122" stroke="#166534" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- X over bug -->
+  <line x1="90" y1="114" x2="110" y2="130" stroke="#FF3333" stroke-width="3" stroke-linecap="round"/>
+  <line x1="110" y1="114" x2="90" y2="130" stroke="#FF3333" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Cap -->
+  <rect x="70" y="44" width="60" height="18" rx="9" fill="url(#pc-cap)" filter="url(#pc-shadow)"/>
+  <ellipse cx="100" cy="44" rx="30" ry="6" fill="#C8ECC8"/>
+
+  <!-- Nozzle -->
+  <rect x="88" y="30" width="24" height="18" rx="6" fill="#A8D8A8"/>
+  <rect x="96" y="18" width="8" height="16" rx="4" fill="#90C890"/>
+  <!-- Spray dots -->
+  <circle cx="118" cy="12" r="4" fill="#22C55E" opacity="0.7"/>
+  <circle cx="128" cy="22" r="3" fill="#22C55E" opacity="0.55"/>
+  <circle cx="124" cy="8"  r="2.5" fill="#22C55E" opacity="0.45"/>
+  <circle cx="134" cy="14" r="2"   fill="#22C55E" opacity="0.35"/>
+  <circle cx="138" cy="28" r="2.5" fill="#22C55E" opacity="0.40"/>
+
+  <!-- Glare -->
+  <ellipse cx="80" cy="80" rx="18" ry="32" fill="url(#pc-glare)" opacity="0.7"/>
+</svg>

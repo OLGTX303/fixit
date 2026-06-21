@@ -94,13 +94,16 @@ final class ProviderModel
         }
 
         return [
-            'id' => (int) $row['id'],
-            'user_id' => (int) $row['user_id'],
-            'bio' => $row['bio'],
-            'location' => $row['location'],
-            'base_rate' => (float) $row['base_rate'],
-            'is_verified' => (bool) $row['is_verified'],
-            'kyc_doc_url' => $row['kyc_doc_url'],
+            'id'           => (int) $row['id'],
+            'user_id'      => (int) $row['user_id'],
+            'bio'          => $row['bio'],
+            'location'     => $row['location'],
+            'base_rate'    => (float) $row['base_rate'],
+            'rate_type'    => $row['rate_type']    ?? 'hourly',
+            'per_job_rate' => isset($row['per_job_rate']) ? (float) $row['per_job_rate'] : null,
+            'is_priority'  => (bool) ($row['is_priority'] ?? false),
+            'is_verified'  => (bool) $row['is_verified'],
+            'kyc_doc_url'  => $row['kyc_doc_url'],
             'kyc_status' => $row['kyc_status'] ?? 'none',
             'kyc_id_type' => $row['kyc_id_type'] ?? null,
             'kyc_id_confidence' => isset($row['kyc_id_confidence']) ? (float) $row['kyc_id_confidence'] : null,
@@ -172,21 +175,32 @@ final class ProviderModel
         $stmt = Connection::get()->prepare(
             'UPDATE ProviderProfile SET
              bio = :bio, location = :location, base_rate = :rate,
+             rate_type = :rate_type, per_job_rate = :per_job_rate,
              latitude = :lat, longitude = :lng, services_json = :services
              WHERE id = :id'
         );
         $stmt->execute([
-            'id' => $id,
-            'bio' => $data['bio'],
-            'location' => $data['location'],
-            'rate' => $data['base_rate'],
-            'lat' => $data['latitude'],
-            'lng' => $data['longitude'],
-            'services' => json_encode($data['services'] ?? []),
+            'id'           => $id,
+            'bio'          => $data['bio'],
+            'location'     => $data['location'],
+            'rate'         => $data['base_rate'],
+            'rate_type'    => in_array($data['rate_type'] ?? 'hourly', ['hourly','per_job'], true)
+                                  ? ($data['rate_type'] ?? 'hourly') : 'hourly',
+            'per_job_rate' => isset($data['per_job_rate']) ? (float) $data['per_job_rate'] : null,
+            'lat'          => $data['latitude'],
+            'lng'          => $data['longitude'],
+            'services'     => json_encode($data['services'] ?? []),
         ]);
         if (!empty($data['category_ids'])) {
             $this->syncCategories($id, $data['category_ids']);
         }
+        return $this->getEnriched($id);
+    }
+
+    public function setPriority(int $id, bool $isPriority): ?array
+    {
+        $stmt = Connection::get()->prepare('UPDATE ProviderProfile SET is_priority = :p WHERE id = :id');
+        $stmt->execute(['id' => $id, 'p' => $isPriority ? 1 : 0]);
         return $this->getEnriched($id);
     }
 

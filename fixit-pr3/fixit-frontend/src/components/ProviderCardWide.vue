@@ -40,6 +40,11 @@ const initials    = computed(() =>
         <span class="material-symbols-outlined" style="font-size:14px;color:#f59e0b;font-variation-settings:'FILL' 1">star</span>
         <span style="font-size:12px;font-weight:700">{{ provider.avg_rating.toFixed(1) }}</span>
       </div>
+      <!-- Priority listing badge (stretch goal) -->
+      <div v-if="provider.is_priority" class="pcw-priority">
+        <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">bolt</span>
+        Priority
+      </div>
     </div>
 
     <!-- Provider identity -->
@@ -55,7 +60,10 @@ const initials    = computed(() =>
     </div>
 
     <div class="pcw-foot">
-      <div class="pcw-price">RM {{ provider.base_rate }}<span class="pcw-price-unit">/hr</span></div>
+      <div class="pcw-price">
+        RM {{ provider.rate_type === 'per_job' ? provider.per_job_rate : provider.base_rate }}
+        <span class="pcw-price-unit">{{ provider.rate_type === 'per_job' ? '/job' : '/hr' }}</span>
+      </div>
       <button class="btn btn-primary btn-sm pcw-book" type="button" @click.stop="$emit('select', provider)">Book</button>
     </div>
   </div>
@@ -113,4 +121,14 @@ const initials    = computed(() =>
 .pcw-price { font-size: 18px; font-weight: 700; color: var(--fx-accent); }
 .pcw-price-unit { font-size: 12px; font-weight: 400; color: var(--fx-muted); }
 .pcw-book { padding: 7px 18px; font-size: 12px; }
+.pcw-priority {
+  position: absolute; bottom: 10px; left: 10px;
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  background: rgba(255,190,0,0.85);
+  backdrop-filter: blur(8px);
+  color: #7a5200;
+  border: 1px solid rgba(255,220,80,0.60);
+  box-shadow: 0 2px 8px rgba(255,190,0,0.25);
+}
 </style>

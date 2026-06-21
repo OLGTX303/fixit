@@ -57,18 +57,22 @@ final class BookingModel
     {
         $pdo = Connection::get();
         $stmt = $pdo->prepare(
-            'INSERT INTO Job (customer_id, provider_id, category_id, status, scheduled_at, address, total, notes)
-             VALUES (:cid, :pid, :cat, :status, :scheduled, :address, :total, :notes)'
+            'INSERT INTO Job
+             (customer_id, provider_id, category_id, status, scheduled_at, address, total, notes,
+              recurrence_type, recurrence_end_date)
+             VALUES (:cid, :pid, :cat, :status, :scheduled, :address, :total, :notes, :rec_type, :rec_end)'
         );
         $stmt->execute([
-            'cid' => $data['customer_id'],
-            'pid' => $data['provider_id'],
-            'cat' => $data['category_id'],
-            'status' => $data['status'] ?? 'requested',
-            'scheduled' => $data['scheduled_at'],
-            'address' => $data['address'],
-            'total' => $data['total'] ?? null,
-            'notes' => $data['notes'] ?? null,
+            'cid'      => $data['customer_id'],
+            'pid'      => $data['provider_id'],
+            'cat'      => $data['category_id'],
+            'status'   => $data['status'] ?? 'requested',
+            'scheduled'=> $data['scheduled_at'],
+            'address'  => $data['address'],
+            'total'    => $data['total'] ?? null,
+            'notes'    => $data['notes'] ?? null,
+            'rec_type' => $data['recurrence_type'] ?? 'none',
+            'rec_end'  => $data['recurrence_end_date'] ?? null,
         ]);
         return $this->findEnriched((int) $pdo->lastInsertId()) ?? [];
     }
@@ -110,18 +114,20 @@ final class BookingModel
         $category = $this->categories->find((int) $row['category_id']);
 
         return [
-            'id' => (int) $row['id'],
-            'customer_id' => (int) $row['customer_id'],
-            'provider_id' => (int) $row['provider_id'],
-            'category_id' => (int) $row['category_id'],
-            'status' => $row['status'],
-            'scheduled_at' => str_replace(' ', 'T', $row['scheduled_at']),
-            'address' => $row['address'],
-            'total' => $row['total'] !== null ? (float) $row['total'] : null,
-            'notes' => $row['notes'],
-            'customer' => $customer,
-            'provider' => $provider,
-            'category' => $category,
+            'id'                   => (int) $row['id'],
+            'customer_id'          => (int) $row['customer_id'],
+            'provider_id'          => (int) $row['provider_id'],
+            'category_id'          => (int) $row['category_id'],
+            'status'               => $row['status'],
+            'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
+            'address'              => $row['address'],
+            'total'                => $row['total'] !== null ? (float) $row['total'] : null,
+            'notes'                => $row['notes'],
+            'recurrence_type'      => $row['recurrence_type'] ?? 'none',
+            'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,
+            'customer'             => $customer,
+            'provider'             => $provider,
+            'category'             => $category,
         ];
     }
 }

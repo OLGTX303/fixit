@@ -54,15 +54,26 @@ final class BookingController
             return ResponseHelper::error($response, 'Provider not available', 422);
         }
 
+        $validRecurrence = ['none', 'weekly', 'biweekly', 'monthly'];
+        $recurrenceType  = in_array($data['recurrence_type'] ?? 'none', $validRecurrence, true)
+            ? ($data['recurrence_type'] ?? 'none')
+            : 'none';
+        $recurrenceEnd = null;
+        if (!empty($data['recurrence_end_date']) && $recurrenceType !== 'none') {
+            $recurrenceEnd = date('Y-m-d', strtotime((string) $data['recurrence_end_date'])) ?: null;
+        }
+
         $booking = (new BookingModel())->create([
-            'customer_id' => (int) $user['id'],
-            'provider_id' => (int) $data['provider_id'],
-            'category_id' => (int) $data['category_id'],
-            'scheduled_at' => str_replace('T', ' ', (string) $data['scheduled_at']),
-            'address' => Validator::cleanText((string) $data['address'], 255),
-            'total' => isset($data['total']) ? (float) $data['total'] : null,
-            'notes' => isset($data['notes']) ? Validator::cleanText((string) $data['notes'], 2000) : null,
-            'status' => 'requested',
+            'customer_id'          => (int) $user['id'],
+            'provider_id'          => (int) $data['provider_id'],
+            'category_id'          => (int) $data['category_id'],
+            'scheduled_at'         => str_replace('T', ' ', (string) $data['scheduled_at']),
+            'address'              => Validator::cleanText((string) $data['address'], 255),
+            'total'                => isset($data['total']) ? (float) $data['total'] : null,
+            'notes'                => isset($data['notes']) ? Validator::cleanText((string) $data['notes'], 2000) : null,
+            'status'               => 'requested',
+            'recurrence_type'      => $recurrenceType,
+            'recurrence_end_date'  => $recurrenceEnd,
         ]);
 
         return ResponseHelper::json($response, $booking, 201);

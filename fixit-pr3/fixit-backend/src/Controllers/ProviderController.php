@@ -72,15 +72,36 @@ final class ProviderController
 
         $data = (array) $request->getParsedBody();
         $provider = $model->update($id, [
-            'bio' => Validator::cleanText((string) ($data['bio'] ?? $existing['bio']), 2000),
-            'location' => Validator::cleanText((string) ($data['location'] ?? $existing['location']), 180),
-            'base_rate' => (float) ($data['base_rate'] ?? $existing['base_rate']),
-            'latitude' => (float) ($data['latitude'] ?? $existing['latitude']),
-            'longitude' => (float) ($data['longitude'] ?? $existing['longitude']),
-            'services' => $data['services'] ?? json_decode((string) ($existing['services_json'] ?? '[]'), true),
+            'bio'          => Validator::cleanText((string) ($data['bio'] ?? $existing['bio']), 2000),
+            'location'     => Validator::cleanText((string) ($data['location'] ?? $existing['location']), 180),
+            'base_rate'    => (float) ($data['base_rate'] ?? $existing['base_rate']),
+            'rate_type'    => in_array($data['rate_type'] ?? null, ['hourly','per_job'], true)
+                                  ? $data['rate_type']
+                                  : ($existing['rate_type'] ?? 'hourly'),
+            'per_job_rate' => isset($data['per_job_rate']) ? (float) $data['per_job_rate']
+                                  : (isset($existing['per_job_rate']) ? (float) $existing['per_job_rate'] : null),
+            'latitude'     => (float) ($data['latitude'] ?? $existing['latitude']),
+            'longitude'    => (float) ($data['longitude'] ?? $existing['longitude']),
+            'services'     => $data['services'] ?? json_decode((string) ($existing['services_json'] ?? '[]'), true),
             'category_ids' => $data['category_ids'] ?? null,
         ]);
 
+        return ResponseHelper::json($response, $provider);
+    }
+
+    /** PATCH /admin/providers/{id}/priority — admin only */
+    public function setPriority(Request $request, Response $response, array $args): Response
+    {
+        $id   = (int) $args['id'];
+        $data = (array) $request->getParsedBody();
+        $isPriority = (bool) ($data['is_priority'] ?? false);
+
+        $model    = new ProviderModel();
+        $existing = $model->findRaw($id);
+        if (!$existing) {
+            return ResponseHelper::error($response, 'Provider not found', 404);
+        }
+        $provider = $model->setPriority($id, $isPriority);
         return ResponseHelper::json($response, $provider);
     }
 
