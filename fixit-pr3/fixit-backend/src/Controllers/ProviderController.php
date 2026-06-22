@@ -71,6 +71,10 @@ final class ProviderController
         }
 
         $data = (array) $request->getParsedBody();
+        $coverUrl = isset($data['cover_url'])
+            ? (filter_var((string) $data['cover_url'], FILTER_VALIDATE_URL) ?: null)
+            : ($existing['cover_url'] ?? null);
+
         $provider = $model->update($id, [
             'bio'          => Validator::cleanText((string) ($data['bio'] ?? $existing['bio']), 2000),
             'location'     => Validator::cleanText((string) ($data['location'] ?? $existing['location']), 180),
@@ -84,6 +88,7 @@ final class ProviderController
             'longitude'    => (float) ($data['longitude'] ?? $existing['longitude']),
             'services'     => $data['services'] ?? json_decode((string) ($existing['services_json'] ?? '[]'), true),
             'category_ids' => $data['category_ids'] ?? null,
+            'cover_url'    => $coverUrl,
         ]);
 
         return ResponseHelper::json($response, $provider);

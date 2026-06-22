@@ -9,6 +9,39 @@ use FixIt\Database\Connection;
 final class StripePaymentModel
 {
     /** @param object $intent Stripe PaymentIntent object */
+    /** Revenue stats for admin CRM — queries the real StripePayment table. */
+    public function listStats(): array
+    {
+        $pdo = Connection::get();
+
+        $monthly = $pdo->query(
+            "SELECT
+                DATE_FORMAT(created_at, '%Y-%m') AS month,
+                SUM(CASE WHEN status = 'succeeded' THEN amount_cents ELSE 0 END) AS revenue_cents,
+                COUNT(CASE WHEN status = 'succeeded' THEN 1 ELSE NULL END) AS paid_count
+             FROM StripePayment
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+             GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+             ORDER BY month ASC"
+        )->fetchAll(\PDO::FETCH_ASSOC);
+
+        $totals = $pdo->query(
+            "SELECT
+                COALESCE(SUM(CASE WHEN status = 'succeeded' THEN amount_cents ELSE 0 END), 0) AS total_revenue_cents,
+                COUNT(CASE WHEN status = 'succeeded' THEN 1 ELSE NULL END) AS total_paid,
+                COUNT(CASE WHEN status = 'failed'    THEN 1 ELSE NULL END) AS total_failed,
+                COUNT(*) AS total_transactions
+             FROM StripePayment"
+        )->fetch(\PDO::FETCH_ASSOC);
+
+        return [
+            'monthly'  => $monthly,
+            'totals'   => $totals,
+            'currency' => 'myr',
+            'mode'     => 'sandbox',
+        ];
+    }
+
     public function upsertFromPaymentIntent(
         int $userId,
         object $intent,

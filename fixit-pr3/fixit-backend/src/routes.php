@@ -14,6 +14,7 @@ use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ReviewController;
 use FixIt\Controllers\StripePaymentController;
 use FixIt\Controllers\UserController;
+use FixIt\Controllers\WalletController;
 use FixIt\Middleware\JwtAuth;
 use FixIt\Middleware\RateLimitMiddleware;
 use FixIt\Middleware\RoleGuard;
@@ -34,10 +35,11 @@ return function (App $app): void {
     $stripe = new StripePaymentController();
     $users = new UserController();
     $availability = new AvailabilityController();
+    $wallet = new WalletController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet
     ) {
         // Stripe webhook �?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
@@ -49,12 +51,19 @@ return function (App $app): void {
         $group->get('/providers', [$providers, 'list']);
         $group->get('/providers/{id}', [$providers, 'get']);
         $group->get('/providers/{id}/availability', [$availability, 'get']);
-        // Public avatar proxy �?streams the image object from R2 by key.
+        // Public avatar proxy — streams the image object from R2 by key.
         $group->get('/avatars/{key:.+}', [$users, 'serveAvatar']);
+        // Public image proxy — serves review/cover images stored in R2.
+        $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet
         ) {
+            $secure->get('/wallet', [$wallet, 'get']);
+            $secure->post('/wallet/topup', [$wallet, 'topUp'])
+                ->add(new RoleGuard(['customer']));
+            $secure->post('/wallet/withdraw', [$wallet, 'withdraw'])
+                ->add(new RoleGuard(['customer']));
             $secure->patch('/users/me', [$users, 'updateMe']);
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
             $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp']);
@@ -98,7 +107,11 @@ return function (App $app): void {
                 ->add(new RoleGuard(['admin']));
             $secure->get('/admin/users', [$admin, 'listUsers'])
                 ->add(new RoleGuard(['admin']));
+            $secure->patch('/admin/users/{id}/block', [$admin, 'blockUser'])
+                ->add(new RoleGuard(['admin']));
             $secure->get('/admin/reviews', [$admin, 'listReviews'])
+                ->add(new RoleGuard(['admin']));
+            $secure->get('/admin/stripe/stats', [$admin, 'stripeStats'])
                 ->add(new RoleGuard(['admin']));
             $secure->get('/admin/harm-reviews', [$admin, 'listHarmReviews'])
                 ->add(new RoleGuard(['admin']));
@@ -112,6 +125,7 @@ return function (App $app): void {
             $secure->patch('/bookings/{id}/status', [$bookings, 'updateStatus']);
             $secure->delete('/bookings/{id}', [$bookings, 'delete']);
 
+            $secure->post('/upload/image', [$users, 'uploadImage']);
             $secure->post('/reviews', [$reviews, 'create'])
                 ->add(new RoleGuard(['customer']));
             $secure->get('/providers/{id}/reviews', [$reviews, 'forProvider']);

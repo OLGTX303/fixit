@@ -7,6 +7,7 @@ namespace FixIt\Controllers;
 use FixIt\Models\HarmReviewModel;
 use FixIt\Models\ProviderModel;
 use FixIt\Models\ReviewModel;
+use FixIt\Models\StripePaymentModel;
 use FixIt\Models\UserModel;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
@@ -42,6 +43,14 @@ final class AdminController
         return ResponseHelper::json($response, (new UserModel())->listAll());
     }
 
+    public function blockUser(Request $request, Response $response, array $args): Response
+    {
+        $data = (array) $request->getParsedBody();
+        $model = new UserModel();
+        $model->setBlocked((int) $args['id'], (bool) ($data['blocked'] ?? false));
+        return ResponseHelper::json($response, ['ok' => true]);
+    }
+
     public function listReviews(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new ReviewModel())->all());
@@ -50,6 +59,11 @@ final class AdminController
     public function listHarmReviews(Request $request, Response $response): Response
     {
         return ResponseHelper::json($response, (new HarmReviewModel())->listPending());
+    }
+
+    public function stripeStats(Request $request, Response $response): Response
+    {
+        return ResponseHelper::json($response, (new StripePaymentModel())->listStats());
     }
 
     public function reviewHarmMessage(Request $request, Response $response, array $args): Response

@@ -1,12 +1,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
 import * as api from '../../services/api'
 import AppIcon from '../../components/AppIcon.vue'
 
 const router = useRouter()
+const route  = useRoute()
+const subTab = ref(route.query.tab || 'profile') // 'profile' | 'availability' | 'kyc'
 const providersStore = useProvidersStore()
 const auth = useAuthStore()
 
@@ -66,6 +68,29 @@ const kycVerified = computed(() => myProfile.value?.is_verified)
 const avatarFileInput = ref(null)
 const uploadingAvatar = ref(false)
 const avatarError     = ref('')
+
+// Cover photo
+const coverFileInput  = ref(null)
+const uploadingCover  = ref(false)
+const coverError      = ref('')
+const coverUrl        = computed(() => myProfile.value?.cover_url || null)
+
+function pickCover() { coverError.value = ''; coverFileInput.value?.click() }
+async function onCoverSelected(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (file.size > 8 * 1024 * 1024) { coverError.value = 'Max 8 MB'; return }
+  uploadingCover.value = true
+  try {
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file)
+    })
+    const { url } = await api.uploadImage(dataUrl)
+    await api.updateProvider(myProfile.value.id, { cover_url: url })
+    await providersStore.load()
+  } catch (err) { coverError.value = err.message }
+  finally { uploadingCover.value = false; if (coverFileInput.value) coverFileInput.value.value = '' }
+}
 
 // Derived: show real avatar if auth.user has one (uploaded in AccountView or here)
 const avatarUrl = computed(() => auth.user?.avatar_url || null)
@@ -142,8 +167,47 @@ async function save() {
 </script>
 
 <template>
-  <div class="fx-page" style="max-width:560px">
-    <h1 class="fw-bold mb-4" style="font-size:20px">My Profile</h1>
+  <div class="fx-page psp-root" style="max-width:560px;padding-top:0">
+
+    <!-- Back bar -->
+    <div class="psp-topbar">
+      <button class="psp-back-btn" @click="router.push({ name: 'pro-profile' })">
+        <span class="material-symbols-outlined">arrow_back_ios</span>
+      </button>
+      <span class="psp-topbar-title">Edit Profile</span>
+      <div style="width:36px"></div>
+    </div>
+
+    <!-- Sub-tab bar -->
+    <div class="psp-tabs">
+      <button class="psp-tab" :class="{active: subTab==='profile'}"      @click="subTab='profile'">
+        <span class="material-symbols-outlined" style="font-size:18px">person</span>Profile
+      </button>
+      <button class="psp-tab" :class="{active: subTab==='availability'}" @click="subTab='availability'">
+        <span class="material-symbols-outlined" style="font-size:18px">calendar_month</span>Schedule
+      </button>
+      <button class="psp-tab" :class="{active: subTab==='kyc'}"          @click="subTab='kyc'">
+        <span class="material-symbols-outlined" style="font-size:18px">verified_user</span>KYC
+      </button>
+    </div>
+
+    <!-- ── PROFILE TAB ── -->
+    <div v-if="subTab==='profile'" class="psp-tab-body">
+
+    <!-- Cover photo -->
+    <div class="psp-cover-wrap mb-3" @click="pickCover" role="button" aria-label="Change cover photo">
+      <img v-if="coverUrl" :src="coverUrl" class="psp-cover-img" alt="Cover" />
+      <div v-else class="psp-cover-placeholder">
+        <span class="material-symbols-outlined" style="font-size:28px;color:rgba(255,255,255,0.8)">add_photo_alternate</span>
+        <span style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px">Add cover photo</span>
+      </div>
+      <div v-if="uploadingCover" class="psp-cover-overlay">Uploading…</div>
+      <div v-else class="psp-cover-edit-badge">
+        <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+      </div>
+    </div>
+    <div v-if="coverError" style="font-size:11px;color:var(--fx-error);margin-bottom:8px">{{ coverError }}</div>
+    <input ref="coverFileInput" type="file" accept="image/*" style="display:none" @change="onCoverSelected" />
 
     <!-- Avatar section — uploads sync to auth.user.avatar_url → HomeView badge -->
     <div class="psp-avatar-section fx-card mb-4">
@@ -161,41 +225,6 @@ async function save() {
         <div style="font-size:12px;color:var(--fx-muted);margin-top:2px">Tap the camera to update your photo</div>
         <div v-if="uploadingAvatar" style="font-size:11px;color:var(--fx-accent);margin-top:4px">Uploading…</div>
         <div v-if="avatarError" style="font-size:11px;color:var(--fx-error);margin-top:4px">{{ avatarError }}</div>
-      </div>
-    </div>
-
-    <!-- KYC / Identity verification card (iOS 26 glass style) -->
-    <div class="fx-card mb-4 psp-kyc-card"
-         :class="kycVerified ? 'psp-kyc-ok' : (myProfile?.kyc_status === 'failed' ? 'psp-kyc-fail' : 'psp-kyc-warn')">
-      <div class="psp-kyc-inner">
-        <div class="psp-kyc-icon">
-          <span class="material-symbols-outlined"
-                :style="{ fontSize: '20px', fontVariationSettings: `'FILL' 1`,
-                          color: kycVerified ? '#22c55e' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error)' : 'var(--fx-accent)' }">
-            {{ kycVerified ? 'verified_user' : 'shield' }}
-          </span>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div class="fw-semibold" style="font-size:14px">
-            {{ kycVerified ? 'Identity Verified' : 'Identity Verification Required' }}
-          </div>
-          <div style="font-size:12px;color:var(--fx-muted);margin-top:3px">
-            {{ kycVerified
-              ? 'Your ID and face liveness check passed. Account approved.'
-              : 'Upload a government ID and complete the 8-colour face check to get approved.'
-            }}
-          </div>
-          <div v-if="myProfile?.kyc_status && myProfile.kyc_status !== 'none'" style="margin-top:6px">
-            <span class="fx-badge" :style="{
-              color: kycVerified ? '#22c55e' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error)' : 'var(--fx-accent)',
-              background: kycVerified ? 'rgba(34,197,94,0.12)' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error-soft)' : 'var(--fx-accent-soft)'
-            }">{{ kycStatusLabel }}</span>
-          </div>
-        </div>
-        <button v-if="!kycVerified" class="btn btn-primary btn-sm psp-kyc-btn"
-                @click="router.push({ name: 'pro-kyc' })">
-          {{ myProfile?.kyc_status === 'failed' ? 'Retry' : 'Start' }}
-        </button>
       </div>
     </div>
 
@@ -268,44 +297,162 @@ async function save() {
       {{ saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Changes' }}
     </button>
 
-    <!-- ── Availability Calendar (stretch goal) ── -->
-    <div class="fx-card mt-4" style="padding:16px">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-          <div class="fw-bold" style="font-size:15px">Weekly Availability</div>
-          <div style="font-size:12px;color:var(--fx-muted)">Set your open time windows per day</div>
-        </div>
-      </div>
+    </div><!-- end profile tab -->
 
-      <!-- Day selector pills -->
-      <div class="d-flex gap-2 mb-3 flex-wrap">
+    <!-- ── AVAILABILITY TAB ── -->
+    <div v-if="subTab==='availability'" class="psp-tab-body">
+      <div class="psp-section-title">Weekly Schedule</div>
+      <div style="font-size:13px;color:var(--fx-muted);margin-bottom:14px">Tap a day to toggle it, then set your hours.</div>
+
+      <div class="d-flex gap-2 mb-4 flex-wrap">
         <button v-for="(day, dow) in DAYS" :key="dow"
           class="fx-chip sm" :class="{ active: isDayActive(dow) }"
           @click="toggleDay(dow)">{{ day }}</button>
       </div>
 
-      <!-- Time slots for active days -->
-      <div v-for="(day, dow) in DAYS" :key="`slot-${dow}`">
-        <div v-if="isDayActive(dow)" class="psp-avail-row">
-          <span class="psp-avail-day">{{ day }}</span>
-          <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).start_time" />
-          <span style="color:var(--fx-muted);font-size:13px">to</span>
-          <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).end_time" />
-          <label class="psp-avail-auto" :title="slotFor(dow).auto_confirm ? 'Auto-accept on' : 'Auto-accept off'">
-            <input type="checkbox" v-model="slotFor(dow).auto_confirm" />
-            <span style="font-size:11px;color:var(--fx-muted)">Auto</span>
-          </label>
+      <div class="d-flex flex-column gap-3">
+        <div v-for="(day, dow) in DAYS" :key="`slot-${dow}`">
+          <div v-if="isDayActive(dow)" class="psp-avail-card">
+            <div class="psp-avail-day-label">{{ day }}</div>
+            <div class="psp-avail-times">
+              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).start_time" />
+              <span style="color:var(--fx-muted);font-size:13px;padding:0 4px">–</span>
+              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).end_time" />
+            </div>
+            <label class="psp-avail-auto">
+              <input type="checkbox" v-model="slotFor(dow).auto_confirm" />
+              <span style="font-size:11px;color:var(--fx-muted)">Auto-accept</span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <button class="btn btn-primary w-100 mt-3" :disabled="savingAvail || !myProfile" @click="saveAvailability">
-        {{ savingAvail ? 'Saving…' : availSaved ? '✓ Saved' : 'Save Availability' }}
+      <button class="btn btn-primary w-100 mt-4" :disabled="savingAvail || !myProfile" @click="saveAvailability">
+        {{ savingAvail ? 'Saving…' : availSaved ? '✓ Saved' : 'Save Schedule' }}
       </button>
-    </div>
+    </div><!-- end availability tab -->
+
+    <!-- ── KYC TAB ── -->
+    <div v-if="subTab==='kyc'" class="psp-tab-body">
+      <div class="psp-section-title">Identity Verification</div>
+
+      <div class="fx-card psp-kyc-card mb-4"
+           :class="kycVerified ? 'psp-kyc-ok' : (myProfile?.kyc_status === 'failed' ? 'psp-kyc-fail' : 'psp-kyc-warn')">
+        <div class="psp-kyc-inner">
+          <div class="psp-kyc-icon">
+            <span class="material-symbols-outlined"
+                  :style="{ fontSize: '22px', fontVariationSettings: `'FILL' 1`,
+                            color: kycVerified ? '#22c55e' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error)' : 'var(--fx-accent)' }">
+              {{ kycVerified ? 'verified_user' : 'shield' }}
+            </span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="fw-semibold" style="font-size:15px">
+              {{ kycVerified ? 'Identity Verified ✓' : 'Verification Required' }}
+            </div>
+            <div style="font-size:12px;color:var(--fx-muted);margin-top:4px;line-height:1.5">
+              {{ kycVerified
+                ? 'Your ID and face liveness check passed. Your account is approved.'
+                : 'Upload a government-issued ID and complete the 8-colour face check to get approved.'
+              }}
+            </div>
+            <div v-if="myProfile?.kyc_status && myProfile.kyc_status !== 'none'" style="margin-top:8px">
+              <span class="fx-badge" :style="{
+                color: kycVerified ? '#22c55e' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error)' : 'var(--fx-accent)',
+                background: kycVerified ? 'rgba(34,197,94,0.12)' : myProfile?.kyc_status === 'failed' ? 'var(--fx-error-soft)' : 'var(--fx-accent-soft)'
+              }">{{ kycStatusLabel }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button v-if="!kycVerified" class="btn btn-primary w-100" @click="router.push({ name: 'pro-kyc' })">
+        <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px">photo_camera</span>
+        {{ myProfile?.kyc_status === 'failed' ? 'Retry Verification' : 'Start Verification' }}
+      </button>
+
+      <div v-if="kycVerified" style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">
+        <span class="material-symbols-outlined" style="font-size:48px;color:#22c55e;display:block;font-variation-settings:'FILL' 1">verified_user</span>
+        All good — your identity is confirmed.
+      </div>
+    </div><!-- end kyc tab -->
+
   </div>
 </template>
 
 <style scoped>
+/* Sub-tab widget */
+.psp-root { padding-top: 0 !important; }
+
+/* Back bar */
+.psp-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 52px 16px 12px;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border-bottom: 0.5px solid rgba(255,255,255,0.60);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.50);
+}
+.psp-back-btn {
+  background: none; border: none; cursor: pointer; color: var(--fx-text);
+  display: flex; align-items: center; padding: 4px;
+}
+.psp-back-btn .material-symbols-outlined { font-size: 20px; }
+.psp-topbar-title { font-size: 17px; font-weight: 700; color: var(--fx-text); }
+
+.psp-tabs {
+  display: flex; position: sticky; top: 0; z-index: 10;
+  background: rgba(255,255,255,0.60);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border-bottom: 0.5px solid rgba(255,255,255,0.55);
+  margin: 0 -16px 0; padding: 0 8px;
+}
+.psp-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 4px; border: none; background: transparent;
+  font-size: 11px; font-weight: 600; color: var(--fx-muted);
+  border-bottom: 2.5px solid transparent; cursor: pointer; transition: all .15s;
+}
+.psp-tab.active { color: #FF6635; border-bottom-color: #FF6635; }
+.psp-tab-body   { padding-top: 16px; }
+.psp-section-title { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+
+/* Availability card rows */
+.psp-avail-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 100%),
+    rgba(255,255,255,0.06);
+  border: 0.5px solid rgba(255,255,255,0.60);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70), 0 2px 8px rgba(0,0,0,0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.psp-avail-day-label { font-size: 13px; font-weight: 700; color: var(--fx-text); width: 36px; flex-shrink: 0; }
+.psp-avail-times { display: flex; align-items: center; flex: 1; }
+
+/* Cover photo */
+.psp-cover-wrap {
+  position: relative; height: 130px; border-radius: 16px; overflow: hidden;
+  background: linear-gradient(160deg, #1e3a5f, #1e4080);
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  cursor: pointer;
+}
+.psp-cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.psp-cover-placeholder { display: flex; flex-direction: column; align-items: center; z-index: 1; }
+.psp-cover-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex;
+  align-items: center; justify-content: center; font-size: 13px; color: #fff;
+}
+.psp-cover-edit-badge {
+  position: absolute; bottom: 8px; right: 10px; z-index: 2;
+  background: rgba(0,0,0,0.45); border-radius: 50%; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+
 /* Avatar section */
 .psp-avatar-section { display: flex; align-items: center; gap: 16px; }
 .psp-avatar-wrap { position: relative; flex-shrink: 0; }

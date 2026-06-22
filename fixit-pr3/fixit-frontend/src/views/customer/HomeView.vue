@@ -5,6 +5,7 @@ import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
 import CategoryGrid from '../../components/CategoryGrid.vue'
 import ProviderCardWide from '../../components/ProviderCardWide.vue'
+import fixitLogo from '../../assets/fixit-logo.svg'
 
 const providersStore = useProvidersStore()
 const auth   = useAuthStore()
@@ -37,11 +38,8 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   <div>
     <!-- Top app bar -->
     <header class="hv-topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="hv-icon-btn" aria-label="Menu">
-          <span class="material-symbols-outlined" style="font-size:24px;color:var(--fx-accent)">menu</span>
-        </button>
-        <span class="hv-brand">FixIt</span>
+      <div style="display:flex;align-items:center">
+        <img :src="fixitLogo" alt="FixIt" class="hv-logo" />
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="hv-icon-btn hv-bell" aria-label="Notifications">
@@ -132,6 +130,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   background: var(--fx-accent); border: 1.5px solid #fff;
 }
 .hv-brand { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #af3100; }
+.hv-logo { width: 56px; height: 56px; object-fit: contain; }
 .hv-avatar {
   width: 42px; height: 42px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.70);

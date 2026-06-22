@@ -10,6 +10,8 @@ const messages = ref([])
 const loading = ref(false)
 const error = ref('')
 const listEl = ref(null)
+const draft = ref('')
+const sending = ref(false)
 
 onMounted(async () => {
   await bookingsStore.load()
@@ -68,6 +70,19 @@ const STATUS = {
 
 function bookingInitials(b) {
   return (b.customer?.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+async function sendCs() {
+  if (!draft.value.trim() || !selectedId.value || sending.value) return
+  sending.value = true
+  try {
+    const msg = await api.sendMessage(selectedId.value, { body: draft.value.trim() })
+    messages.value.push(msg)
+    draft.value = ''
+    nextTick(() => { if (listEl.value) listEl.value.scrollTop = listEl.value.scrollHeight })
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -128,15 +143,15 @@ function bookingInitials(b) {
             </div>
           </div>
           <div class="fx-badge" style="background:rgba(255,102,53,0.09);color:var(--fx-accent);font-size:11px;padding:4px 10px;gap:4px">
-            <span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">admin_panel_settings</span>
-            Admin view
+            <span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">support_agent</span>
+            CS Mode
           </div>
         </div>
 
-        <!-- E2E notice -->
+        <!-- CS notice -->
         <div class="e2e-bar">
-          <span class="material-symbols-outlined" style="font-size:14px">lock</span>
-          E2E encrypted messages are not visible — only metadata and safety flags are shown
+          <span class="material-symbols-outlined" style="font-size:14px">support_agent</span>
+          Customer Service mode — messages you send appear as support in this conversation
         </div>
 
         <!-- Messages -->
@@ -174,6 +189,15 @@ function bookingInitials(b) {
             <span class="material-symbols-outlined" style="font-size:32px;color:var(--fx-muted-soft);display:block;margin-bottom:8px">chat_bubble</span>
             No messages in this conversation yet
           </div>
+        </div>
+
+        <!-- CS compose bar -->
+        <div class="cs-compose">
+          <input v-model="draft" class="cs-input" placeholder="Type a customer service message…"
+                 @keydown.enter.prevent="sendCs" />
+          <button class="cs-send" :disabled="!draft.trim() || sending" @click="sendCs">
+            <span class="material-symbols-outlined" style="font-size:20px">send</span>
+          </button>
         </div>
       </template>
 
@@ -387,6 +411,40 @@ function bookingInitials(b) {
   font-size: 13px;
   padding: 40px;
 }
+
+/* CS compose bar */
+.cs-compose {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.40);
+  backdrop-filter: blur(30px);
+  border-top: 1px solid rgba(255,255,255,0.40);
+  flex-shrink: 0;
+}
+.cs-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 22px;
+  border: 1.5px solid rgba(255,255,255,0.60);
+  background: rgba(255,255,255,0.55);
+  font-size: 13px;
+  outline: none;
+  color: var(--fx-text);
+}
+.cs-input:focus { border-color: var(--fx-accent); }
+.cs-send {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--fx-accent);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cs-send:disabled { opacity: 0.45; cursor: default; }
 
 /* Mobile: stacked layout */
 @media (max-width: 680px) {

@@ -1,347 +1,431 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useBookingsStore } from '../stores/bookings'
+import { useWalletStore } from '../stores/wallet'
 import * as api from '../services/api'
 
 const auth   = useAuthStore()
 const router = useRouter()
+const bookingsStore = useBookingsStore()
+const wallet = useWalletStore()
 
-const user      = computed(() => auth.user || {})
-const initials  = computed(() => (user.value.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
-const roleLabel = computed(() => { const r = auth.role; return r ? r.charAt(0).toUpperCase()+r.slice(1) : '' })
+const user     = computed(() => auth.user || {})
+const initials = computed(() => (user.value.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
+const isAdmin    = computed(() => auth.role === 'admin')
+const isProvider = computed(() => auth.role === 'provider')
 
-const editing       = ref(false)
-const form          = ref({ name:'', phone:'' })
-const savingProfile = ref(false)
-const profileError  = ref('')
-const profileMsg    = ref('')
+// ── Customer data ──────────────────────────────────────────────────
+onMounted(async () => {
+  if (isAdmin.value) {
+    await loadAdminStats()
+  } else {
+    bookingsStore.load()
+    if (!isProvider.value) {
+      try { await wallet.load() } catch { /* stripe may be unconfigured */ }
+    }
+  }
+})
 
-function startEdit() {
-  form.value = { name: user.value.name||'', phone: user.value.phone||'' }
-  profileError.value = ''; profileMsg.value = ''; editing.value = true
-}
-async function saveProfile() {
-  savingProfile.value = true; profileError.value = ''
+const myBookings = computed(() => bookingsStore.bookings.filter(b => b.customer_id === auth.user?.id))
+const upcoming   = computed(() => myBookings.value.filter(b => ['requested','accepted','in_progress'].includes(b.status)))
+const toReview   = computed(() => myBookings.value.filter(b => b.status === 'completed'))
+const walletBal  = computed(() => (wallet.balanceCents / 100).toFixed(2))
+
+// ── Admin stats (fetched once on mount) ────────────────────────────
+const adminStats = ref({ users: 0, blocked: 0, providers: 0, pendingVerify: 0, bookings: 0, harmPending: 0 })
+async function loadAdminStats() {
   try {
-    const { user: updated } = await api.updateProfile({ name: form.value.name, phone: form.value.phone })
-    auth.setUser(updated); editing.value = false; profileMsg.value = 'Profile updated'
-  } catch (e) { profileError.value = e.message }
-  finally { savingProfile.value = false }
+    const [users, providers, harm] = await Promise.all([
+      api.getUsers(),
+      api.getProviders(),
+      api.getHarmReviews(),
+    ])
+    adminStats.value = {
+      users:         users.length,
+      blocked:       users.filter(u => u.is_blocked).length,
+      providers:     providers.length,
+      pendingVerify: providers.filter(p => !p.is_verified).length,
+      harmPending:   harm.filter(h => h.status === 'pending').length,
+    }
+  } catch {}
 }
 
-const fileInput      = ref(null)
-const uploadingAvatar = ref(false)
-const avatarError    = ref('')
-
-function pickAvatar() { avatarError.value = ''; fileInput.value?.click() }
+// ── Avatar upload ──────────────────────────────────────────────────
+const fileInput = ref(null)
+const uploading = ref(false)
 async function onAvatarSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
-  if (!file.type.startsWith('image/')) { avatarError.value = 'Please choose an image file'; return }
-  if (file.size > 4*1024*1024) { avatarError.value = 'Image too large (max 4 MB)'; return }
-  uploadingAvatar.value = true
+  uploading.value = true
   try {
-    const dataUrl = await new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file) })
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file)
+    })
     const { user: updated } = await api.uploadAvatar(dataUrl)
     auth.setUser(updated)
-  } catch (err) { avatarError.value = err.message }
-  finally { uploadingAvatar.value = false; if (fileInput.value) fileInput.value.value='' }
+  } finally { uploading.value = false; if (fileInput.value) fileInput.value.value = '' }
 }
 
-// ── KYC demo flow ──────────────────────────────────────────────────────────
-const kycStep   = ref(0)   // 0=idle, 1=upload, 2=processing, 3=done, -1=failed
-const kycIdFile = ref(null)
-const kycIdName = ref('')
-const kycBusy   = ref(false)
-
-const kycStatusLabel = computed(() => {
-  if (kycStep.value === 3) return 'Verified'
-  if (kycStep.value === -1) return 'Failed'
-  if (kycStep.value > 0)   return 'In progress'
-  return 'Not verified'
-})
-const kycBadgeStyle = computed(() => {
-  if (kycStep.value === 3)  return { color:'var(--fx-success)', background:'var(--fx-success-soft)' }
-  if (kycStep.value === -1) return { color:'var(--fx-error)',   background:'var(--fx-error-soft)' }
-  if (kycStep.value > 0)   return { color:'var(--fx-warn)',    background:'var(--fx-warn-soft)' }
-  return { color:'var(--fx-muted)', background:'rgba(142,112,104,0.10)' }
-})
-
-function kycPickId(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-  kycIdFile.value = file
-  kycIdName.value = file.name
-}
-async function kycSubmit() {
-  if (!kycIdFile.value) return
-  kycBusy.value = true
-  kycStep.value = 2
-  // Simulate a 2-second analysis delay for demo
-  await new Promise(r => setTimeout(r, 2000))
-  // Demo: always pass
-  kycStep.value = 3
-  kycBusy.value = false
-}
-function kycReset() { kycStep.value = 0; kycIdFile.value = null; kycIdName.value = '' }
-
-function logout() { auth.logout(); router.push({ name:'login' }) }
+// Customer quick actions (no Wallet — already in stats row)
+const CUSTOMER_QUICK = [
+  { icon: 'star',          label: 'Favourites', to: null },
+  { icon: 'history',       label: 'History',    to: 'job-tracker' },
+  { icon: 'redeem',        label: 'Coupons',    to: null },
+  { icon: 'shopping_cart', label: 'Cart',       to: 'cart' },
+]
 </script>
 
 <template>
-  <div class="fx-page" style="max-width:520px">
-    <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:20px">Profile</h1>
+  <div class="acv-root">
 
-    <!-- Avatar card -->
-    <div class="fx-card" style="margin-bottom:12px;display:flex;align-items:center;gap:16px">
-      <div style="position:relative;flex-shrink:0">
-        <img v-if="user.avatar_url" :src="user.avatar_url" alt="avatar"
-             style="width:68px;height:68px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.70)" />
-        <div v-else class="fx-avatar" style="width:68px;height:68px;font-size:22px">{{ initials }}</div>
-        <button class="ac-cam-btn glossy-primary" :disabled="uploadingAvatar" @click="pickAvatar">
-          <span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1">photo_camera</span>
+    <!-- ── Hero ── -->
+    <div class="acv-hero" :class="isAdmin ? 'hero-admin' : 'hero-customer'">
+      <div class="acv-hero-actions">
+        <button class="acv-icon-btn" @click="router.push({ name: 'account-settings' })">
+          <span class="material-symbols-outlined">settings</span>
         </button>
-        <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onAvatarSelected" />
       </div>
-      <div>
-        <div style="font-size:18px;font-weight:700">{{ user.name || 'Unknown user' }}</div>
-        <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--fx-accent-soft);color:var(--fx-accent);margin-top:4px">
-          {{ roleLabel }}
-        </span>
-        <div v-if="uploadingAvatar" style="font-size:11px;color:var(--fx-muted);margin-top:4px">Uploading…</div>
+
+      <div class="acv-profile-row">
+        <div class="acv-avatar-wrap" @click="fileInput?.click()">
+          <img v-if="user.avatar_url" :src="user.avatar_url" class="acv-avatar-img" />
+          <div v-else class="acv-avatar-fallback">{{ initials }}</div>
+          <div class="acv-avatar-cam">
+            <span class="material-symbols-outlined" style="font-size:12px;color:#fff;font-variation-settings:'FILL' 1">photo_camera</span>
+          </div>
+          <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onAvatarSelected" />
+        </div>
+        <div class="acv-name-block">
+          <div class="acv-username">{{ user.name || 'User' }}</div>
+          <div class="acv-subline">{{ user.email || user.phone || '' }}</div>
+          <div class="acv-role-chip">
+            <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">
+              {{ isAdmin ? 'admin_panel_settings' : isProvider ? 'build' : 'home_repair_service' }}
+            </span>
+            {{ isAdmin ? 'Administrator' : isProvider ? 'Provider' : 'Customer' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Admin stats (real numbers) ── -->
+      <div v-if="isAdmin" class="acv-stats-row">
+        <div class="acv-stat" @click="router.push({ name: 'admin-users' })">
+          <div class="acv-stat-num">{{ adminStats.users }}</div>
+          <div class="acv-stat-lbl">Total Users</div>
+        </div>
+        <div class="acv-stat-div"></div>
+        <div class="acv-stat" @click="router.push({ name: 'admin-verify' })">
+          <div class="acv-stat-num">{{ adminStats.pendingVerify }}</div>
+          <div class="acv-stat-lbl">Unverified</div>
+        </div>
+        <div class="acv-stat-div"></div>
+        <div class="acv-stat" @click="router.push({ name: 'admin-harm' })">
+          <div class="acv-stat-num">{{ adminStats.harmPending }}</div>
+          <div class="acv-stat-lbl">Reports</div>
+        </div>
+      </div>
+
+      <!-- ── Customer / Provider stats ── -->
+      <div v-else class="acv-stats-row">
+        <div class="acv-stat" @click="router.push({ name: 'job-tracker' })">
+          <div class="acv-stat-num">{{ myBookings.length }}</div>
+          <div class="acv-stat-lbl">Bookings</div>
+        </div>
+        <div class="acv-stat-div"></div>
+        <div class="acv-stat" @click="router.push({ name: 'wallet' })">
+          <div class="acv-stat-num">RM{{ walletBal }}</div>
+          <div class="acv-stat-lbl">Wallet</div>
+        </div>
+        <div class="acv-stat-div"></div>
+        <div class="acv-stat">
+          <div class="acv-stat-num">{{ toReview.length }}</div>
+          <div class="acv-stat-lbl">To Review</div>
+        </div>
       </div>
     </div>
-    <div v-if="avatarError" class="alert alert-danger" style="font-size:12px;padding:8px 12px;margin-bottom:10px">{{ avatarError }}</div>
 
-    <!-- Account details card -->
-    <div class="fx-card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span class="fx-label-caps">Account Details</span>
-        <button v-if="!editing" class="btn btn-link" style="font-size:13px" @click="startEdit">Edit</button>
-      </div>
+    <!-- ══════════════════════════════════════════
+         ADMIN CONTENT
+    ══════════════════════════════════════════ -->
+    <template v-if="isAdmin">
 
-      <template v-if="!editing">
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div>
-            <div style="font-size:11px;color:var(--fx-muted);margin-bottom:2px">Name</div>
-            <div style="font-size:14px;font-weight:600">{{ user.name || '—' }}</div>
+      <!-- Feature cards 2×2 -->
+      <div class="adm-grid">
+        <!-- Users -->
+        <button class="adm-card" @click="router.push({ name: 'admin-users' })">
+          <div class="adm-card-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">manage_accounts</span>
           </div>
-          <div>
-            <div style="font-size:11px;color:var(--fx-muted);margin-bottom:2px">Phone</div>
-            <div style="font-size:14px;font-weight:600">{{ user.phone || '—' }}</div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Users</div>
+            <div class="adm-card-sub">{{ adminStats.users }} total
+              <span v-if="adminStats.blocked" style="color:#ef4444"> · {{ adminStats.blocked }} blocked</span>
+            </div>
           </div>
-        </div>
-        <div v-if="profileMsg" style="font-size:12px;color:var(--fx-success);margin-top:10px">✓ {{ profileMsg }}</div>
-      </template>
-
-      <template v-else>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div>
-            <div class="fx-label-caps" style="margin-bottom:6px">Name</div>
-            <div class="fx-input"><input v-model="form.name" placeholder="Your name" /></div>
-          </div>
-          <div>
-            <div class="fx-label-caps" style="margin-bottom:6px">Phone</div>
-            <div class="fx-input"><input v-model="form.phone" placeholder="+60 12-345 6789" /></div>
-          </div>
-        </div>
-        <div v-if="profileError" class="alert alert-danger" style="font-size:12px;padding:8px 12px;margin-top:10px">{{ profileError }}</div>
-        <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn btn-primary" style="flex:1" :disabled="savingProfile" @click="saveProfile">
-            {{ savingProfile ? 'Saving…' : 'Save' }}
-          </button>
-          <button class="btn btn-outline-secondary" :disabled="savingProfile" @click="editing=false">Cancel</button>
-        </div>
-      </template>
-    </div>
-
-    <!-- ── KYC Identity Verification (customer demo) ─────────────────── -->
-    <div class="fx-card kyc-card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="kyc-icon-wrap">
-            <span class="material-symbols-outlined" style="font-size:18px;color:var(--fx-accent);font-variation-settings:'FILL' 1">verified_user</span>
-          </div>
-          <span class="fx-label-caps">Identity Verification</span>
-        </div>
-        <span class="fx-badge" :style="kycBadgeStyle">{{ kycStatusLabel }}</span>
-      </div>
-
-      <!-- Idle — not started -->
-      <template v-if="kycStep === 0">
-        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:14px;line-height:1.5">
-          Verify your identity to unlock higher booking limits and priority support.
-          Takes less than 2 minutes.
-        </p>
-        <div class="kyc-steps-row">
-          <div class="kyc-step-pill">
-            <span class="material-symbols-outlined" style="font-size:16px">badge</span>
-            Gov ID
-          </div>
-          <div class="kyc-step-arrow">›</div>
-          <div class="kyc-step-pill">
-            <span class="material-symbols-outlined" style="font-size:16px">check_circle</span>
-            Review
-          </div>
-          <div class="kyc-step-arrow">›</div>
-          <div class="kyc-step-pill">
-            <span class="material-symbols-outlined" style="font-size:16px">verified</span>
-            Done
-          </div>
-        </div>
-        <button class="btn btn-primary w-100" style="margin-top:14px" @click="kycStep=1">
-          Start Verification
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
         </button>
-      </template>
 
-      <!-- Step 1 — Upload ID -->
-      <template v-else-if="kycStep === 1">
-        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:12px">
-          Upload a clear photo of your passport, national ID, or driving licence.
-        </p>
-        <label class="kyc-upload-area">
-          <input type="file" accept="image/*" class="d-none" @change="kycPickId" />
-          <span class="material-symbols-outlined" style="font-size:28px;color:var(--fx-accent)">upload_file</span>
-          <span style="font-size:13px;font-weight:600;margin-top:6px">
-            {{ kycIdName || 'Tap to upload ID photo' }}
-          </span>
-          <span style="font-size:11px;color:var(--fx-muted)">JPEG, PNG · max 4 MB</span>
-        </label>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn btn-outline-secondary" @click="kycReset">Cancel</button>
-          <button class="btn btn-primary" style="flex:1" :disabled="!kycIdFile" @click="kycSubmit">
-            Analyse ID
+        <!-- Providers -->
+        <button class="adm-card" @click="router.push({ name: 'admin-verify' })">
+          <div class="adm-card-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">verified_user</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Providers</div>
+            <div class="adm-card-sub">{{ adminStats.providers }} total
+              <span v-if="adminStats.pendingVerify" style="color:#f59e0b"> · {{ adminStats.pendingVerify }} pending</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+
+        <!-- Bookings -->
+        <button class="adm-card" @click="router.push({ name: 'admin-bookings' })">
+          <div class="adm-card-icon" style="background:rgba(16,185,129,0.12);color:#10b981">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">calendar_month</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Bookings</div>
+            <div class="adm-card-sub">All job orders</div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+
+        <!-- CS Chat -->
+        <button class="adm-card" @click="router.push({ name: 'admin-chats' })">
+          <div class="adm-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">support_agent</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">CS Chat</div>
+            <div class="adm-card-sub">Customer service</div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+
+        <!-- Safety / Harm reviews -->
+        <button class="adm-card" @click="router.push({ name: 'admin-harm' })">
+          <div class="adm-card-icon" style="background:rgba(239,68,68,0.12);color:#ef4444">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">shield</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Safety Reports</div>
+            <div class="adm-card-sub">
+              <span v-if="adminStats.harmPending" style="color:#ef4444;font-weight:700">{{ adminStats.harmPending }} pending review</span>
+              <span v-else style="color:var(--fx-success)">All clear</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+
+        <!-- Reviews moderation -->
+        <button class="adm-card" @click="router.push({ name: 'admin-bookings' })">
+          <div class="adm-card-icon" style="background:rgba(236,72,153,0.12);color:#ec4899">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">rate_review</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Reviews</div>
+            <div class="adm-card-sub">Moderate feedback</div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+      </div>
+
+    </template>
+
+    <!-- ══════════════════════════════════════════
+         CUSTOMER / PROVIDER CONTENT
+    ══════════════════════════════════════════ -->
+    <template v-else>
+
+      <!-- Quick actions -->
+      <div class="acv-card acv-quick-grid">
+        <button v-for="q in CUSTOMER_QUICK" :key="q.label"
+                class="acv-quick-item"
+                @click="q.to && router.push({ name: q.to })">
+          <div class="acv-quick-icon">
+            <span class="material-symbols-outlined" style="font-size:22px;font-variation-settings:'FILL' 1">{{ q.icon }}</span>
+          </div>
+          <span class="acv-quick-lbl">{{ q.label }}</span>
+        </button>
+      </div>
+
+      <!-- My Bookings -->
+      <div class="acv-card">
+        <div class="acv-card-header">
+          <span class="acv-card-title">My Bookings</span>
+          <button class="acv-see-all" @click="router.push({ name: 'job-tracker' })">
+            View All <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
           </button>
         </div>
-      </template>
-
-      <!-- Step 2 — Processing -->
-      <template v-else-if="kycStep === 2">
-        <div class="kyc-processing">
-          <div class="kyc-spinner"></div>
-          <div style="font-size:14px;font-weight:600;margin-top:12px">Analysing your document…</div>
-          <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">Running OCR + fraud checks</div>
+        <div class="acv-orders-grid">
+          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
+            <span class="material-symbols-outlined acv-order-icon">list_alt</span>
+            <span class="acv-order-lbl">All</span>
+          </button>
+          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
+            <div style="position:relative;display:inline-block">
+              <span class="material-symbols-outlined acv-order-icon">schedule</span>
+              <span v-if="upcoming.length" class="acv-order-badge">{{ upcoming.length }}</span>
+            </div>
+            <span class="acv-order-lbl">Upcoming</span>
+          </button>
+          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
+            <div style="position:relative;display:inline-block">
+              <span class="material-symbols-outlined acv-order-icon">rate_review</span>
+              <span v-if="toReview.length" class="acv-order-badge">{{ toReview.length }}</span>
+            </div>
+            <span class="acv-order-lbl">To Review</span>
+          </button>
+          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
+            <span class="material-symbols-outlined acv-order-icon">cancel</span>
+            <span class="acv-order-lbl">Cancelled</span>
+          </button>
         </div>
-      </template>
-
-      <!-- Step 3 — Verified -->
-      <template v-else-if="kycStep === 3">
-        <div class="kyc-success">
-          <div class="kyc-check">
-            <span class="material-symbols-outlined" style="font-size:32px;color:#fff;font-variation-settings:'FILL' 1">verified</span>
-          </div>
-          <div style="font-size:15px;font-weight:700;margin-top:12px">Identity verified</div>
-          <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">Your account is now trusted</div>
-        </div>
-      </template>
-    </div>
-
-    <!-- Email row -->
-    <button class="fx-card ac-row-btn" style="margin-bottom:10px" @click="router.push({ name:'account-email' })">
-      <div class="ac-row-icon">
-        <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-accent);font-variation-settings:'FILL' 1">mail</span>
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600">Email</div>
-        <div style="font-size:12px;color:var(--fx-muted)">{{ user.email }}</div>
-      </div>
-      <span class="material-symbols-outlined" style="font-size:18px;color:rgba(142,112,104,0.45)">chevron_right</span>
-    </button>
 
-    <!-- Payment row -->
-    <button class="fx-card ac-row-btn" style="margin-bottom:20px" @click="router.push({ name:'account-billing' })">
-      <div class="ac-row-icon">
-        <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-accent);font-variation-settings:'FILL' 1">credit_card</span>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600">Payment methods</div>
-        <div style="font-size:12px;color:var(--fx-muted)">Manage your saved card</div>
-      </div>
-      <span class="material-symbols-outlined" style="font-size:18px;color:rgba(142,112,104,0.45)">chevron_right</span>
-    </button>
+    </template>
 
-    <!-- Logout -->
-    <button class="btn btn-outline-danger w-100" style="height:50px;font-size:14px" @click="logout">
-      <span class="material-symbols-outlined" style="font-size:18px;margin-right:6px">logout</span>
-      Log out
-    </button>
-
-    <p style="text-align:center;font-size:11px;color:var(--fx-muted);margin-top:16px">
-      <router-link :to="{ name:'legal-terms' }"   style="color:var(--fx-accent);text-decoration:none">Terms</router-link>
-      ·
-      <router-link :to="{ name:'legal-privacy' }" style="color:var(--fx-accent);text-decoration:none">Privacy</router-link>
-    </p>
+    <div style="height: calc(88px + env(safe-area-inset-bottom))"></div>
   </div>
 </template>
 
 <style scoped>
-.ac-cam-btn {
-  position: absolute; bottom: -4px; right: -4px;
-  width: 28px; height: 28px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 2px solid rgba(255,255,255,0.70);
-}
-.ac-row-btn {
-  width: 100%; display: flex; align-items: center; gap: 14px;
-  border: none; text-align: left; cursor: pointer;
-  transition: transform 0.15s ease;
-}
-.ac-row-btn:hover  { transform: translateX(3px); }
-.ac-row-btn:active { transform: scale(0.98); }
-.ac-row-icon {
-  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-  background: var(--fx-accent-soft);
-  display: flex; align-items: center; justify-content: center;
-}
+.acv-root { background: var(--fx-bg); min-height: 100vh; }
 
-/* KYC */
-.kyc-icon-wrap {
-  width: 32px; height: 32px; border-radius: 10px;
-  background: var(--fx-accent-soft);
+/* ── Hero ── */
+.acv-hero {
+  padding: 52px 20px 0; border-radius: 0 0 28px 28px;
+  position: relative; overflow: hidden; margin-bottom: 14px;
+}
+.hero-customer { background: linear-gradient(160deg, #FF7D54 0%, #FF6635 60%, #e8501e 100%); }
+.hero-admin    { background: linear-gradient(160deg, #9333ea 0%, #7c3aed 60%, #5b21b6 100%); }
+.acv-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+.acv-hero-actions { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
+.acv-icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.20); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  backdrop-filter: blur(8px);
+}
+.acv-icon-btn .material-symbols-outlined { font-size: 20px; }
+
+.acv-profile-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.acv-avatar-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
+.acv-avatar-img  { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.60); }
+.acv-avatar-fallback {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: rgba(255,255,255,0.25); color: #fff;
+  font-size: 24px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  border: 3px solid rgba(255,255,255,0.40);
 }
-.kyc-steps-row {
-  display: flex; align-items: center; gap: 6px;
-}
-.kyc-step-pill {
-  display: flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
-  background: rgba(255,102,53,0.08); color: var(--fx-accent);
-  flex: 1; justify-content: center;
-}
-.kyc-step-arrow { color: var(--fx-muted-soft); font-size: 16px; }
-
-.kyc-upload-area {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; padding: 20px; border-radius: 16px; cursor: pointer;
-  border: 2px dashed rgba(255,102,53,0.30);
-  background: rgba(255,102,53,0.04);
-  transition: background 0.2s ease;
-  width: 100%;
-}
-.kyc-upload-area:hover { background: rgba(255,102,53,0.08); }
-
-.kyc-processing {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 24px 0 16px;
-}
-.kyc-spinner {
-  width: 40px; height: 40px; border-radius: 50%;
-  border: 3px solid rgba(255,102,53,0.20);
-  border-top-color: var(--fx-accent);
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.kyc-success {
-  display: flex; flex-direction: column; align-items: center; padding: 20px 0 12px;
-}
-.kyc-check {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: linear-gradient(145deg, #34d399, #22c55e);
+.acv-avatar-cam {
+  position: absolute; bottom: 0; right: 0;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.45); border: 2px solid rgba(255,255,255,0.6);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 16px rgba(34,197,94,0.30);
+}
+.acv-name-block { flex: 1; min-width: 0; }
+.acv-username   { font-size: 20px; font-weight: 800; color: #fff; }
+.acv-subline    { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+.acv-role-chip  {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 6px;
+  padding: 3px 10px; border-radius: 20px;
+  background: rgba(255,255,255,0.20); color: #fff;
+  font-size: 11px; font-weight: 700; backdrop-filter: blur(6px);
+}
+.acv-stats-row {
+  display: flex; align-items: center;
+  background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+  border-radius: 14px 14px 0 0; padding: 14px 0;
+}
+.acv-stat     { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+.acv-stat-num { font-size: 17px; font-weight: 800; color: #fff; }
+.acv-stat-lbl { font-size: 11px; color: rgba(255,255,255,0.80); }
+.acv-stat-div { width: 1px; height: 28px; background: rgba(255,255,255,0.25); }
+
+/* ── Admin feature cards ── */
+.adm-grid {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 0 12px;
+}
+.adm-card {
+  display: flex; align-items: center; gap: 14px;
+  background:
+    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
+    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
+    rgba(255,255,255,0.06);
+  border: 0.5px solid rgba(255,255,255,0.55);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.06);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border-radius: 20px; padding: 14px 16px;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.adm-card:active { transform: scale(0.985); box-shadow: 0 0 0 2px rgba(124,58,237,0.18); }
+.adm-card-icon {
+  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.adm-card-body { flex: 1; min-width: 0; }
+.adm-card-title { font-size: 15px; font-weight: 700; color: var(--fx-text); }
+.adm-card-sub   { font-size: 12px; color: var(--fx-muted); margin-top: 2px; }
+.adm-chevron    { font-size: 20px; color: var(--fx-muted); flex-shrink: 0; }
+
+/* ── Customer cards ── */
+.acv-card {
+  background:
+    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
+    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
+    rgba(255,255,255,0.06);
+  border: 0.5px solid rgba(255,255,255,0.55);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.06);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border-radius: 22px;
+  padding: 16px; margin: 0 12px 12px;
+}
+.acv-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.acv-card-title   { font-size: 15px; font-weight: 800; color: var(--fx-text); }
+.acv-see-all      {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 12px; color: var(--fx-muted); background: none; border: none; cursor: pointer; padding: 0;
+}
+.acv-quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+.acv-quick-item { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 4px 0; }
+.acv-quick-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 100%),
+    rgba(255,102,53,0.08);
+  border: 0.5px solid rgba(255,255,255,0.60);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70), 0 2px 8px rgba(255,102,53,0.10);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #FF6635;
+  display: flex; align-items: center; justify-content: center;
+}
+.acv-quick-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); }
+.acv-orders-grid { display: grid; grid-template-columns: repeat(4,1fr); }
+.acv-order-btn  {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer; padding: 4px 0;
+}
+.acv-order-icon { font-size: 26px; color: var(--fx-text); }
+.acv-order-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); }
+.acv-order-badge {
+  position: absolute; top: -4px; right: -6px;
+  min-width: 16px; height: 16px; border-radius: 10px; padding: 0 4px;
+  background: #FF6635; color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--fx-card);
 }
 </style>

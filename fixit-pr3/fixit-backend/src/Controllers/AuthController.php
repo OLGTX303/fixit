@@ -139,6 +139,9 @@ final class AuthController
         if (!$user || !password_verify((string) $data['password'], (string) $user['password_hash'])) {
             return ResponseHelper::error($response, 'Invalid email or password', 401);
         }
+        if (!empty($user['is_blocked'])) {
+            return ResponseHelper::error($response, 'This account has been suspended. Contact support.', 403);
+        }
 
         unset($user['password_hash']);
         $token = self::issueToken($user);

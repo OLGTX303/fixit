@@ -64,7 +64,7 @@ final class ProviderModel
     public function getEnriched(int $id): ?array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT p.*, u.name, u.email, u.phone
+            'SELECT p.*, u.name, u.email, u.phone, u.avatar_url
              FROM ProviderProfile p
              JOIN User u ON u.id = p.user_id
              WHERE p.id = :id LIMIT 1'
@@ -124,6 +124,8 @@ final class ProviderModel
             'categories' => $cats,
             'category_names' => array_map(fn ($c) => $c['name'], $cats),
             'review_count' => $this->reviewCountForProvider((int) $row['id']),
+            'cover_url'    => $row['cover_url'] ?? null,
+            'avatar_url'   => $row['avatar_url'] ?? null,
         ];
     }
 
@@ -172,11 +174,17 @@ final class ProviderModel
 
     public function update(int $id, array $data): ?array
     {
+        // Lazy-add cover_url column if not yet present
+        try {
+            Connection::get()->exec("ALTER TABLE ProviderProfile ADD COLUMN cover_url VARCHAR(512) NULL");
+        } catch (\Throwable) {}
+
         $stmt = Connection::get()->prepare(
             'UPDATE ProviderProfile SET
              bio = :bio, location = :location, base_rate = :rate,
              rate_type = :rate_type, per_job_rate = :per_job_rate,
-             latitude = :lat, longitude = :lng, services_json = :services
+             latitude = :lat, longitude = :lng, services_json = :services,
+             cover_url = :cover_url
              WHERE id = :id'
         );
         $stmt->execute([
@@ -190,6 +198,7 @@ final class ProviderModel
             'lat'          => $data['latitude'],
             'lng'          => $data['longitude'],
             'services'     => json_encode($data['services'] ?? []),
+            'cover_url'    => $data['cover_url'] ?? null,
         ]);
         if (!empty($data['category_ids'])) {
             $this->syncCategories($id, $data['category_ids']);

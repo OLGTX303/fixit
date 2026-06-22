@@ -9,6 +9,11 @@ import * as harmReview from '../../services/harmReview'
 import PinModal from '../../components/PinModal.vue'
 import { E2E_ENABLED } from '../../config'
 
+const props = defineProps({
+  bookingId: { type: [Number, String], default: null },
+  embedded:  { type: Boolean, default: false },
+})
+
 const route = useRoute()
 const router = useRouter()
 const bookingsStore = useBookingsStore()
@@ -24,8 +29,8 @@ const showPinSetup = ref(false)
 const showPinUnlock = ref(false)
 const ready = ref(false)
 
-const booking = computed(() => bookingsStore.byId(route.params.id))
-const jobId = computed(() => Number(route.params.id))
+const jobId   = computed(() => Number(props.bookingId || route.params.id))
+const booking = computed(() => bookingsStore.byId(jobId.value))
 
 // Show the other party: a provider chats with the customer, a customer with the provider.
 const other = computed(() => {
@@ -68,7 +73,7 @@ async function onPinReady() {
 async function initChat() {
   try {
     if (E2E_ENABLED) await chatCrypto.ensureJobKey(jobId.value)
-    const raw = await api.getMessagesForJob(route.params.id)
+    const raw = await api.getMessagesForJob(jobId.value)
     messages.value = raw
     await decryptAll(raw)
     ready.value = true
@@ -141,10 +146,10 @@ function timeOf(iso) {
   <PinModal v-if="showPinSetup" mode="setup" @done="onPinReady" />
   <PinModal v-else-if="showPinUnlock" mode="unlock" @done="onPinReady" />
 
-  <div class="d-flex flex-column" style="height:calc(100vh - 100px)">
+  <div class="d-flex flex-column" :style="{ height: embedded ? '100%' : 'calc(100vh - 100px)' }">
     <div class="d-flex align-items-center gap-3 px-3 py-2"
          style="background:rgba(255,255,255,0.40);backdrop-filter:blur(30px);border-bottom:1px solid rgba(255,255,255,0.35)">
-      <button class="glass-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" @click="router.back()">
+      <button v-if="!embedded" class="glass-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">arrow_back</span>
       </button>
       <div class="fx-avatar" style="width:40px;height:40px;font-size:15px;font-weight:800">
@@ -156,7 +161,7 @@ function timeOf(iso) {
           🔒 E2E encrypted · #{{ route.params.id }}
         </div>
         <div v-else style="font-size:12px;color:var(--fx-muted);font-weight:500">
-          Job #{{ route.params.id }}
+          Job #{{ jobId }}
         </div>
       </div>
       <button v-if="E2E_ENABLED" class="glass-btn" style="border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700" @click="chatCrypto.lock(); showPinUnlock = true">

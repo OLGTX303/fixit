@@ -11,7 +11,7 @@ final class UserModel
 {
     public function findByEmail(string $email): ?array
     {
-        $stmt = Connection::get()->prepare('SELECT id, name, email, password_hash, role, phone, avatar_url FROM User WHERE email = :email LIMIT 1');
+        $stmt = Connection::get()->prepare('SELECT id, name, email, password_hash, role, phone, avatar_url, COALESCE(is_blocked,0) AS is_blocked FROM User WHERE email = :email LIMIT 1');
         $stmt->execute(['email' => $email]);
         $row = $stmt->fetch();
         return $row ?: null;
@@ -100,8 +100,16 @@ final class UserModel
 
     public function listAll(): array
     {
-        $stmt = Connection::get()->query('SELECT id, name, email, role, phone, avatar_url FROM User ORDER BY id');
+        // ponytail: lazy column — add once, silently ignored if already exists
+        try { Connection::get()->exec('ALTER TABLE User ADD COLUMN is_blocked TINYINT(1) NOT NULL DEFAULT 0'); } catch (\Throwable) {}
+        $stmt = Connection::get()->query('SELECT id, name, email, role, phone, avatar_url, is_blocked FROM User ORDER BY id');
         return $stmt->fetchAll();
+    }
+
+    public function setBlocked(int $id, bool $blocked): void
+    {
+        Connection::get()->prepare('UPDATE User SET is_blocked = :b WHERE id = :id')
+            ->execute(['id' => $id, 'b' => (int) $blocked]);
     }
 
     /** True if another user (not $excludeId) already uses this email. */

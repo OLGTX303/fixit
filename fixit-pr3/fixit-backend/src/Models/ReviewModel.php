@@ -9,18 +9,26 @@ use PDO;
 
 final class ReviewModel
 {
-    public function create(int $jobId, int $rating, ?string $comment, ?float $tipAmount = null): array
+    public function create(int $jobId, int $rating, ?string $comment, ?float $tipAmount = null, array $imageUrls = []): array
     {
         $pdo = Connection::get();
+        $imageJson = $imageUrls ? json_encode(array_values($imageUrls)) : null;
+
+        // Add image_urls column if it doesn't exist yet (safe lazy migration)
+        try {
+            $pdo->exec("ALTER TABLE Review ADD COLUMN image_urls TEXT NULL");
+        } catch (\Throwable) {}
+
         $stmt = $pdo->prepare(
-            'INSERT INTO Review (job_id, rating, comment, tip_amount)
-             VALUES (:job, :rating, :comment, :tip)'
+            'INSERT INTO Review (job_id, rating, comment, tip_amount, image_urls)
+             VALUES (:job, :rating, :comment, :tip, :imgs)'
         );
         $stmt->execute([
             'job'     => $jobId,
             'rating'  => $rating,
             'comment' => $comment,
             'tip'     => $tipAmount,
+            'imgs'    => $imageJson,
         ]);
         $id = (int) $pdo->lastInsertId();
         $this->recalculateProviderRating($jobId);
@@ -39,8 +47,10 @@ final class ReviewModel
     public function forProvider(int $providerId): array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT r.* FROM Review r
+            'SELECT r.*, u.name AS customer_name, u.avatar_url AS customer_avatar
+             FROM Review r
              JOIN Job j ON j.id = r.job_id
+             JOIN User u ON u.id = j.customer_id
              WHERE j.provider_id = :pid
              ORDER BY r.created_at DESC'
         );
@@ -79,13 +89,21 @@ final class ReviewModel
     /** @param array<string,mixed> $row */
     private function format(array $row): array
     {
+        $imgs = [];
+        if (!empty($row['image_urls'])) {
+            $decoded = json_decode((string) $row['image_urls'], true);
+            if (is_array($decoded)) $imgs = $decoded;
+        }
         return [
-            'id'         => (int) $row['id'],
-            'job_id'     => (int) $row['job_id'],
-            'rating'     => (int) $row['rating'],
-            'comment'    => $row['comment'],
-            'tip_amount' => isset($row['tip_amount']) ? (float) $row['tip_amount'] : null,
-            'created_at' => str_replace(' ', 'T', $row['created_at']),
+            'id'              => (int) $row['id'],
+            'job_id'          => (int) $row['job_id'],
+            'rating'          => (int) $row['rating'],
+            'comment'         => $row['comment'],
+            'tip_amount'      => isset($row['tip_amount']) ? (float) $row['tip_amount'] : null,
+            'image_urls'      => $imgs,
+            'customer_name'   => $row['customer_name'] ?? null,
+            'customer_avatar' => $row['customer_avatar'] ?? null,
+            'created_at'      => str_replace(' ', 'T', $row['created_at']),
         ];
     }
 }
