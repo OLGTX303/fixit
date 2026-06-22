@@ -1,4 +1,8 @@
-# FixIt — PR3 Full-Stack Build
+# FixIt - PR3 Full-Stack Build
+
+<p align="center">
+  <img src="fixit-frontend/public/fixit-logo.svg" alt="FixIt project logo" width="240">
+</p>
 
 On-demand local home-services marketplace. This is the **PR3 milestone**:
 Vue 3 frontend + PHP Slim 4 API + MySQL, with production KYC, Stripe test payments,
