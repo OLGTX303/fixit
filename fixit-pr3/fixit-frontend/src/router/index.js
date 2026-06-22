@@ -10,22 +10,30 @@ const routes = [
 
   // Account / profile — available to every authenticated role
   { path: '/account', name: 'account', component: () => import('../views/AccountView.vue') },
+  { path: '/account/settings', name: 'account-settings', component: () => import('../views/SettingsView.vue') },
+  { path: '/account/personal', name: 'account-personal', component: () => import('../views/PersonalInfoView.vue') },
+  { path: '/account/privacy', name: 'account-privacy', component: () => import('../views/PrivacySettingsView.vue') },
   { path: '/account/email', name: 'account-email', component: () => import('../views/EmailEditView.vue') },
   { path: '/account/billing', name: 'account-billing', component: () => import('../views/BillingView.vue') },
 
   // Customer
   { path: '/home', name: 'home', component: () => import('../views/customer/HomeView.vue'), meta: { role: 'customer' } },
   { path: '/search', name: 'search', component: () => import('../views/customer/SearchView.vue'), meta: { role: 'customer' } },
-  { path: '/provider/:id', name: 'provider-profile', component: () => import('../views/customer/ProviderProfileView.vue'), meta: { role: 'customer' } },
+  { path: '/provider/:id', name: 'provider-profile', component: () => import('../views/customer/ProviderProfileView.vue') },
   { path: '/book/:id', name: 'booking-form', component: () => import('../views/customer/BookingFormView.vue'), meta: { role: 'customer' } },
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
+  { path: '/cart', name: 'cart', component: () => import('../views/customer/CartView.vue'), meta: { role: 'customer' } },
+  { path: '/jobs/:id', name: 'job-detail', component: () => import('../views/customer/JobDetailView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/chat', name: 'chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'customer' } },
   { path: '/messages', name: 'messages', component: () => import('../views/customer/MessagesView.vue'), meta: { role: 'customer' } },
   { path: '/payment', name: 'payment', component: () => import('../views/customer/PaymentView.vue'), meta: { role: 'customer' } },
+  { path: '/wallet', name: 'wallet', component: () => import('../views/WalletView.vue') },
 
   // Provider
-  { path: '/pro/profile', name: 'pro-profile', component: () => import('../views/provider/ProfileSetupView.vue'), meta: { role: 'provider' } },
+  { path: '/pro/profile', name: 'pro-profile', component: () => import('../views/provider/ProviderHubView.vue'), meta: { role: 'provider' } },
+  { path: '/pro/services', name: 'pro-services', component: () => import('../views/provider/ServiceManagementView.vue'), meta: { role: 'provider' } },
+  { path: '/pro/profile/edit', name: 'pro-profile-edit', component: () => import('../views/provider/ProfileSetupView.vue'), meta: { role: 'provider' } },
   { path: '/pro/kyc', name: 'pro-kyc', component: () => import('../views/provider/KycVerificationView.vue'), meta: { role: 'provider' } },
   { path: '/pro/requests', name: 'pro-requests', component: () => import('../views/provider/BookingRequestsView.vue'), meta: { role: 'provider' } },
   { path: '/pro/jobs/:id', name: 'pro-job', component: () => import('../views/provider/JobStatusView.vue'), meta: { role: 'provider' } },

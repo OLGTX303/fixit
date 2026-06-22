@@ -45,11 +45,22 @@ final class ReviewController
             $tipAmount = max(0.0, (float) $data['tip_amount']);
         }
 
+        $imageUrls = [];
+        if (!empty($data['image_urls']) && is_array($data['image_urls'])) {
+            foreach (array_slice($data['image_urls'], 0, 9) as $url) {
+                $u = filter_var((string) $url, FILTER_VALIDATE_URL);
+                if ($u !== false) {
+                    $imageUrls[] = $u;
+                }
+            }
+        }
+
         $review = (new ReviewModel())->create(
             $jobId,
             $rating,
             isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null,
-            $tipAmount
+            $tipAmount,
+            $imageUrls
         );
 
         if ($booking['status'] === 'completed') {

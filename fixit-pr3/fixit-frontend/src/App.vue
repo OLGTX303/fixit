@@ -6,6 +6,8 @@ import { useProvidersStore } from './stores/providers'
 import { useBookingsStore } from './stores/bookings'
 import AppIcon from './components/AppIcon.vue'
 import LegalFooter from './components/LegalFooter.vue'
+// Single viewport condition for ALL pages (self-syncs body.fx-desktop/fx-mobile).
+import './composables/useViewport.js'
 
 // ── Liquid cursor blob (mirrors the studio's mouse-spring follower) ──────
 let blobEl = null
@@ -40,16 +42,15 @@ const route = useRoute()
 const NAVS = {
   customer: [
     { icon: 'home',     msIcon: 'home',           label: 'Home',     to: 'home' },
-    { icon: 'search',   msIcon: 'search',          label: 'Explore',  to: 'search' },
-    { icon: 'calendar', msIcon: 'calendar_month',  label: 'Bookings', to: 'job-tracker' },
+    { icon: 'shopping_cart', msIcon: 'shopping_cart', label: 'Cart', to: 'cart' },
     { icon: 'chat',     msIcon: 'chat',            label: 'Messages', to: 'messages' },
+    { icon: 'user',     msIcon: 'person',          label: 'My',       to: 'account' },
   ],
   provider: [
-    { icon: 'grid',      msIcon: 'dashboard',     label: 'Dashboard', to: 'pro-profile' },
-    { icon: 'bell',      msIcon: 'notifications', label: 'Requests',  to: 'pro-requests' },
-    { icon: 'briefcase', msIcon: 'work',          label: 'Jobs',      to: 'pro-job',   jobRoute: true },
-    { icon: 'chat',      msIcon: 'chat',          label: 'Messages',  to: 'pro-chats' },
-    { icon: 'user',      msIcon: 'person',        label: 'Profile',   to: 'account' },
+    { icon: 'bell',   msIcon: 'notifications',          label: 'Requests', to: 'pro-requests' },
+    { icon: 'build',  msIcon: 'build',                  label: 'Services', to: 'pro-services' },
+    { icon: 'chat',   msIcon: 'chat',                   label: 'Messages', to: 'pro-chats' },
+    { icon: 'user',   msIcon: 'person',                 label: 'Profile',  to: 'pro-profile' },
   ],
   admin: [
     { icon: 'shield',   msIcon: 'verified_user',  label: 'Verify',   to: 'admin-verify' },

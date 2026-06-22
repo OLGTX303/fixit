@@ -23,6 +23,9 @@ import { LEGAL_COMPANY, LEGAL_CONTACT_EMAIL } from '../content/legal.js'
   text-align: center;
   padding: 16px 0 8px;
 }
+@media (max-width: 768px) {
+  .fx-legal-foot { display: none; }
+}
 .fx-legal-links {
   display: flex;
   flex-wrap: wrap;

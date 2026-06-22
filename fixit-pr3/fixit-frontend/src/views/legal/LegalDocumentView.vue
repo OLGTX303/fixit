@@ -24,10 +24,7 @@ function goBack() {
         <span>Back</span>
       </button>
       <div class="fx-legal-brand">
-        <div class="fx-legal-logo">
-          <AppIcon name="tool" :size="18" />
-        </div>
-        <span>FixIt</span>
+        <img src="/fixit-logo.svg" alt="FixIt" class="fx-legal-logo-img" />
       </div>
     </header>
 
@@ -106,15 +103,10 @@ function goBack() {
   font-weight: 800;
   font-size: 18px;
 }
-.fx-legal-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--fx-accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.fx-legal-logo-img {
+  width: 48px;
+  height: 48px;
+  display: block;
 }
 .fx-legal-body {
   max-width: 760px;
@@ -165,7 +157,8 @@ function goBack() {
 }
 .fx-legal-toc ol {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 0;
+  list-style: none;
   font-size: 14px;
   line-height: 1.7;
 }

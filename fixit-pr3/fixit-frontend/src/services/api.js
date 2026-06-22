@@ -92,6 +92,7 @@ const del = (path) => request('DELETE', path)
 
 // ── Reads ───────────────────────────────────────────────────────────────────
 export const getUsers = () => get('/admin/users')
+export const blockUser = (id, blocked) => patch(`/admin/users/${id}/block`, { blocked })
 export const getCategories = () => get('/categories')
 export const getMapsConfig = () => get('/config/maps')
 
@@ -102,6 +103,7 @@ export async function getProviders() {
 export const getProvider = (id) => get(`/providers/${id}`)
 export const getBookings = () => get('/bookings')
 export const getReviews = () => get('/admin/reviews')
+export const getStripeStats = () => get('/admin/stripe/stats')
 export const getReviewsForProvider = (providerId) => get(`/providers/${providerId}/reviews`)
 export const getMessagesForJob = (jobId) => get(`/jobs/${jobId}/messages`)
 
@@ -161,6 +163,7 @@ export const sendMessage = (jobId, payload) => post(`/jobs/${jobId}/messages`, p
 // ── Profile ─────────────────────────────────────────────────────────────────
 export const updateProfile = (payload) => patch('/users/me', payload)
 export const uploadAvatar = (dataUrl) => post('/users/me/avatar', { image: dataUrl })
+export const uploadImage  = (dataUrl) => post('/upload/image', { image: dataUrl })
 export const requestEmailOtp = (email) => post('/users/me/email/otp', { email })
 export const verifyEmailOtp = (email, otp) => post('/users/me/email/verify', { email, otp })
 
@@ -194,6 +197,11 @@ export const saveStripePaymentMethod = (paymentMethodId) =>
 export const payWithStripeSavedMethod = (payload) =>
   post('/payments/stripe/pay-with-saved-method', payload)
 export const removeStripeSavedPaymentMethod = () => del('/payments/stripe/saved-payment-method')
+
+// ── Wallet (real ledger; top-up charges card, withdraw refunds) ──────────────
+export const getWallet = () => get('/wallet')
+export const walletTopUp = (amountCents) => post('/wallet/topup', { amount_cents: amountCents })
+export const walletWithdraw = (amountCents) => post('/wallet/withdraw', { amount_cents: amountCents })
 
 // ── Availability calendar ────────────────────────────────────────────────────
 export const getProviderAvailability = (id) => get(`/providers/${id}/availability`)

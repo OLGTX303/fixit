@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import fixitLogo from '../assets/fixit-logo.svg'
 
 const auth   = useAuthStore()
 const router = useRouter()
@@ -31,11 +32,7 @@ async function submit() {
     <main class="lg-login-card liquid-glass" style="border-radius:32px">
       <!-- Logo -->
       <div class="lg-logo-section">
-        <div class="lg-logo-icon">
-          <span class="material-symbols-outlined"
-                style="font-size:38px;color:#FF6635;font-variation-settings:'FILL' 1">build</span>
-        </div>
-        <h1 class="lg-brand">FixIt</h1>
+        <img :src="fixitLogo" alt="FixIt" width="140" height="140" style="display:block" />
       </div>
 
       <!-- Heading -->
@@ -113,14 +110,8 @@ async function submit() {
   margin-bottom: 24px;
 }
 .lg-logo-icon {
-  width: 76px; height: 76px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.65), rgba(255,255,255,0.20));
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.80);
-  box-shadow: inset 0 1px 2px rgba(255,255,255,1), 0 4px 16px rgba(255,102,53,0.12);
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .lg-brand {
   font-size: 32px; font-weight: 800; letter-spacing: -0.02em;

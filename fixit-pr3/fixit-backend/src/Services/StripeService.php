@@ -6,6 +6,7 @@ namespace FixIt\Services;
 
 use FixIt\Models\StripePaymentModel;
 use FixIt\Models\UserModel;
+use FixIt\Models\WalletModel;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -19,6 +20,7 @@ final class StripeService
     private StripeClient $stripe;
     private UserModel $users;
     private StripePaymentModel $payments;
+    private WalletModel $wallet;
 
     public function __construct()
     {
@@ -26,6 +28,7 @@ final class StripeService
         $this->stripe = new StripeClient($_ENV['STRIPE_SECRET_KEY']);
         $this->users = new UserModel();
         $this->payments = new StripePaymentModel();
+        $this->wallet = new WalletModel();
     }
 
     public static function isConfigured(): bool
@@ -190,6 +193,145 @@ final class StripeService
         }
 
         return $result;
+    }
+
+    // ── Wallet ────────────────────────────────────────────────────────────
+    // The wallet is a ledger (WalletModel). Top-up = a real PaymentIntent on the
+    // saved card; withdraw = a real Refund of prior top-ups. Both produce real
+    // Stripe sandbox objects AND a settled ledger row — no fake balances.
+
+    public function getWallet(int $userId): array
+    {
+        return [
+            'balance_cents' => $this->wallet->balanceCents($userId),
+            'currency' => 'myr',
+            'transactions' => $this->wallet->list($userId),
+            'mode' => 'test',
+        ];
+    }
+
+    /** Charge the saved card; on success credit the wallet ledger. */
+    public function walletTopUp(int $userId, int $amountCents, string $currency = 'myr'): array
+    {
+        if ($amountCents < 50) {
+            throw new \RuntimeException('Top-up must be at least 50 cents');
+        }
+
+        $user = $this->users->findById($userId);
+        $customerId = $user['stripe_test_customer_id'] ?? null;
+        $pmId = $user['stripe_test_default_payment_method_id'] ?? null;
+        if (!$customerId || !$pmId) {
+            throw new \RuntimeException('No saved card — add a card first');
+        }
+
+        $this->verifyPaymentMethodOwnership($customerId, $pmId);
+
+        $intent = $this->stripe->paymentIntents->create([
+            'amount' => $amountCents,
+            'currency' => strtolower($currency),
+            'customer' => $customerId,
+            'payment_method' => $pmId,
+            'off_session' => true,
+            'confirm' => true,
+            'metadata' => [
+                'fixit_user_id' => (string) $userId,
+                'fixit_purpose' => 'wallet_topup',
+                'stripe_mode' => 'test',
+            ],
+        ]);
+
+        $this->payments->upsertFromPaymentIntent($userId, $intent);
+
+        if ($intent->status === 'requires_action') {
+            // 3DS — not credited until confirmed client-side.
+            return [
+                'status' => 'requires_action',
+                'requires_action' => true,
+                'client_secret' => $intent->client_secret,
+                'payment_intent_id' => $intent->id,
+                'balance_cents' => $this->wallet->balanceCents($userId),
+            ];
+        }
+
+        if ($intent->status !== 'succeeded') {
+            throw new \RuntimeException('Top-up not completed: ' . $intent->status);
+        }
+
+        $this->wallet->add($userId, 'topup', $amountCents, $currency, $intent->id, 'Wallet top-up (card)');
+
+        return [
+            'status' => 'succeeded',
+            'paid' => true,
+            'payment_intent_id' => $intent->id,
+            'amount_cents' => $amountCents,
+            'balance_cents' => $this->wallet->balanceCents($userId),
+        ];
+    }
+
+    /**
+     * Withdraw = real Stripe Refund(s) of prior top-up charges, newest first.
+     * Balance (ledger sum) equals total still-refundable, so a balance check
+     * guarantees enough to refund. Records one settled debit row.
+     */
+    public function walletWithdraw(int $userId, int $amountCents, string $currency = 'myr'): array
+    {
+        if ($amountCents < 50) {
+            throw new \RuntimeException('Withdraw must be at least 50 cents');
+        }
+
+        $balance = $this->wallet->balanceCents($userId);
+        if ($amountCents > $balance) {
+            throw new \RuntimeException('Insufficient wallet balance');
+        }
+
+        $need = $amountCents;
+        $refundIds = [];
+        foreach ($this->wallet->topupIntents($userId) as $piId) {
+            if ($need <= 0) {
+                break;
+            }
+            $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
+            $charge = $pi->latest_charge;
+            if (!$charge || $charge->status !== 'succeeded') {
+                continue;
+            }
+            $refundable = (int) $charge->amount - (int) $charge->amount_refunded;
+            if ($refundable <= 0) {
+                continue;
+            }
+            $chunk = min($need, $refundable);
+            $refund = $this->stripe->refunds->create([
+                'charge' => $charge->id,
+                'amount' => $chunk,
+                'metadata' => [
+                    'fixit_user_id' => (string) $userId,
+                    'fixit_purpose' => 'wallet_withdraw',
+                ],
+            ]);
+            $refundIds[] = $refund->id;
+            $need -= $chunk;
+        }
+
+        if ($need > 0) {
+            // Should not happen given the balance check, but never over-promise money.
+            throw new \RuntimeException('Could not refund full amount — try a smaller withdraw');
+        }
+
+        $this->wallet->add(
+            $userId,
+            'withdraw',
+            -$amountCents,
+            $currency,
+            $refundIds[0] ?? null,
+            'Withdrawal to card (refund)'
+        );
+
+        return [
+            'status' => 'succeeded',
+            'amount_cents' => $amountCents,
+            'refund_ids' => $refundIds,
+            'balance_cents' => $this->wallet->balanceCents($userId),
+        ];
     }
 
     public function detachSavedPaymentMethod(int $userId): void

@@ -191,17 +191,76 @@ final class UserController
     public function serveAvatar(Request $request, Response $response, array $args): Response
     {
         $key = (string) ($args['key'] ?? '');
-        // Only serve from the avatars/ prefix to prevent arbitrary object reads.
         if ($key === '' || !str_starts_with($key, 'avatars/') || str_contains($key, '..')) {
             return $response->withStatus(404);
         }
+        return $this->streamR2($response, $key);
+    }
 
+    /** GET /api/images/{key} — public proxy for review/cover images stored in R2. */
+    public function serveImage(Request $request, Response $response, array $args): Response
+    {
+        $key = (string) ($args['key'] ?? '');
+        if ($key === '' || !str_starts_with($key, 'images/') || str_contains($key, '..')) {
+            return $response->withStatus(404);
+        }
+        return $this->streamR2($response, $key);
+    }
+
+    /** POST /api/upload/image — generic R2 image upload; returns { url }. */
+    public function uploadImage(Request $request, Response $response): Response
+    {
+        if (!R2Service::isConfigured()) {
+            return ResponseHelper::error($response, 'Image storage is not configured on the server', 503);
+        }
+
+        $auth = $request->getAttribute('user');
+        $userId = (int) $auth['id'];
+        $data = (array) $request->getParsedBody();
+
+        $raw = (string) ($data['image'] ?? '');
+        if ($raw === '') {
+            return ResponseHelper::error($response, 'No image provided', 422);
+        }
+
+        if (!preg_match('#^data:([^;]+);base64,(.+)$#s', $raw, $m)) {
+            return ResponseHelper::error($response, 'Image must be a base64 data URL', 422);
+        }
+        $mime = strtolower($m[1]);
+        if (!isset(self::MIME_EXT[$mime])) {
+            return ResponseHelper::error($response, 'Unsupported image type. Use JPEG, PNG, WEBP or GIF.', 422);
+        }
+
+        $binary = base64_decode($m[2], true);
+        if ($binary === false || $binary === '') {
+            return ResponseHelper::error($response, 'Invalid base64 image data', 422);
+        }
+        if (strlen($binary) > self::MAX_AVATAR_BYTES) {
+            return ResponseHelper::error($response, 'Image too large (max 4 MB)', 422);
+        }
+
+        $ext = self::MIME_EXT[$mime];
+        $key = 'images/u' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+        try {
+            (new R2Service())->putObject($key, $binary, $mime);
+        } catch (\Throwable $e) {
+            return ResponseHelper::error($response, 'Failed to store image: ' . $e->getMessage(), 502);
+        }
+
+        $base = rtrim((string) ($_ENV['APP_PUBLIC_URL'] ?? 'https://fixit.olgtx.com'), '/');
+        $url = $base . '/api/images/' . $key;
+
+        return ResponseHelper::json($response, ['url' => $url], 201);
+    }
+
+    private function streamR2(Response $response, string $key): Response
+    {
         try {
             $obj = (new R2Service())->getObject($key);
         } catch (\Throwable) {
             return $response->withStatus(404);
         }
-
         $response->getBody()->write($obj['body']);
         return $response
             ->withHeader('Content-Type', $obj['content_type'])

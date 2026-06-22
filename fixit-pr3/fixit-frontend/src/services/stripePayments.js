@@ -39,6 +39,9 @@ export async function mountSaveCardElement(containerEl) {
     elements,
     clientSecret,
     async confirmSave() {
+      const { error: submitError } = await elements.submit()
+      if (submitError) throw new Error(submitError.message)
+
       const { error, setupIntent } = await stripe.confirmSetup({
         elements,
         clientSecret,
