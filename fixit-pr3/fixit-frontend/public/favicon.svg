@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 52 784 784" role="img" aria-labelledby="title desc">
+  <title id="title">FixIt app icon</title>
+  <desc id="desc">No-text FixIt beaver mark centered for browser tab icons.</desc>
+  <defs>
+    <style>
+      .outline{stroke:#333333;stroke-width:22;stroke-linecap:round;stroke-linejoin:round}
+      .thin{stroke:#333333;stroke-width:14;stroke-linecap:round;stroke-linejoin:round}
+      .txt{font-family:Inter,Arial,sans-serif;font-weight:900;letter-spacing:-10px}
+    </style>
+  </defs>
+
+  
+  <rect x="120" y="52" width="784" height="784" rx="176" fill="#FFE8DF"/>
+<!-- transparent background for app/icon flexibility -->
+  <g id="logo-mark">
+    <!-- roof / home cue -->
+    <path d="M225 390 L512 170 L799 390" fill="none" stroke="#FF6635" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M706 244 H768 Q791 244 791 267 V332" fill="none" stroke="#FF6635" stroke-width="44" stroke-linecap="round"/>
+
+    <!-- trust badge -->
+    <circle cx="755" cy="300" r="64" fill="#666666"/>
+    <path d="M723 299 L748 323 L794 270" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M825 211 l15 34 34 15-34 15-15 34-15-34-34-15 34-15z" fill="#FFFFFF"/>
+
+    <!-- tail -->
+    <path class="outline" d="M260 560 C191 523 177 429 240 384 C306 336 396 396 373 483 C359 537 319 572 260 560 Z" fill="#FF6635"/>
+    <path class="thin" d="M226 432 L334 532 M336 426 L225 531 M251 390 L355 479" fill="none" opacity=".45"/>
+
+    <!-- ears behind head -->
+    <circle class="outline" cx="329" cy="395" r="53" fill="#FF6635"/>
+    <circle cx="329" cy="395" r="27" fill="#FFFFFF"/>
+    <circle class="outline" cx="695" cy="395" r="53" fill="#FF6635"/>
+    <circle cx="695" cy="395" r="27" fill="#FFFFFF"/>
+
+    <!-- body -->
+    <path class="outline" d="M327 634 C337 515 413 454 512 454 C611 454 687 515 697 634 Z" fill="#FF6635"/>
+    <path d="M422 634 C431 558 466 520 512 520 C558 520 593 558 602 634 Z" fill="#FFFFFF"/>
+
+    <!-- head -->
+    <path class="outline" d="M305 425 C305 274 397 207 512 207 C627 207 719 274 719 425 C719 545 632 610 512 610 C392 610 305 545 305 425 Z" fill="#FF6635"/>
+    <path d="M353 483 C380 555 439 592 512 592 C585 592 644 555 671 483 C631 531 574 556 512 556 C450 556 393 531 353 483 Z" fill="#FFFFFF"/>
+
+    <!-- hard hat -->
+    <path class="outline" d="M363 323 C380 234 434 190 512 190 C590 190 644 234 661 323 Z" fill="#FF6635"/>
+    <path class="thin" d="M451 312 L466 207 M573 207 L588 312" fill="none"/>
+    <path d="M379 284 C429 251 596 251 645 284" fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round"/>
+    <path class="outline" d="M347 338 C405 367 619 367 677 338" fill="#FF6635"/>
+    <ellipse cx="511" cy="268" rx="31" ry="20" fill="#FF6635" opacity=".8"/>
+    <path d="M632 238 q28 1 39 29" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- face -->
+    <circle cx="432" cy="425" r="24" fill="#333333"/>
+    <circle cx="592" cy="425" r="24" fill="#333333"/>
+    <circle cx="423" cy="416" r="8" fill="#fff"/>
+    <circle cx="583" cy="416" r="8" fill="#fff"/>
+    <ellipse cx="512" cy="470" rx="43" ry="31" fill="#FFFFFF"/>
+    <ellipse cx="512" cy="447" rx="25" ry="18" fill="#666666"/>
+    <path class="thin" d="M512 463 V494" fill="none"/>
+    <path class="thin" d="M512 494 C488 525 451 515 449 486 M512 494 C536 525 573 515 575 486" fill="none"/>
+    <ellipse cx="374" cy="485" rx="31" ry="20" fill="#666666" opacity=".85"/>
+    <ellipse cx="650" cy="485" rx="31" ry="20" fill="#666666" opacity=".85"/>
+    <rect x="487" y="523" width="50" height="35" rx="10" fill="#fff" stroke="#333333" stroke-width="10"/>
+    <line x1="512" y1="525" x2="512" y2="556" stroke="#666666" stroke-width="5"/>
+
+    <!-- arms / paws -->
+    <path class="outline" d="M361 610 C390 580 430 596 443 634" fill="#FF6635"/>
+    <path class="thin" d="M389 618 L388 646 M421 620 L417 650" fill="none"/>
+
+    <!-- wrench -->
+    <g transform="rotate(14 716 530)">
+      <path d="M716 351 C750 349 779 372 786 405 L754 438 L722 417 L741 385 C725 379 706 384 694 398 C676 418 678 448 696 467 L626 657 C619 675 599 684 581 677 C563 670 554 650 561 632 L632 443 C621 416 627 384 650 363 C668 346 692 351 716 351 Z" fill="#FFFFFF" stroke="#333333" stroke-width="18" stroke-linejoin="round"/>
+      <circle cx="593" cy="635" r="16" fill="#ffffff" stroke="#333333" stroke-width="12"/>
+      <path d="M670 466 L602 641" stroke="#666666" stroke-width="14" stroke-linecap="round"/>
+    </g>
+    <path class="outline" d="M667 605 C703 578 745 597 752 637" fill="#FF6635"/>
+    <path class="thin" d="M696 618 L694 646 M724 620 L719 650" fill="none"/>
+
+    <!-- baseline -->
+    <path d="M307 664 H717" stroke="#333333" stroke-width="18" stroke-linecap="round"/>
+  </g>
+</svg>

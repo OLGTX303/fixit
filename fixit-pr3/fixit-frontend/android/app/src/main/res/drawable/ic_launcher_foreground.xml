@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FixIt Beaver foreground — converted from fixit_beaver_logo_brand_theme.svg
-  Canvas: 108×108dp | Viewport: 1024×1024 (beaver fits ~225–800 x, 170–680 y = within safe zone)
-  Text wordmark omitted (not supported in Android VD).
+  FixIt beaver foreground mark.
+  Canvas: 108x108dp | Viewport: 1024x1024.
+  Text wordmark omitted for launcher clarity.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="1024"
     android:viewportHeight="1024">
+
+    <group android:pivotX="512" android:pivotY="512"
+        android:scaleX="0.82"
+        android:scaleY="0.82"
+        android:translateY="78">
 
     <!-- roof / home cue -->
     <path android:pathData="M225,390 L512,170 L799,390"
@@ -145,7 +150,7 @@
         android:strokeColor="#333333" android:strokeWidth="14"
         android:strokeLineCap="round" android:strokeLineJoin="round"/>
 
-    <!-- wrench (rotated 14° around 716,530) -->
+    <!-- wrench (rotated 14 deg around 716,530) -->
     <group android:rotation="14" android:pivotX="716" android:pivotY="530">
         <path android:pathData="M716,351 C750,349 779,372 786,405 L754,438 L722,417 L741,385 C725,379 706,384 694,398 C676,418 678,448 696,467 L626,657 C619,675 599,684 581,677 C563,670 554,650 561,632 L632,443 C621,416 627,384 650,363 C668,346 692,351 716,351 Z"
             android:fillColor="#FFFFFF"
@@ -175,5 +180,7 @@
         android:fillColor="#00000000"
         android:strokeColor="#333333" android:strokeWidth="18"
         android:strokeLineCap="round"/>
+
+    </group>
 
 </vector>
