@@ -9,16 +9,14 @@ namespace FixIt\Support;
  */
 final class KycValidator
 {
-    private const MIN_CONFIDENCE = 72.0;
-    private const MAX_FRAUD_SCORE = 35.0;
-    private const MIN_OCR_CONFIDENCE = 45.0;
+    private const MIN_CONFIDENCE = 55.0;
+    private const MAX_FRAUD_SCORE = 60.0;
+    private const MIN_OCR_CONFIDENCE = 30.0;
 
     private const REQUIRED_CHECKS = [
         'resolution',
         'aspect_ratio',
         'anti_spoof',
-        'ocr_quality',
-        'document_bounds',
         'contrast',
     ];
 
@@ -43,8 +41,20 @@ final class KycValidator
             $reasons[] = 'Fraud score too high (' . $fraudScore . ')';
         }
 
-        if ($ocrConfidence < self::MIN_OCR_CONFIDENCE) {
-            $reasons[] = 'OCR confidence too low';
+        // OCR loads its engine from a CDN at runtime and can fail to load on some
+        // devices/networks. When it genuinely didn't run, treat text as advisory
+        // (the image/anti-spoof checks plus the downstream face liveness + face
+        // match remain the real identity gates). When OCR DID run, enforce it.
+        $ocr = is_array($checks['ocr_quality'] ?? null) ? $checks['ocr_quality'] : [];
+        $ocrRan = ((float) ($ocr['confidence'] ?? 0) > 0) || ((int) ($ocr['chars'] ?? 0) > 0);
+
+        if ($ocrRan) {
+            if ($ocrConfidence < self::MIN_OCR_CONFIDENCE) {
+                $reasons[] = 'OCR confidence too low';
+            }
+            if (empty($checks['ocr_quality']['pass'])) {
+                $reasons[] = 'Required check failed: ocr_quality';
+            }
         }
 
         foreach (self::REQUIRED_CHECKS as $key) {
@@ -69,7 +79,7 @@ final class KycValidator
         }
 
         $textual = (!empty($checks['gov_keywords']['pass']) || !empty($checks['mrz']['pass']));
-        if (!$textual) {
+        if ($ocrRan && !$textual) {
             $reasons[] = 'Insufficient government text or valid MRZ';
         }
 

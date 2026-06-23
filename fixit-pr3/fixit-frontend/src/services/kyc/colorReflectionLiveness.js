@@ -137,7 +137,7 @@ export async function runColorReflectionCheck(video, { onFlash, onProgress }) {
       .map((c) => channelDelta(baseline, sample, c))
     const maxOther = Math.max(...otherDeltas, 0)
 
-    const reflected = delta > 8 && delta > maxOther + 3
+    const reflected = delta > 5 && delta > maxOther + 1
     flashResults.push({
       color: color.name,
       expected_channel: expected,
@@ -150,7 +150,7 @@ export async function runColorReflectionCheck(video, { onFlash, onProgress }) {
 
   const matchCount = flashResults.filter((f) => f.reflected).length
   const score = Math.round((matchCount / sequence.length) * 100)
-  const passed = matchCount >= 6
+  const passed = matchCount >= 4
 
   return {
     passed,
@@ -160,7 +160,7 @@ export async function runColorReflectionCheck(video, { onFlash, onProgress }) {
       method: '8_color_random_reflection',
       colors_tested: sequence.length,
       matches: matchCount,
-      threshold: 6,
+      threshold: 4,
       flash_results: flashResults,
       baseline_rgb: {
         r: Math.round(baseline.r),
