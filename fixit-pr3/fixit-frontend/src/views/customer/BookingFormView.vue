@@ -42,20 +42,32 @@ onMounted(async () => {
   form.value.time = times[0]
 })
 
+// A specific service can be selected from the provider's catalog (Book button).
+const selectedService = route.query.service ? String(route.query.service) : null
+const servicePrice    = route.query.price ? parseFloat(route.query.price) : null
+
 const ESTIMATED_HOURS = 2
 const platformFee = 5
-const total = computed(() => (provider.value ? provider.value.base_rate * ESTIMATED_HOURS + platformFee : 0))
+// Selected service = flat price; otherwise fall back to hourly base rate.
+const subtotal = computed(() => {
+  if (!provider.value) return 0
+  return servicePrice != null ? servicePrice : provider.value.base_rate * ESTIMATED_HOURS
+})
+const total = computed(() => (provider.value ? subtotal.value + platformFee : 0))
 const canSubmit = computed(() => form.value.date && form.value.time && form.value.address)
 
 async function confirm() {
   submitting.value = true
+  const notes = selectedService
+    ? `[${selectedService}] ${form.value.notes}`.trim()
+    : form.value.notes
   const booking = await bookingsStore.create({
     customer_id:          auth.user.id,
     provider_id:          provider.value.id,
     category_id:          provider.value.category_ids[0],
     scheduled_at:         `${form.value.date}T${form.value.time}`,
     address:              form.value.address,
-    notes:                form.value.notes,
+    notes:                notes,
     total:                total.value,
     recurrence_type:      recurring.value ? recurrenceType.value : 'none',
     recurrence_end_date:  recurring.value && recurrenceEndDate.value ? recurrenceEndDate.value : null,
@@ -153,8 +165,8 @@ async function confirm() {
     <!-- Price estimate -->
     <div class="fx-card bg-accent-soft mb-3">
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
-        <span style="color:var(--fx-muted)">Service fee (est. {{ ESTIMATED_HOURS }} hrs)</span>
-        <span class="fw-semibold">RM{{ (provider.base_rate * ESTIMATED_HOURS).toFixed(2) }}</span>
+        <span style="color:var(--fx-muted)">{{ selectedService ? selectedService : `Service fee (est. ${ESTIMATED_HOURS} hrs)` }}</span>
+        <span class="fw-semibold">RM{{ subtotal.toFixed(2) }}</span>
       </div>
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
         <span style="color:var(--fx-muted)">Platform fee</span>

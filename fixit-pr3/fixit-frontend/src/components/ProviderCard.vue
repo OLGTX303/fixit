@@ -15,7 +15,10 @@ const roleLabel = computed(() => props.provider.category_names?.join(', ') || 'P
 
 <template>
   <div class="pc-card liquid-glass" role="button" @click="$emit('select', provider)">
-    <div class="pc-avatar">{{ initials }}</div>
+    <div class="pc-avatar">
+      <img v-if="provider.avatar_url" :src="provider.avatar_url" :alt="provider.name" />
+      <span v-else>{{ initials }}</span>
+    </div>
     <div style="flex:1;min-width:0">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
         <span style="font-size:14px;font-weight:700;color:var(--fx-text)">{{ provider.name }}</span>
@@ -50,5 +53,7 @@ const roleLabel = computed(() => props.provider.category_names?.join(', ') || 'P
   color: var(--fx-accent);
   border: 2px solid rgba(255,255,255,0.65);
   box-shadow: 0 2px 8px rgba(255,102,53,0.12);
+  overflow: hidden;
 }
+.pc-avatar img { width: 100%; height: 100%; object-fit: cover; }
 </style>

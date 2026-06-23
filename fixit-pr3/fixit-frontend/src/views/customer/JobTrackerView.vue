@@ -19,7 +19,9 @@ const TABS = [
   { key: 'rate',    label: 'Rate' },
 ]
 
-const myBookings = computed(() => bookingsStore.forCustomer(auth.user.id))
+// Exclude pre-order inquiry threads — they're conversations, not jobs.
+const myBookings = computed(() =>
+  bookingsStore.forCustomer(auth.user.id).filter(b => b.status !== 'inquiry'))
 
 const filtered = computed(() => {
   const all = myBookings.value

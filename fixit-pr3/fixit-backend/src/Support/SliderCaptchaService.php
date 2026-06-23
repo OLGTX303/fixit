@@ -12,9 +12,10 @@ final class SliderCaptchaService
     private const TTL_SECONDS = 300;
     private const TOLERANCE_PX = 8;
     private const MIN_DRAG_MS = 280;
-    private const WIDTH = 300;
-    private const HEIGHT = 160;
-    private const PIECE_SIZE = 44;
+    // Square challenge — renders as a small square block, not a wide rectangle.
+    private const WIDTH = 240;
+    private const HEIGHT = 240;
+    private const PIECE_SIZE = 48;
 
     /** @return array<string,mixed> */
     public function create(string $ip): array

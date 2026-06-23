@@ -42,6 +42,25 @@ final class StripePaymentModel
         ];
     }
 
+    /**
+     * Succeeded PaymentIntent ids that may still hold a refundable balance,
+     * newest first. Used as the refund source for a provider withdrawal — the
+     * platform's real sandbox charges (currently customer wallet top-ups), since
+     * provider earnings are ledger credits with no charge of their own.
+     *
+     * @return list<string>
+     */
+    public function refundableIntents(): array
+    {
+        $stmt = Connection::get()->query(
+            "SELECT stripe_payment_intent_id
+             FROM StripePayment
+             WHERE status = 'succeeded' AND stripe_payment_intent_id LIKE 'pi_%'
+             ORDER BY created_at DESC, id DESC"
+        );
+        return array_column($stmt->fetchAll(\PDO::FETCH_ASSOC), 'stripe_payment_intent_id');
+    }
+
     public function upsertFromPaymentIntent(
         int $userId,
         object $intent,

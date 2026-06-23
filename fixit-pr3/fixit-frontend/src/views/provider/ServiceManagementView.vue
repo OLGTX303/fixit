@@ -103,10 +103,24 @@ const svcImagePreview = ref(null)
 const uploadingImage  = ref(false)
 const svcImageInput   = ref(null)
 
-function loadServices() {
-  try { services.value = JSON.parse(localStorage.getItem(storageKey.value) || '[]') } catch { services.value = [] }
+// Services are a real server catalog (ProviderService table) — full CRUD with
+// per-service price, photo (R2), description. No more localStorage.
+async function loadServices() {
+  if (!myProfile.value) return
+  try {
+    const rows = await api.getProviderServices(myProfile.value.id)
+    services.value = rows.map(r => ({ ...r, active: r.is_active }))
+    // One-time seed from legacy services_json names so existing data carries over.
+    if (!services.value.length && myProfile.value.services?.length) {
+      for (const name of myProfile.value.services) {
+        await api.createProviderService(myProfile.value.id, {
+          name, price: myProfile.value.base_rate || 45, is_active: true,
+        })
+      }
+      services.value = (await api.getProviderServices(myProfile.value.id)).map(r => ({ ...r, active: r.is_active }))
+    }
+  } catch (e) { console.error('load services failed', e) }
 }
-function saveServices() { localStorage.setItem(storageKey.value, JSON.stringify(services.value)) }
 
 function genSku(name) {
   return name.trim().toUpperCase().replace(/\s+/g, '-').slice(0, 8) + '-' + Math.random().toString(36).slice(2, 5).toUpperCase()
@@ -120,40 +134,69 @@ function openAdd() {
 }
 function openEdit(svc) {
   editingService.value = svc
-  svcForm.value = { ...svc }
+  svcForm.value = {
+    name: svc.name, sku: svc.sku || '', price: svc.price,
+    description: svc.description || '', image_url: svc.image_url || '', active: svc.active,
+  }
   svcImagePreview.value = svc.image_url || null
   showServiceForm.value = true
 }
 
-async function pickSvcImage() {
-  svcImageInput.value?.click()
-}
+function pickSvcImage() { svcImageInput.value?.click() }
 async function onSvcImageSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
   uploadingImage.value = true
   try {
-    const dataUrl = await compressImage(file, 600, 600, 0.78)
+    const dataUrl = await compressImage(file, 800, 800, 0.8)
     svcForm.value.image_url = dataUrl
     svcImagePreview.value = dataUrl
   } catch (err) { console.error(err) }
   finally { uploadingImage.value = false; if (svcImageInput.value) svcImageInput.value.value = '' }
 }
 
+// Create / update on the server. A freshly-picked photo (data URL) is uploaded
+// to R2 first, then its URL is stored on the service.
 async function saveService() {
-  if (!svcForm.value.name || !svcForm.value.price) return
-  if (!svcForm.value.sku) svcForm.value.sku = genSku(svcForm.value.name)
-  if (editingService.value) {
-    const i = services.value.findIndex(s => s.sku === editingService.value.sku)
-    if (i !== -1) services.value[i] = { ...svcForm.value }
-  } else {
-    services.value.push({ ...svcForm.value, id: Date.now() })
-  }
-  saveServices()
-  showServiceForm.value = false
+  if (!svcForm.value.name || !svcForm.value.price || !myProfile.value) return
+  uploadingImage.value = true
+  try {
+    let imageUrl = svcForm.value.image_url || null
+    if (imageUrl && imageUrl.startsWith('data:')) {
+      imageUrl = (await api.uploadImage(imageUrl)).url
+    }
+    const payload = {
+      name: svcForm.value.name,
+      price: parseFloat(svcForm.value.price),
+      description: svcForm.value.description || null,
+      image_url: imageUrl,
+      sku: svcForm.value.sku || genSku(svcForm.value.name),
+      is_active: svcForm.value.active !== false,
+    }
+    if (editingService.value) {
+      await api.updateProviderServiceItem(myProfile.value.id, editingService.value.id, payload)
+    } else {
+      await api.createProviderService(myProfile.value.id, payload)
+    }
+    await loadServices()
+    showServiceForm.value = false
+  } catch (e) {
+    alert('Could not save service: ' + (e.message || 'failed'))
+  } finally { uploadingImage.value = false }
 }
-function deleteService(svc) { services.value = services.value.filter(s => s.sku !== svc.sku); saveServices() }
-function toggleActive(svc)  { svc.active = !svc.active; saveServices() }
+
+async function deleteService(svc) {
+  if (!myProfile.value) return
+  try { await api.deleteProviderServiceItem(myProfile.value.id, svc.id); await loadServices() }
+  catch (e) { alert('Could not delete: ' + (e.message || '')) }
+}
+async function toggleActive(svc) {
+  if (!myProfile.value) return
+  try {
+    await api.updateProviderServiceItem(myProfile.value.id, svc.id, { ...svc, is_active: !svc.active })
+    await loadServices()
+  } catch (e) { alert('Could not update: ' + (e.message || '')) }
+}
 
 // ── Base rate ──────────────────────────────────────────────────────────
 const savingRate = ref(false)

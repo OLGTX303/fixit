@@ -17,6 +17,7 @@ onMounted(() => { bookingsStore.load() })
 const myBookings = computed(() => bookingsStore.forCustomer(auth.user?.id))
 
 const STATUS = {
+  inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
   requested:   { c: 'var(--fx-warn)',    bg: 'var(--fx-warn-soft)',    label: 'Requested' },
   accepted:    { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Accepted' },
   in_progress: { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'In Progress' },

@@ -17,22 +17,26 @@ function safeParseUser(raw) {
   }
 }
 
+// localStorage (not sessionStorage): the JWT must survive across tabs, reloads,
+// and app/PWA relaunches. sessionStorage is per-tab, so a context that never ran
+// the login (new tab, external link, cold app launch) had no token — public pages
+// still rendered, but the authed POST /bookings 401'd and bounced the user to login.
 export function getStoredToken() {
-  return sessionStorage.getItem(TOKEN_KEY)
+  return localStorage.getItem(TOKEN_KEY)
 }
 
 export function getStoredUser() {
-  return safeParseUser(sessionStorage.getItem(USER_KEY))
+  return safeParseUser(localStorage.getItem(USER_KEY))
 }
 
 export function persistSession(token, user) {
-  sessionStorage.setItem(TOKEN_KEY, token)
-  sessionStorage.setItem(USER_KEY, JSON.stringify(user))
+  localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(TOKEN_KEY)
-  sessionStorage.removeItem(USER_KEY)
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
 }
 
 export function setUnauthorizedHandler(fn) {
@@ -105,6 +109,12 @@ export const getBookings = () => get('/bookings')
 export const getReviews = () => get('/admin/reviews')
 export const getStripeStats = () => get('/admin/stripe/stats')
 export const getReviewsForProvider = (providerId) => get(`/providers/${providerId}/reviews`)
+
+// ── Provider service catalog (rich, server-persisted) ────────────────────────
+export const getProviderServices = (providerId) => get(`/providers/${providerId}/services`)
+export const createProviderService = (providerId, payload) => post(`/providers/${providerId}/services`, payload)
+export const updateProviderServiceItem = (providerId, sid, payload) => put(`/providers/${providerId}/services/${sid}`, payload)
+export const deleteProviderServiceItem = (providerId, sid) => del(`/providers/${providerId}/services/${sid}`)
 export const getMessagesForJob = (jobId) => get(`/jobs/${jobId}/messages`)
 
 // ── Auth ────────────────────────────────────────────────────────────────────
@@ -114,6 +124,7 @@ export async function register(payload) {
   return data
 }
 
+export const requestRegisterOtp = (payload) => post('/auth/register/otp', payload)
 export const getCaptchaChallenge = () => get('/auth/captcha')
 export const verifyCaptcha = (payload) => post('/auth/captcha/verify', payload)
 
@@ -130,6 +141,15 @@ export function logout() {
 // ── Mutations ───────────────────────────────────────────────────────────────
 function toServerDatetime(value) {
   if (!value) return null
+  // The booking form's time chips are 12-hour ("10:00 AM"), which Date can't
+  // parse — so handle "YYYY-MM-DD[T ]H:MM AM/PM" explicitly into MySQL DATETIME.
+  const ampm = String(value).match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (ampm) {
+    const [, date, hh, mm, ap] = ampm
+    let h = Number(hh) % 12
+    if (/PM/i.test(ap)) h += 12
+    return `${date} ${String(h).padStart(2, '0')}:${mm}:00`
+  }
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value.replace('T', ' ')
   const pad = (n) => String(n).padStart(2, '0')
@@ -156,6 +176,9 @@ export const setProviderVerification = (providerId, isVerified) =>
 
 export const updateBookingStatus = (bookingId, status) =>
   patch(`/bookings/${bookingId}/status`, { status })
+
+// Pre-order chat: get-or-create an inquiry conversation with a provider.
+export const startInquiry = (providerId) => post(`/providers/${providerId}/inquiry`)
 
 export const createReview = (payload) => post('/reviews', payload)
 export const sendMessage = (jobId, payload) => post(`/jobs/${jobId}/messages`, payload)

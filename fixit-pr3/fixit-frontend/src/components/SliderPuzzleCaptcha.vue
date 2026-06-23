@@ -139,7 +139,7 @@ defineExpose({ reload: loadChallenge })
         :src="challenge.piece"
         alt=""
         class="fx-captcha-piece"
-        :style="{ transform: `translateX(${sliderX}px)` }"
+        :style="{ width: `${(challenge.piece_size / challenge.width) * 100}%`, left: `${(sliderX / challenge.width) * 100}%` }"
         draggable="false"
       />
       <div v-if="verified" class="fx-captcha-ok">
@@ -199,7 +199,7 @@ defineExpose({ reload: loadChallenge })
 .fx-captcha-stage {
   position: relative;
   width: 100%;
-  max-width: 300px;
+  max-width: 240px;
   margin: 0 auto 12px;
   border-radius: 12px;
   overflow: hidden;

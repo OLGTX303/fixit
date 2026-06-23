@@ -22,17 +22,21 @@ final class JwtAuth implements MiddlewareInterface
             return ResponseHelper::error(new SlimResponse(), 'Authentication required', 401);
         }
 
+        // Only the decode is guarded — handing off to the route must stay OUTSIDE
+        // the catch, or a downstream error (e.g. a DB exception) gets reported as
+        // "Invalid or expired token" 401 and the app wrongly logs the user out.
         try {
             $claims = JWT::decode($matches[1], new Key($_ENV['JWT_SECRET'] ?? 'dev-secret', 'HS256'));
-            $user = [
-                'id' => (int) $claims->sub,
-                'role' => (string) $claims->role,
-                'email' => (string) $claims->email,
-                'name' => (string) $claims->name,
-            ];
-            return $handler->handle($request->withAttribute('user', $user));
         } catch (\Throwable) {
             return ResponseHelper::error(new SlimResponse(), 'Invalid or expired token', 401);
         }
+
+        $user = [
+            'id' => (int) $claims->sub,
+            'role' => (string) $claims->role,
+            'email' => (string) $claims->email,
+            'name' => (string) $claims->name,
+        ];
+        return $handler->handle($request->withAttribute('user', $user));
     }
 }

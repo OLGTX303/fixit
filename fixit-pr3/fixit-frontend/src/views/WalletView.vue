@@ -17,9 +17,9 @@ const balance = computed(() => wallet.balanceCents / 100)
 
 onMounted(async () => {
   await bookingsStore.load()
-  if (!isProvider.value) {
-    try { await wallet.load() } catch { /* stripe may be unconfigured */ }
-  }
+  // Providers need the ledger too — their earnings are credited to the same
+  // real wallet when jobs complete, so "My Earnings" reads the server balance.
+  try { await wallet.load() } catch { /* stripe may be unconfigured */ }
 })
 
 // ── Top-up / withdraw bottom sheet ───────────────────────────────────────────
@@ -192,36 +192,60 @@ async function doWithdraw() {
   }
 }
 
+// Provider withdraw: refunds platform charges (Stripe sandbox Refund) and debits
+// the provider's earned ledger balance. Withdraws the full available balance.
+const pwBusy = ref(false)
+const pwMsg  = ref('')
+async function providerWithdraw() {
+  const cents = wallet.balanceCents
+  if (cents < 50) { pwMsg.value = 'Nothing to withdraw yet.'; return }
+  if (!window.confirm(`Withdraw RM ${(cents / 100).toFixed(2)} to your bank?`)) return
+  pwBusy.value = true
+  pwMsg.value = ''
+  try {
+    await wallet.withdraw(cents)
+    pwMsg.value = 'Withdrawal sent — funds released via Stripe.'
+  } catch (e) {
+    pwMsg.value = e.message
+  } finally {
+    pwBusy.value = false
+  }
+}
+
 onUnmounted(() => {
   cardSession?.destroy()
   document.body.classList.remove('sheet-open')
 })
 
 // ── Provider income ─────────────────────────────────────────────────────────
+// The API already scopes /bookings to this provider, so just filter by status.
 const providerBookings = computed(() => {
   if (!isProvider.value) return []
-  return bookingsStore.bookings.filter(
-    b => b.provider_id === auth.user?.provider_id &&
-         ['completed','reviewed'].includes(b.status)
-  )
+  return bookingsStore.bookings.filter(b => ['completed','reviewed'].includes(b.status))
 })
-const totalIncome = computed(() =>
-  providerBookings.value.reduce((s, b) => s + parseFloat(b.total_price || b.provider?.base_rate || 0), 0)
-)
-const pendingPayout = computed(() => (totalIncome.value * 0.85).toFixed(2))
+// Earnings = the real wallet balance (payouts are credited there on completion).
+const earnings = computed(() => wallet.balanceCents / 100)
+const avgPerJob = computed(() =>
+  (earnings.value / Math.max(providerBookings.value.length, 1)).toFixed(2))
 
 // ── Transactions ─────────────────────────────────────────────────────────────
 const transactions = computed(() => {
   const txs = []
   if (isProvider.value) {
-    providerBookings.value.forEach(b => txs.push({
-      id: b.id,
-      label: `${b.category?.name || 'Service'} — #${b.id}`,
-      sub: `From ${b.customer?.name || 'Customer'}`,
-      amount: `+RM ${parseFloat(b.total_price || b.provider?.base_rate || 0).toFixed(2)}`,
-      positive: true,
-      date: b.updated_at || b.created_at,
-    }))
+    // Real ledger entries — job payouts (and any withdrawals) from the server.
+    wallet.transactions.forEach(tx => {
+      const positive = tx.amount_cents > 0
+      const label = tx.kind === 'payout' ? 'Job Payout'
+        : tx.kind === 'topup' ? 'Wallet Top Up' : 'Withdrawal'
+      txs.push({
+        id: `w${tx.id}`,
+        label,
+        sub: tx.note || '',
+        amount: `${positive ? '+' : '-'}RM ${(Math.abs(tx.amount_cents) / 100).toFixed(2)}`,
+        positive,
+        date: tx.created_at,
+      })
+    })
   } else {
     // Real ledger entries (top-ups + withdrawals) from the server.
     wallet.transactions.forEach(tx => {
@@ -265,11 +289,11 @@ function fmtDate(d) {
     <!-- ── PROVIDER VIEW ── -->
     <template v-if="isProvider">
       <div class="wv-hero liquid-glass">
-        <div class="wv-hero-label">Total Earnings</div>
-        <div class="wv-hero-amount">RM {{ totalIncome.toFixed(2) }}</div>
+        <div class="wv-hero-label">Wallet Balance</div>
+        <div class="wv-hero-amount">RM {{ earnings.toFixed(2) }}</div>
         <div class="wv-hero-sub">
-          After 15% platform fee:
-          <strong style="color:#22c55e">RM {{ pendingPayout }}</strong>
+          Credited to your wallet as jobs complete
+          <strong style="color:#22c55e"> (net of 15% fee)</strong>
         </div>
         <div class="wv-hero-stats">
           <div class="wv-stat">
@@ -278,21 +302,22 @@ function fmtDate(d) {
           </div>
           <div class="wv-stat-div"></div>
           <div class="wv-stat">
-            <span class="wv-stat-val">RM {{ (totalIncome * 0.15).toFixed(2) }}</span>
-            <span class="wv-stat-lbl">Platform Fee</span>
+            <span class="wv-stat-val">RM {{ earnings.toFixed(2) }}</span>
+            <span class="wv-stat-lbl">In Wallet</span>
           </div>
           <div class="wv-stat-div"></div>
           <div class="wv-stat">
-            <span class="wv-stat-val">RM {{ (totalIncome / Math.max(providerBookings.length,1)).toFixed(0) }}</span>
+            <span class="wv-stat-val">RM {{ avgPerJob }}</span>
             <span class="wv-stat-lbl">Avg / Job</span>
           </div>
         </div>
       </div>
       <div style="padding:0 16px 16px">
-        <button class="wv-primary-btn">
+        <button class="wv-primary-btn" :disabled="pwBusy || earnings <= 0" @click="providerWithdraw">
           <span class="material-symbols-outlined" style="font-size:18px">account_balance</span>
-          Withdraw to Bank
+          {{ pwBusy ? 'Processing…' : 'Withdraw to Bank' }}
         </button>
+        <div v-if="pwMsg" style="font-size:12px;text-align:center;margin-top:8px;color:var(--fx-muted)">{{ pwMsg }}</div>
       </div>
     </template>
 

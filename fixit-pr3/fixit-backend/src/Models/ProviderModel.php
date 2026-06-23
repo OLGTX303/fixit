@@ -28,7 +28,7 @@ final class ProviderModel
     /** @return list<array<string,mixed>> */
     public function listEnriched(bool $verifiedOnly = true, array $filters = []): array
     {
-        $sql = 'SELECT p.*, u.name, u.email, u.phone
+        $sql = 'SELECT p.*, u.name, u.email, u.phone, u.avatar_url
                 FROM ProviderProfile p
                 JOIN User u ON u.id = p.user_id
                 WHERE 1=1';

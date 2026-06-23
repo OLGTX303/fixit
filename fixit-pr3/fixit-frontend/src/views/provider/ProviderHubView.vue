@@ -4,15 +4,18 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useProvidersStore } from '../../stores/providers'
 import { useBookingsStore } from '../../stores/bookings'
+import { useWalletStore } from '../../stores/wallet'
 import * as api from '../../services/api'
 
 const router         = useRouter()
 const auth           = useAuthStore()
 const providersStore = useProvidersStore()
 const bookingsStore  = useBookingsStore()
+const wallet         = useWalletStore()
 
 onMounted(async () => {
   await Promise.all([providersStore.load(), bookingsStore.load()])
+  try { await wallet.load() } catch { /* stripe may be unconfigured */ }
 })
 
 const user      = computed(() => auth.user || {})
@@ -37,9 +40,9 @@ const avgRating  = computed(() => {
   return (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1)
 })
 
-const earningsTotal = computed(() => {
-  return doneJobs.value.reduce((s, b) => s + parseFloat(b.total || 0), 0).toFixed(0)
-})
+// Earnings = the real wallet balance (job payouts are credited there on
+// completion), so this matches the "My Earnings" / wallet page exactly.
+const earningsTotal = computed(() => (wallet.balanceCents / 100).toFixed(0))
 
 const recentDone = computed(() => [...doneJobs.value].reverse().slice(0, 3))
 
@@ -56,6 +59,9 @@ async function onAvatarSelected(e) {
     })
     const { user: updated } = await api.uploadAvatar(dataUrl)
     auth.setUser(updated)
+    // Refresh the cached provider record so the public profile / cards pick up
+    // the new avatar from the DB (it's joined into the enriched provider data).
+    await providersStore.reload()
   } finally { uploading.value = false; if (fileInput.value) fileInput.value.value = '' }
 }
 

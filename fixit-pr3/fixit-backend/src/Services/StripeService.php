@@ -334,6 +334,77 @@ final class StripeService
         ];
     }
 
+    /**
+     * Provider withdrawal = a real Stripe test Refund of the platform's
+     * refundable charges, newest first, debiting the provider's wallet ledger.
+     * Providers have no charge of their own (earnings are ledger payouts), so we
+     * draw from the platform's refundable PaymentIntents — a real sandbox object
+     * representing money leaving. Falls back to an error if nothing is refundable.
+     */
+    public function providerWithdraw(int $userId, int $amountCents, string $currency = 'myr'): array
+    {
+        if ($amountCents < 50) {
+            throw new \RuntimeException('Withdraw must be at least 50 cents');
+        }
+
+        $balance = $this->wallet->balanceCents($userId);
+        if ($amountCents > $balance) {
+            throw new \RuntimeException('Insufficient wallet balance');
+        }
+
+        $need = $amountCents;
+        $refundIds = [];
+        foreach ($this->payments->refundableIntents() as $piId) {
+            if ($need <= 0) {
+                break;
+            }
+            try {
+                $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
+            } catch (ApiErrorException) {
+                continue;
+            }
+            $charge = $pi->latest_charge;
+            if (!$charge || $charge->status !== 'succeeded') {
+                continue;
+            }
+            $refundable = (int) $charge->amount - (int) $charge->amount_refunded;
+            if ($refundable <= 0) {
+                continue;
+            }
+            $chunk = min($need, $refundable);
+            $refund = $this->stripe->refunds->create([
+                'charge' => $charge->id,
+                'amount' => $chunk,
+                'metadata' => [
+                    'fixit_user_id' => (string) $userId,
+                    'fixit_purpose' => 'provider_withdraw',
+                ],
+            ]);
+            $refundIds[] = $refund->id;
+            $need -= $chunk;
+        }
+
+        if ($need > 0) {
+            throw new \RuntimeException('No refundable Stripe charges available to fund this withdrawal');
+        }
+
+        $this->wallet->add(
+            $userId,
+            'withdraw',
+            -$amountCents,
+            $currency,
+            $refundIds[0] ?? null,
+            'Withdrawal to bank (Stripe refund)'
+        );
+
+        return [
+            'status' => 'succeeded',
+            'amount_cents' => $amountCents,
+            'refund_ids' => $refundIds,
+            'balance_cents' => $this->wallet->balanceCents($userId),
+        ];
+    }
+
     public function detachSavedPaymentMethod(int $userId): void
     {
         $user = $this->users->findById($userId);

@@ -79,7 +79,9 @@ const categoriesWithCounts = computed(() =>
              class="fx-card d-flex align-items-center gap-3"
              style="padding:12px 14px"
              :style="u.is_blocked ? 'opacity:0.65' : ''">
-          <div class="fx-avatar" style="width:40px;height:40px;font-size:13px;flex-shrink:0"
+          <img v-if="u.avatar_url" :src="u.avatar_url" :alt="u.name"
+               class="fx-avatar" style="width:40px;height:40px;flex-shrink:0;object-fit:cover" />
+          <div v-else class="fx-avatar" style="width:40px;height:40px;font-size:13px;flex-shrink:0"
                :style="{ background: u.role==='provider' ? 'var(--fx-accent-soft)' : 'var(--fx-blue-soft)',
                          color: u.role==='provider' ? 'var(--fx-accent)' : 'var(--fx-blue)' }">
             {{ u.name.split(' ').map(w=>w[0]).join('') }}
