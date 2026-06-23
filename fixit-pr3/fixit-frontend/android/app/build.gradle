@@ -11,10 +11,10 @@ def hasReleaseSigning = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'
 }
 
 android {
-    namespace "com.fixit.app"
+    namespace "com.fixit.olgtx.com"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.fixit.app"
+        applicationId "com.fixit.olgtx.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
