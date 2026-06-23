@@ -14,8 +14,13 @@ const auth    = useAuthStore()
 
 const provider = computed(() => store.byId(route.params.id))
 const reviews  = ref([])
+const catalog  = ref([])          // rich service catalog (ProviderService)
 const activeTab = ref('services')
 const loading  = ref(true)
+
+// Customers see active services only; the owner sees all (incl. hidden).
+const visibleServices = computed(() =>
+  isOwner.value ? catalog.value : catalog.value.filter(s => s.is_active))
 
 // Cart helpers
 function isInCart() {
@@ -56,6 +61,7 @@ onMounted(async () => {
   await store.load()
   inCart.value = isInCart()
   try { reviews.value = await api.getReviewsForProvider(route.params.id) } catch {}
+  try { catalog.value = await api.getProviderServices(route.params.id) } catch {}
   loading.value = false
 })
 
@@ -95,8 +101,8 @@ const reviewTags = computed(() => {
 const lightboxUrl  = ref(null)
 function openLightbox(url) { lightboxUrl.value = url }
 
-function messageProvider() {
-  // Find an existing booking with this provider to open its chat
+async function messageProvider() {
+  // Reuse an existing conversation (any booking or prior inquiry) with this provider…
   const bookingsStore = useBookingsStore()
   const existing = bookingsStore.bookings?.find(b =>
     String(b.provider_id) === String(provider.value?.id) ||
@@ -104,7 +110,14 @@ function messageProvider() {
   )
   if (existing) {
     router.push({ name: 'chat', params: { id: existing.id } })
-  } else {
+    return
+  }
+  // …otherwise start a pre-order inquiry thread so the customer can message now.
+  try {
+    const job = await api.startInquiry(provider.value.id)
+    if (!bookingsStore.bookings.some(b => b.id === job.id)) bookingsStore.bookings.unshift(job)
+    router.push({ name: 'chat', params: { id: job.id } })
+  } catch {
     router.push({ name: 'messages' })
   }
 }
@@ -270,23 +283,21 @@ function fmtDate(d) {
         <span v-for="cat in provider.category_names" :key="cat" class="ppv-chip">{{ cat }}</span>
       </div>
 
-      <!-- Service cards -->
-      <div v-if="provider.services?.length" class="ppv-service-list">
-        <div v-for="(svc, i) in provider.services" :key="i" class="ppv-service-card">
+      <!-- Service cards (rich catalog: photo, per-service price, description) -->
+      <div v-if="visibleServices.length" class="ppv-service-list">
+        <div v-for="svc in visibleServices" :key="svc.id" class="ppv-service-card" :class="{ inactive: !svc.is_active }">
           <div class="ppv-svc-thumb">
-            <span class="material-symbols-outlined" style="font-size:30px;color:#FF6635;font-variation-settings:'FILL' 1">home_repair_service</span>
+            <img v-if="svc.image_url" :src="svc.image_url" :alt="svc.name" class="ppv-svc-thumb-img" />
+            <span v-else class="material-symbols-outlined" style="font-size:30px;color:#FF6635;font-variation-settings:'FILL' 1">home_repair_service</span>
           </div>
           <div class="ppv-svc-info">
-            <div class="ppv-svc-name">{{ svc }}</div>
+            <div class="ppv-svc-name">{{ svc.name }} <span v-if="isOwner && !svc.is_active" class="ppv-svc-hidden">hidden</span></div>
             <div class="ppv-svc-price">
-              <span class="ppv-svc-curr">RM{{ provider.base_rate }}</span>
-              <span class="ppv-svc-unit">/hr</span>
+              <span class="ppv-svc-curr">RM{{ svc.price }}</span>
             </div>
-            <div class="ppv-svc-cats">
-              <span v-for="cat in (provider.category_names || []).slice(0,2)" :key="cat" class="ppv-svc-cat-tag">{{ cat }}</span>
-            </div>
+            <div v-if="svc.description" class="ppv-svc-desc-line">{{ svc.description }}</div>
           </div>
-          <button class="ppv-book-pill" @click="router.push({name:'booking-form',params:{id:provider.id}})">Book</button>
+          <button class="ppv-book-pill" @click="router.push({name:'booking-form',params:{id:provider.id},query:{service:svc.name,price:svc.price}})">Book</button>
         </div>
       </div>
 
@@ -568,9 +579,14 @@ function fmtDate(d) {
   border:1px solid var(--fx-border);
 }
 .ppv-svc-thumb {
-  width:72px; height:72px; border-radius:10px; flex-shrink:0;
+  width:72px; height:72px; border-radius:10px; flex-shrink:0; overflow:hidden;
   background:rgba(255,102,53,.08); display:flex; align-items:center; justify-content:center;
 }
+.ppv-svc-thumb-img { width:100%; height:100%; object-fit:cover; }
+.ppv-service-card.inactive { opacity:.55; }
+.ppv-svc-hidden { font-size:10px; font-weight:700; color:var(--fx-muted); background:rgba(0,0,0,.06); padding:1px 6px; border-radius:8px; vertical-align:middle; }
+.ppv-svc-desc-line { font-size:12px; color:var(--fx-muted); line-height:1.4; margin-top:2px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .ppv-svc-info { flex:1; min-width:0; }
 .ppv-svc-name  { font-size:14px; font-weight:700; color:var(--fx-text); margin-bottom:4px; }
 .ppv-svc-price { margin-bottom:4px; }
@@ -679,11 +695,18 @@ function fmtDate(d) {
 
 /* ── Edit modal ─────────────────────────────────────────────────────────── */
 .ppv-modal-backdrop {
-  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.45);
+  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.40);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
 }
 .ppv-modal {
   position:fixed; bottom:0; left:0; right:0; z-index:201;
-  background:var(--fx-card); border-radius:24px 24px 0 0;
+  /* opaque glass panel — var(--fx-card) is translucent, which let the page
+     content show through the modal. 0.92 white + blur reads as solid. */
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 5%, rgba(255,255,255,0.35) 0%, transparent 65%),
+    rgba(255,255,255,0.92);
+  backdrop-filter:blur(40px) saturate(1.6); -webkit-backdrop-filter:blur(40px) saturate(1.6);
+  border-radius:24px 24px 0 0;
   max-height:90vh; display:flex; flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.18);
 }

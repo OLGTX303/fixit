@@ -51,7 +51,11 @@ final class WalletController
             return ResponseHelper::error($response, $err, 422);
         }
         try {
-            $result = $this->service()->walletWithdraw((int) $user['id'], (int) $data['amount_cents']);
+            // Customers withdraw by refunding their own top-ups; providers withdraw
+            // their earned ledger balance via a platform refund (real sandbox object).
+            $result = ($user['role'] ?? '') === 'provider'
+                ? $this->service()->providerWithdraw((int) $user['id'], (int) $data['amount_cents'])
+                : $this->service()->walletWithdraw((int) $user['id'], (int) $data['amount_cents']);
             return ResponseHelper::json($response, $result);
         } catch (\RuntimeException $e) {
             return ResponseHelper::error($response, $e->getMessage(), 400);

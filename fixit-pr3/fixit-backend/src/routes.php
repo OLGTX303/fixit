@@ -11,6 +11,7 @@ use FixIt\Controllers\CryptoController;
 use FixIt\Controllers\KycController;
 use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
+use FixIt\Controllers\ProviderServiceController;
 use FixIt\Controllers\ReviewController;
 use FixIt\Controllers\StripePaymentController;
 use FixIt\Controllers\UserController;
@@ -36,34 +37,43 @@ return function (App $app): void {
     $users = new UserController();
     $availability = new AvailabilityController();
     $wallet = new WalletController();
+    $providerServices = new ProviderServiceController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices
     ) {
         // Stripe webhook �?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
         $group->get('/auth/captcha', [$auth, 'captchaChallenge'])->add($rateLimit);
         $group->post('/auth/captcha/verify', [$auth, 'captchaVerify'])->add($rateLimit);
+        $group->post('/auth/register/otp', [$auth, 'registerOtp'])->add($rateLimit);
         $group->post('/auth/register', [$auth, 'register'])->add($rateLimit);
         $group->post('/auth/login', [$auth, 'login'])->add($rateLimit);
         $group->get('/categories', [$categories, 'list']);
         $group->get('/providers', [$providers, 'list']);
         $group->get('/providers/{id}', [$providers, 'get']);
         $group->get('/providers/{id}/availability', [$availability, 'get']);
+        $group->get('/providers/{id}/services', [$providerServices, 'list']);
         // Public avatar proxy — streams the image object from R2 by key.
         $group->get('/avatars/{key:.+}', [$users, 'serveAvatar']);
         // Public image proxy — serves review/cover images stored in R2.
         $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices
         ) {
+            $secure->post('/providers/{id}/services', [$providerServices, 'create'])
+                ->add(new RoleGuard(['provider', 'admin']));
+            $secure->put('/providers/{id}/services/{sid}', [$providerServices, 'update'])
+                ->add(new RoleGuard(['provider', 'admin']));
+            $secure->delete('/providers/{id}/services/{sid}', [$providerServices, 'delete'])
+                ->add(new RoleGuard(['provider', 'admin']));
             $secure->get('/wallet', [$wallet, 'get']);
             $secure->post('/wallet/topup', [$wallet, 'topUp'])
                 ->add(new RoleGuard(['customer']));
             $secure->post('/wallet/withdraw', [$wallet, 'withdraw'])
-                ->add(new RoleGuard(['customer']));
+                ->add(new RoleGuard(['customer', 'provider']));
             $secure->patch('/users/me', [$users, 'updateMe']);
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
             $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp']);
@@ -117,6 +127,9 @@ return function (App $app): void {
                 ->add(new RoleGuard(['admin']));
             $secure->patch('/admin/harm-reviews/{id}', [$admin, 'reviewHarmMessage'])
                 ->add(new RoleGuard(['admin']));
+
+            $secure->post('/providers/{id}/inquiry', [$bookings, 'inquiry'])
+                ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);
             $secure->get('/bookings/{id}', [$bookings, 'get']);

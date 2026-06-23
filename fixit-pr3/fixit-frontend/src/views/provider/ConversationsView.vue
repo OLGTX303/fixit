@@ -22,6 +22,7 @@ const profile = computed(() => providersStore.providers.find(p => p.user_id === 
 const myJobs  = computed(() => profile.value ? bookingsStore.forProvider(profile.value.id) : [])
 
 const STATUS = {
+  inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
   requested:   { c: 'var(--fx-warn)',    bg: 'var(--fx-warn-soft)',    label: 'Requested' },
   accepted:    { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Accepted' },
   in_progress: { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'In Progress' },

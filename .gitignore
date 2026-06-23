@@ -18,7 +18,11 @@ vendor/
 # Scratch / prompts / agent tooling (not part of shipped project)
 .scratch/
 .grok/
+.claude/
+.codegraph/
 sourcecoderepo/
+pr3/
+pr3.zip
 AGENTS.md
 CONTEXT-MAP.md
 **/CONTEXT.md

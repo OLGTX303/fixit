@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
+import { useProvidersStore } from '../../stores/providers'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -9,6 +10,8 @@ import AppIcon from '../../components/AppIcon.vue'
 const route = useRoute()
 const router = useRouter()
 const bookingsStore = useBookingsStore()
+const providersStore = useProvidersStore()
+const error = ref('')
 
 const booking = computed(() => bookingsStore.byId(route.params.id))
 
@@ -57,6 +60,7 @@ function toggleTag(t) {
 
 async function submit() {
   submitting.value = true
+  error.value = ''
   try {
     await uploadPhotos()
     const imageUrls = photos.value.map(p => p.url).filter(Boolean)
@@ -67,8 +71,15 @@ async function submit() {
       tip_amount: tipAmount.value !== '' ? parseFloat(tipAmount.value) : null,
       image_urls: imageUrls,
     })
-    await bookingsStore.advanceStatus(booking.value.id, 'reviewed')
+    // The backend marks the job 'reviewed' on review create — don't PATCH the
+    // status again (reviewed→reviewed is rejected and used to abort navigation).
+    const b = bookingsStore.byId(booking.value.id)
+    if (b) b.status = 'reviewed'
+    // Refresh the provider directory so the new rating shows without re-login.
+    try { await providersStore.reload() } catch { /* non-fatal */ }
     router.push({ name: 'job-tracker', query: { id: booking.value.id } })
+  } catch (e) {
+    error.value = e.message || 'Could not submit review. Please try again.'
   } finally {
     submitting.value = false
   }
@@ -138,6 +149,7 @@ async function submit() {
              placeholder="Custom" style="width:90px;text-align:center" />
     </div>
 
+    <div v-if="error" class="alert alert-danger py-2 mb-2" style="font-size:13px">{{ error }}</div>
     <button class="btn btn-primary w-100" :disabled="submitting" @click="submit">
       {{ submitting ? 'Submitting…' : 'Submit Review' }}
     </button>

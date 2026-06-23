@@ -51,6 +51,26 @@ final class WalletModel
         return array_column($stmt->fetchAll(), 'stripe_ref');
     }
 
+    /**
+     * Credit a provider's wallet for a completed job. Idempotent: keyed on the
+     * job id via stripe_ref ("job_<id>"), so re-completing never double-pays.
+     * Returns true if a new payout row was written.
+     */
+    public function creditJobPayout(int $userId, int $cents, int $jobId, string $currency = 'myr'): bool
+    {
+        $ref = 'job_' . $jobId;
+        $pdo = Connection::get();
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction WHERE kind = 'payout' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['ref' => $ref]);
+        if ($chk->fetchColumn()) {
+            return false;
+        }
+        $this->add($userId, 'payout', $cents, $currency, $ref, 'Job payout #' . $jobId . ' (after 15% fee)');
+        return true;
+    }
+
     public function add(
         int $userId,
         string $kind,

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import * as api from '../services/api'
 import SliderPuzzleCaptcha from '../components/SliderPuzzleCaptcha.vue'
 import { LEGAL_VERSION } from '../content/legal.js'
 
@@ -16,38 +17,61 @@ const captchaRef      = ref(null)
 const showCaptcha     = ref(false)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
-function submit() {
-  if (!acceptedTerms.value || !acceptedPrivacy.value) return
+// Email OTP — verify the email belongs to the registrant before creating the account.
+const emailOtp   = ref('')
+const otpSent    = ref(false)
+const sendingOtp = ref(false)
+const otpMsg     = ref('')
+
+// Step 1: clicking "Send code" opens the slider captcha — verifying a human
+// BEFORE we send any email, so bots can't abuse the OTP endpoint.
+function sendCode() {
+  if (!form.value.email.trim()) { otpMsg.value = 'Enter your email address first'; return }
   captchaProof.value = null
+  otpMsg.value = ''
   showCaptcha.value = true
   setTimeout(() => captchaRef.value?.reload?.(), 0)
 }
 function closeCaptcha() { showCaptcha.value = false }
 
+// Captcha solved → send the OTP, passing the one-time pass token.
 async function onCaptchaVerified(proof) {
   captchaProof.value = proof
-  await register()
+  showCaptcha.value = false
+  sendingOtp.value = true
+  otpMsg.value = ''
+  try {
+    const email = form.value.email.trim()
+    await api.requestRegisterOtp({
+      email,
+      captcha_id: proof.captcha_id,
+      captcha_pass_token: proof.captcha_pass_token,
+    })
+    otpSent.value = true
+    otpMsg.value = `Code sent to ${email}. Check your inbox.`
+  } catch (e) {
+    otpMsg.value = e.message || 'Could not send code'
+  } finally {
+    sendingOtp.value = false
+  }
 }
 
-async function register() {
+// Step 2: final submit just registers — the OTP already proves human + email.
+async function submit() {
+  if (!acceptedTerms.value || !acceptedPrivacy.value || !emailOtp.value) return
   try {
     const user = await auth.register({
-      name:                    form.value.name,
-      email:                   form.value.email,
-      password:                form.value.password,
-      role:                    form.value.role,
-      accepted_terms:          true,
-      accepted_privacy:        true,
-      legal_policy_version:    LEGAL_VERSION,
-      captcha_id:              captchaProof.value.captcha_id,
-      captcha_pass_token:      captchaProof.value.captcha_pass_token,
+      name:                 form.value.name,
+      email:                form.value.email,
+      password:             form.value.password,
+      role:                 form.value.role,
+      accepted_terms:       true,
+      accepted_privacy:     true,
+      legal_policy_version: LEGAL_VERSION,
+      email_otp:            emailOtp.value.trim(),
     })
-    showCaptcha.value = false
     router.push({ name: landing[user.role] || 'home' })
-  } catch {
-    captchaProof.value = null
-    captchaRef.value?.reload?.()
-  }
+  } catch { /* auth.error shown in the form */ }
 }
 </script>
 
@@ -88,11 +112,27 @@ async function register() {
         <!-- Email -->
         <div>
           <div class="fx-label-caps" style="margin-bottom:6px">Email Address</div>
-          <div class="lg-input-wrap glass-input">
-            <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">mail</span>
-            <input v-model="form.email" placeholder="john@example.com" required type="email" autocomplete="email" />
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <div class="lg-input-wrap glass-input" style="flex:1">
+              <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">mail</span>
+              <input v-model="form.email" placeholder="john@example.com" required type="email" autocomplete="email" />
+            </div>
+            <button type="button" class="lg-otp-send" :disabled="sendingOtp || !form.email" @click="sendCode">
+              {{ sendingOtp ? 'Sending…' : (otpSent ? 'Resend' : 'Send code') }}
+            </button>
           </div>
         </div>
+
+        <!-- Email verification code -->
+        <div v-if="otpSent">
+          <div class="fx-label-caps" style="margin-bottom:6px">Verification Code</div>
+          <div class="lg-input-wrap glass-input">
+            <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">verified</span>
+            <input v-model="emailOtp" placeholder="6-digit code" required inputmode="numeric"
+                   maxlength="6" autocomplete="one-time-code" style="letter-spacing:4px" />
+          </div>
+        </div>
+        <div v-if="otpMsg" style="font-size:12px;color:var(--fx-muted);margin-top:-6px">{{ otpMsg }}</div>
         <!-- Password -->
         <div>
           <div class="fx-label-caps" style="margin-bottom:6px">Password</div>
@@ -124,8 +164,8 @@ async function register() {
         </div>
 
         <button class="btn btn-primary w-100 lg-submit" type="submit"
-                :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy">
-          {{ auth.loading ? 'Creating…' : 'Continue to Verification' }}
+                :disabled="auth.loading || !acceptedTerms || !acceptedPrivacy || !emailOtp">
+          {{ auth.loading ? 'Creating…' : 'Create Account' }}
         </button>
       </form>
 
@@ -213,6 +253,13 @@ async function register() {
 }
 .lg-input-wrap input::placeholder { color: rgba(94,65,58,0.40); }
 .lg-submit { height: 52px; font-size: 15px; margin-top: 6px; }
+.lg-otp-send {
+  flex-shrink: 0; padding: 0 14px; border-radius: 14px;
+  border: 1px solid var(--fx-accent); background: var(--fx-accent-soft);
+  color: var(--fx-accent); font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.lg-otp-send:disabled { opacity: 0.5; cursor: not-allowed; }
 .lg-captcha-backdrop {
   position: fixed; inset: 0; z-index: 2000;
   background: rgba(17,24,39,0.30);

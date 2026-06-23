@@ -53,6 +53,18 @@ final class BookingModel
         return $row ? $this->enrich($row) : null;
     }
 
+    /** Existing pre-order inquiry thread between a customer and provider, if any. */
+    public function findInquiry(int $customerId, int $providerId): ?array
+    {
+        $stmt = Connection::get()->prepare(
+            "SELECT * FROM Job WHERE customer_id = :c AND provider_id = :p AND status = 'inquiry'
+             ORDER BY id DESC LIMIT 1"
+        );
+        $stmt->execute(['c' => $customerId, 'p' => $providerId]);
+        $row = $stmt->fetch();
+        return $row ? $this->enrich($row) : null;
+    }
+
     public function create(array $data): array
     {
         $pdo = Connection::get();

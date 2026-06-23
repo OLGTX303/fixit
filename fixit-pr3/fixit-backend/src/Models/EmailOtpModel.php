@@ -24,6 +24,32 @@ final class EmailOtpModel
         $stmt->execute();
     }
 
+    /** Pre-registration OTP (no user yet) — keyed on email only, user_id NULL. */
+    public function createForEmail(string $email, string $otp, int $ttlSeconds = 600): void
+    {
+        $pdo = Connection::get();
+        $pdo->prepare('DELETE FROM EmailOtp WHERE user_id IS NULL AND new_email = :email')
+            ->execute(['email' => $email]);
+        $stmt = $pdo->prepare(
+            'INSERT INTO EmailOtp (user_id, new_email, otp_hash, expires_at)
+             VALUES (NULL, :email, :hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND))'
+        );
+        $stmt->bindValue('email', $email);
+        $stmt->bindValue('hash', password_hash($otp, PASSWORD_BCRYPT));
+        $stmt->bindValue('ttl', $ttlSeconds, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    public function findPendingForEmail(string $email): ?array
+    {
+        $stmt = Connection::get()->prepare(
+            'SELECT * FROM EmailOtp WHERE user_id IS NULL AND new_email = :email
+             AND expires_at > NOW() ORDER BY id DESC LIMIT 1'
+        );
+        $stmt->execute(['email' => $email]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function findPending(int $userId, string $newEmail): ?array
     {
         $stmt = Connection::get()->prepare(

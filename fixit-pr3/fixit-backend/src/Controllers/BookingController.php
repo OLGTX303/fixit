@@ -6,6 +6,7 @@ namespace FixIt\Controllers;
 
 use FixIt\Models\BookingModel;
 use FixIt\Models\ProviderModel;
+use FixIt\Models\WalletModel;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -54,6 +55,13 @@ final class BookingController
             return ResponseHelper::error($response, 'Provider not available', 422);
         }
 
+        // Normalize to MySQL DATETIME; reject unparseable input as 422 (not a 500).
+        $ts = strtotime(str_replace('T', ' ', (string) $data['scheduled_at']));
+        if ($ts === false) {
+            return ResponseHelper::error($response, 'Invalid scheduled_at datetime', 422);
+        }
+        $scheduledAt = date('Y-m-d H:i:s', $ts);
+
         $validRecurrence = ['none', 'weekly', 'biweekly', 'monthly'];
         $recurrenceType  = in_array($data['recurrence_type'] ?? 'none', $validRecurrence, true)
             ? ($data['recurrence_type'] ?? 'none')
@@ -67,13 +75,52 @@ final class BookingController
             'customer_id'          => (int) $user['id'],
             'provider_id'          => (int) $data['provider_id'],
             'category_id'          => (int) $data['category_id'],
-            'scheduled_at'         => str_replace('T', ' ', (string) $data['scheduled_at']),
+            'scheduled_at'         => $scheduledAt,
             'address'              => Validator::cleanText((string) $data['address'], 255),
             'total'                => isset($data['total']) ? (float) $data['total'] : null,
             'notes'                => isset($data['notes']) ? Validator::cleanText((string) $data['notes'], 2000) : null,
             'status'               => 'requested',
             'recurrence_type'      => $recurrenceType,
             'recurrence_end_date'  => $recurrenceEnd,
+        ]);
+
+        return ResponseHelper::json($response, $booking, 201);
+    }
+
+    /**
+     * Get-or-create a pre-order "inquiry" conversation so a customer can message
+     * a provider before booking. Reuses the job-scoped chat: the inquiry is a Job
+     * with status 'inquiry', excluded from booking/earnings/request lists.
+     */
+    public function inquiry(Request $request, Response $response, array $args): Response
+    {
+        $user = $request->getAttribute('user');
+        $providerId = (int) $args['id'];
+        $providerModel = new ProviderModel();
+        if (!$providerModel->findRaw($providerId)) {
+            return ResponseHelper::error($response, 'Provider not found', 404);
+        }
+
+        $model = new BookingModel();
+        $existing = $model->findInquiry((int) $user['id'], $providerId);
+        if ($existing) {
+            return ResponseHelper::json($response, $existing);
+        }
+
+        $enriched = $providerModel->getEnriched($providerId);
+        $categoryId = (int) ($enriched['category_ids'][0] ?? 1);
+
+        $booking = $model->create([
+            'customer_id'         => (int) $user['id'],
+            'provider_id'         => $providerId,
+            'category_id'         => $categoryId,
+            'scheduled_at'        => date('Y-m-d H:i:s'),
+            'address'             => '',
+            'total'               => null,
+            'notes'               => null,
+            'status'              => 'inquiry',
+            'recurrence_type'     => 'none',
+            'recurrence_end_date' => null,
         ]);
 
         return ResponseHelper::json($response, $booking, 201);
@@ -114,6 +161,19 @@ final class BookingController
         }
 
         $updated = $model->updateStatus($id, $newStatus);
+
+        // On first completion, credit the provider's real wallet ledger with their
+        // payout (total minus 15% platform fee). Idempotent on the job id, so the
+        // wallet balance always reflects earned-but-completed jobs.
+        if ($newStatus === 'completed' && $current !== 'completed') {
+            $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
+            $total = (float) ($booking['total'] ?? 0);
+            $payoutCents = (int) round($total * 100 * 0.85);
+            if ($providerUserId > 0 && $payoutCents > 0) {
+                (new WalletModel())->creditJobPayout($providerUserId, $payoutCents, $id);
+            }
+        }
+
         return ResponseHelper::json($response, $updated);
     }
 

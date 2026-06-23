@@ -14,11 +14,6 @@ final class ReviewModel
         $pdo = Connection::get();
         $imageJson = $imageUrls ? json_encode(array_values($imageUrls)) : null;
 
-        // Add image_urls column if it doesn't exist yet (safe lazy migration)
-        try {
-            $pdo->exec("ALTER TABLE Review ADD COLUMN image_urls TEXT NULL");
-        } catch (\Throwable) {}
-
         $stmt = $pdo->prepare(
             'INSERT INTO Review (job_id, rating, comment, tip_amount, image_urls)
              VALUES (:job, :rating, :comment, :tip, :imgs)'
