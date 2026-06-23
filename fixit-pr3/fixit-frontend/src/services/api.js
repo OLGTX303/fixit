@@ -105,6 +105,8 @@ export async function getProviders() {
 }
 
 export const getProvider = (id) => get(`/providers/${id}`)
+// The logged-in provider's own profile (works even while unverified).
+export const getMyProviderProfile = () => get('/me/provider')
 export const getBookings = () => get('/bookings')
 export const getReviews = () => get('/admin/reviews')
 export const getStripeStats = () => get('/admin/stripe/stats')

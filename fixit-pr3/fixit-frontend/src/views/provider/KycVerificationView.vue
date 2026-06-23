@@ -26,8 +26,10 @@ const livenessProgress = ref({ current: 0, total: 8 })
 const livenessResult = ref(null)
 const kycStatus = ref(null)
 
-const myProfile = computed(() =>
-  providersStore.providers.find((p) => p.user_id === auth.user?.id))
+// Own profile — fetched directly so it resolves even while unverified (the
+// public providers list is verified-only, which left this null and made the
+// "Recognise government ID" button silently no-op).
+const myProfile = ref(null)
 
 const statusLabel = computed(() => {
   const s = kycStatus.value?.kyc_status || myProfile.value?.kyc_status || 'none'
@@ -43,15 +45,23 @@ const statusLabel = computed(() => {
 })
 
 onMounted(async () => {
-  await providersStore.load()
-  if (myProfile.value) {
-    try {
-      kycStatus.value = await api.getKycStatus(myProfile.value.id)
-      if (kycStatus.value.kyc_status === 'id_passed') step.value = 2
-      if (kycStatus.value.kyc_status === 'submitted') step.value = 3
-    } catch {
-      /* offline / mock */
-    }
+  try {
+    myProfile.value = await api.getMyProviderProfile()
+  } catch {
+    // Fallback: maybe the profile is in the (verified-only) store.
+    await providersStore.load()
+    myProfile.value = providersStore.providers.find((p) => p.user_id === auth.user?.id) || null
+  }
+  if (!myProfile.value) {
+    error.value = 'No provider profile found. Set up your provider profile first.'
+    return
+  }
+  try {
+    kycStatus.value = await api.getKycStatus(myProfile.value.id)
+    if (kycStatus.value.kyc_status === 'id_passed') step.value = 2
+    if (kycStatus.value.kyc_status === 'submitted') step.value = 3
+  } catch {
+    /* offline / mock */
   }
 })
 
@@ -133,6 +143,24 @@ function stopCamera() {
   if (videoRef.value) videoRef.value.srcObject = null
 }
 
+function captureVideoFrame(video) {
+  if (!video || !video.videoWidth) return null
+  const c = document.createElement('canvas')
+  c.width = video.videoWidth
+  c.height = video.videoHeight
+  c.getContext('2d').drawImage(video, 0, 0)
+  return c.toDataURL('image/jpeg', 0.9)
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result)
+    r.onerror = reject
+    r.readAsDataURL(file)
+  })
+}
+
 async function runLiveness() {
   if (!videoRef.value || !myProfile.value) return
   busy.value = true
@@ -145,11 +173,18 @@ async function runLiveness() {
     livenessResult.value = result
     flashColor.value = null
 
+    // Capture a live selfie + the ID image so the server can face-match them
+    // against each other via the local gateway.
+    const selfieImage = captureVideoFrame(videoRef.value)
+    const idImage = idFile.value ? await fileToDataUrl(idFile.value) : null
+
     kycStatus.value = await api.submitKycLiveness(myProfile.value.id, {
       passed: result.passed,
       score: result.score,
       color_sequence_hash: result.color_sequence_hash,
       checks: result.checks,
+      selfie_image: selfieImage,
+      id_image: idImage,
     })
 
     if (!result.passed) {
@@ -282,4 +317,19 @@ function retry() {
       <button v-if="kycStatus?.kyc_status === 'failed'" class="btn btn-outline-primary mt-3" @click="retry">Try again</button>
     </div>
   </div>
+
+  <!-- Full-screen colour flash: the phone screen becomes the light source so the
+       face actually reflects each colour (essential for liveness to work on H5). -->
+  <Teleport to="body">
+    <div v-if="flashColor" class="kyc-flash" :style="{ background: flashColor }"></div>
+  </Teleport>
 </template>
+
+<style scoped>
+.kyc-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  pointer-events: none;
+}
+</style>

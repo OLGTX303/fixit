@@ -69,6 +69,9 @@ return function (App $app): void {
                 ->add(new RoleGuard(['provider', 'admin']));
             $secure->delete('/providers/{id}/services/{sid}', [$providerServices, 'delete'])
                 ->add(new RoleGuard(['provider', 'admin']));
+            $secure->get('/me/provider', [$providers, 'me'])
+                ->add(new RoleGuard(['provider', 'admin']));
+
             $secure->get('/wallet', [$wallet, 'get']);
             $secure->post('/wallet/topup', [$wallet, 'topUp'])
                 ->add(new RoleGuard(['customer']));

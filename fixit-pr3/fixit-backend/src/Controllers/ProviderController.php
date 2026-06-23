@@ -30,6 +30,35 @@ final class ProviderController
         return ResponseHelper::json($response, $provider);
     }
 
+    /** GET /api/providers/me — the logged-in provider's OWN profile, even when
+     *  unverified (the public /providers list is verified-only, so KYC/hub can't
+     *  find an unverified provider's own record there). */
+    public function me(Request $request, Response $response): Response
+    {
+        $user = $request->getAttribute('user');
+        $model = new ProviderModel();
+        $raw = $model->findByUserId((int) $user['id']);
+        if (!$raw) {
+            // A provider may not have set up a profile yet. Auto-provision a blank
+            // one so KYC / hub work immediately; they can fill in details later
+            // under Profile setup. (Admins without a profile get a 404.)
+            if (($user['role'] ?? '') !== 'provider') {
+                return ResponseHelper::error($response, 'Provider profile not found', 404);
+            }
+            $created = $model->create((int) $user['id'], [
+                'bio' => '',
+                'location' => '',
+                'base_rate' => 0,
+                'latitude' => 0,
+                'longitude' => 0,
+                'services' => [],
+                'category_ids' => [],
+            ]);
+            return ResponseHelper::json($response, $created);
+        }
+        return ResponseHelper::json($response, $model->getEnriched((int) $raw['id']));
+    }
+
     public function create(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');

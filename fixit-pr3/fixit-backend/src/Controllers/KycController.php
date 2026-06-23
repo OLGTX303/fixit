@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FixIt\Controllers;
 
 use FixIt\Models\ProviderModel;
+use FixIt\Services\FaceMatchService;
 use FixIt\Support\KycValidator;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
@@ -174,13 +175,61 @@ final class KycController
             return ResponseHelper::error($response, 'Invalid color_sequence_hash', 422);
         }
 
+        $passed = (bool) $data['passed'];
+
+        // Server-side face match: compare the ID photo against the live selfie via
+        // the local gateway. A real same-person score gates the pass; a detection
+        // failure (no face / gateway down) is recorded but stays inconclusive.
+        $idImg = self::decodeImage($data['id_image'] ?? null);
+        $selfieImg = self::decodeImage($data['selfie_image'] ?? null);
+        if (FaceMatchService::isConfigured() && $idImg && $selfieImg) {
+            $fm = (new FaceMatchService())->match($idImg['bin'], $idImg['mime'], $selfieImg['bin'], $selfieImg['mime']);
+            $checks['face_match'] = [
+                'score' => $fm['score'],
+                'min_score' => (new FaceMatchService())->minScore(),
+                'gateway_ok' => $fm['ok'],
+                'message' => $fm['message'],
+                'passed' => $fm['passed'],
+            ];
+            if ($fm['passed'] === false) {
+                $passed = false;
+            }
+        }
+
         $summary = $model->saveLivenessCheck($id, [
-            'passed' => (bool) $data['passed'],
+            'passed' => $passed,
             'score' => $score,
             'color_sequence_hash' => $hash,
             'checks' => $checks,
         ]);
 
+        if (!$passed && isset($checks['face_match']) && $checks['face_match']['passed'] === false) {
+            return ResponseHelper::error(
+                $response,
+                'Face does not match the ID photo (match score ' . ($checks['face_match']['score'] ?? '?') . '%).',
+                422
+            );
+        }
+
         return ResponseHelper::json($response, self::kycPayload($summary));
+    }
+
+    /**
+     * Decode a base64 data URL into raw bytes + mime, or null if absent/invalid.
+     * @return array{bin:string,mime:string}|null
+     */
+    private static function decodeImage(mixed $raw): ?array
+    {
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        if (!preg_match('#^data:([^;]+);base64,(.+)$#s', $raw, $m)) {
+            return null;
+        }
+        $bin = base64_decode($m[2], true);
+        if ($bin === false || $bin === '') {
+            return null;
+        }
+        return ['bin' => $bin, 'mime' => strtolower($m[1])];
     }
 }

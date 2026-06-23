@@ -20,11 +20,11 @@ const ID_ASPECT_RANGES = [
 ]
 
 const THRESHOLDS = {
-  min_confidence: 72,
-  min_long_edge: 960,
+  min_confidence: 55,
+  min_long_edge: 500,
   min_gov_keywords: 2,
-  min_ocr_chars: 24,
-  max_fraud_score: 35,
+  min_ocr_chars: 16,
+  max_fraud_score: 60,
 }
 
 async function fileToImage(file) {
@@ -232,13 +232,18 @@ async function runForensics(file, img, ctx, w, h) {
   const flat = detectFlatLighting(ctx, w, h)
   const bounds = detectDocumentBounds(ctx, w, h)
   const recompress = await detectRecompression(img, ctx, w, h)
-  const flags = [meta, screen, flat, bounds, recompress].map((c) => c.flag).filter(Boolean)
-  const fraudScore = Math.min(100, flags.length * 18 + (flat.pass ? 0 : 15))
+  // Only a clear screen-capture / wrong-file is treated as hard fraud; border,
+  // flat-lighting and recompression are advisory (clean scans legitimately
+  // trip them), so they add a little fraud score but don't auto-reject.
+  const hardFlags = [meta, screen].map((c) => c.flag).filter(Boolean)
+  const softFlags = [flat, bounds, recompress].map((c) => c.flag).filter(Boolean)
+  const flags = [...hardFlags, ...softFlags]
+  const fraudScore = Math.min(100, hardFlags.length * 30 + softFlags.length * 8)
   return {
     checks: { metadata: meta, screen_pattern: screen, flat_lighting: flat, document_bounds: bounds, recompression: recompress },
-    fraud_flags: flags,
+    fraud_flags: hardFlags,
     fraud_score: fraudScore,
-    anti_spoof_pass: meta.pass && screen.pass && bounds.pass && fraudScore < 40,
+    anti_spoof_pass: meta.pass && screen.pass && fraudScore < THRESHOLDS.max_fraud_score,
   }
 }
 
@@ -270,27 +275,42 @@ function detectDates(text) {
   return dates.slice(0, 8)
 }
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+  ])
+}
+
+// OCR loads its worker/wasm/lang from a CDN at runtime; on a slow or blocked
+// network that can hang or fail. Time-box it and degrade gracefully so the
+// "Recognise" button always completes instead of spinning forever.
 async function runOcr(canvas) {
-  const { createWorker } = await import('tesseract.js')
-  const worker = await createWorker('eng', 1, { logger: () => {} })
   try {
-    const { data } = await worker.recognize(canvas)
-    return { text: data.text || '', confidence: Math.round(data.confidence ?? 0) }
-  } finally {
-    await worker.terminate()
+    const { createWorker } = await withTimeout(import('tesseract.js'), 10000, 'ocr_load_timeout')
+    const worker = await withTimeout(createWorker('eng', 1, { logger: () => {} }), 15000, 'ocr_init_timeout')
+    try {
+      const { data } = await withTimeout(worker.recognize(canvas), 20000, 'ocr_timeout')
+      return { text: data.text || '', confidence: Math.round(data.confidence ?? 0), unavailable: false }
+    } finally {
+      await worker.terminate()
+    }
+  } catch {
+    return { text: '', confidence: 0, unavailable: true }
   }
 }
 
-function computeDecision(checks, fraudScore, ocrConfidence) {
+function computeDecision(checks, fraudScore, ocrConfidence, ocrUnavailable = false) {
   const critical = [
     checks.resolution?.pass,
     checks.aspect_ratio?.pass,
     checks.anti_spoof?.pass,
     checks.contrast?.pass,
-    checks.document_bounds?.pass,
   ]
   const criticalOk = critical.every(Boolean)
-  const textualOk = (checks.gov_keywords?.pass || checks.mrz?.pass) && checks.ocr_quality?.pass
+  // If OCR couldn't run (CDN/worker failure), we can't read text — fall back to
+  // the image/anti-spoof checks rather than blocking the whole verification.
+  const textualOk = ocrUnavailable || (checks.gov_keywords?.pass || checks.mrz?.pass)
   const mrzFailed = checks.mrz?.found && !checks.mrz?.pass
   const rejectionReasons = []
   if (!checks.resolution?.pass) rejectionReasons.push('Image resolution too low — use a sharper photo')
@@ -299,20 +319,18 @@ function computeDecision(checks, fraudScore, ocrConfidence) {
   if (checks.fraud_flags?.length) rejectionReasons.push(`Fraud signals: ${checks.fraud_flags.join(', ')}`)
   if (!textualOk) rejectionReasons.push('Could not read enough official text from the document')
   if (mrzFailed) rejectionReasons.push('MRZ checksum failed — document may be forged')
-  if (ocrConfidence < 45) rejectionReasons.push('OCR confidence too low — improve lighting and focus')
 
-  let confidence = critical.filter(Boolean).length * 10
-  confidence += textualOk ? 20 : 0
-  confidence += checks.mrz?.pass ? 25 : 0
-  confidence += Math.min(15, (checks.gov_keywords?.count || 0) * 4)
-  confidence += Math.min(10, ocrConfidence / 10)
-  confidence -= Math.min(30, fraudScore / 2)
+  let confidence = critical.filter(Boolean).length * 12
+  confidence += textualOk ? 22 : 0
+  confidence += checks.mrz?.pass ? 20 : 0
+  confidence += Math.min(15, (checks.gov_keywords?.count || 0) * 5)
+  confidence += Math.min(10, ocrConfidence / 8)
+  confidence -= Math.min(25, fraudScore / 3)
   confidence = Math.max(0, Math.min(100, Math.round(confidence)))
 
   const valid = criticalOk && textualOk && !mrzFailed
     && confidence >= THRESHOLDS.min_confidence
     && fraudScore <= THRESHOLDS.max_fraud_score
-    && ocrConfidence >= 45
 
   return { valid, confidence, rejectionReasons }
 }
@@ -341,7 +359,7 @@ export async function analyzeGovernmentId(file, onProgress = () => {}) {
   const checks = {
     resolution: {
       width, height, long_edge: longEdge,
-      pass: longEdge >= THRESHOLDS.min_long_edge && width >= 640 && height >= 400,
+      pass: longEdge >= THRESHOLDS.min_long_edge && Math.min(width, height) >= 240,
     },
     aspect_ratio: { ...aspect, pass: aspect.type !== 'unknown' },
     contrast: { variance: Math.round(stats.variance), pass: stats.variance > 900 },
@@ -350,7 +368,7 @@ export async function analyzeGovernmentId(file, onProgress = () => {}) {
     ocr_quality: {
       chars: ocr.text.length,
       confidence: ocr.confidence,
-      pass: ocr.text.length >= THRESHOLDS.min_ocr_chars && ocr.confidence >= 45,
+      pass: ocr.text.length >= THRESHOLDS.min_ocr_chars && ocr.confidence >= 30,
     },
     gov_keywords: { hits: keywords.hits, count: keywords.count, pass: keywords.count >= THRESHOLDS.min_gov_keywords },
     dates: { found: dates, pass: dates.length >= 1 },
@@ -369,7 +387,7 @@ export async function analyzeGovernmentId(file, onProgress = () => {}) {
     fraud_flags: forensics.fraud_flags,
   }
 
-  const { valid, confidence, rejectionReasons } = computeDecision(checks, forensics.fraud_score, ocr.confidence)
+  const { valid, confidence, rejectionReasons } = computeDecision(checks, forensics.fraud_score, ocr.confidence, ocr.unavailable)
 
   return {
     valid,
