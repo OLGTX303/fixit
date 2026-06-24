@@ -15,12 +15,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH redeploy (frontend + backend)
+      - name: SSH redeploy (frontend + backend + DB migrations)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          username: deploy                 # least-privilege CI user (key-only)
+          key: ${{ secrets.SSH_KEY }}      # private key; deploy may sudo ONLY redeploy.sh
           port: ${{ secrets.SSH_PORT }}
           command_timeout: 20m
-          script: bash /root/redeploy.sh
+          script: sudo -n /root/redeploy.sh
