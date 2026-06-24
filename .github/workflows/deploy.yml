@@ -1,0 +1,26 @@
+name: Deploy to server
+
+# Every push to master SSHes into the server (reachable via DDNS) and runs
+# redeploy.sh, which pulls the latest code and rebuilds frontend + backend.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH redeploy (frontend + backend)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          command_timeout: 20m
+          script: bash /root/redeploy.sh
