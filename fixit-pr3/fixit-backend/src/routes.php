@@ -160,6 +160,47 @@ return function (App $app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
+    // OTA: the app polls this for the latest signed APK. Reads the newest GitHub
+    // release (public repo, no token), cached 5 min to respect rate limits.
+    $app->get('/api/app/latest', function ($request, $response) {
+        $cache = sys_get_temp_dir() . '/fixit_latest_release.json';
+        if (is_file($cache) && time() - filemtime($cache) < 300) {
+            $response->getBody()->write((string) file_get_contents($cache));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+        $out = ['version' => null, 'apk_url' => null, 'name' => null, 'notes' => null];
+        try {
+            $ch = curl_init('https://api.github.com/repos/OLGTX303/fixit/releases/latest');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_HTTPHEADER => ['User-Agent: fixit-ota', 'Accept: application/vnd.github+json'],
+            ]);
+            $rel = json_decode((string) curl_exec($ch), true);
+            curl_close($ch);
+            if (is_array($rel) && !empty($rel['tag_name'])) {
+                $apk = null;
+                foreach (($rel['assets'] ?? []) as $a) {
+                    if (str_ends_with(strtolower((string) ($a['name'] ?? '')), '.apk')) {
+                        $apk = $a['browser_download_url'];
+                        break;
+                    }
+                }
+                $out = [
+                    'version' => ltrim((string) $rel['tag_name'], 'v'),
+                    'apk_url' => $apk,
+                    'name'    => $rel['name'] ?? $rel['tag_name'],
+                    'notes'   => $rel['body'] ?? null,
+                ];
+                @file_put_contents($cache, json_encode($out));
+            }
+        } catch (\Throwable) {
+            /* return nulls — app treats as "no update" */
+        }
+        $response->getBody()->write(json_encode($out));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
     // Public client config �?the Google Maps JS key is stored server-side in
     // .env (GOOGLE_MAPS_API_KEY) and fetched at runtime so it never lives in
     // the committed frontend source. Restrict the key in Google Cloud Console.
