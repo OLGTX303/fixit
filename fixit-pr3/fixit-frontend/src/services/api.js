@@ -95,7 +95,18 @@ const patch = (path, body) => request('PATCH', path, body)
 const del = (path) => request('DELETE', path)
 
 // ── Reads ───────────────────────────────────────────────────────────────────
-export const getUsers = () => get('/admin/users')
+export const getUsers = ({ q = '', limit = 25, offset = 0, sort = 'name' } = {}) =>
+  get(`/admin/users?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=${sort}`)
+export const getCategoryStats = () => get('/admin/category-stats')
+export const getVerifyStats = () => get('/admin/verify-stats')
+// Admin provider list, paginated. opts: { verified (0|1), limit, offset }
+export function getAdminProviders(opts = {}) {
+  const p = new URLSearchParams()
+  if (opts.verified != null) p.set('verified', opts.verified)
+  p.set('limit', opts.limit ?? 20)
+  p.set('offset', opts.offset ?? 0)
+  return get(`/admin/providers?${p.toString()}`)
+}
 export const blockUser = (id, blocked) => patch(`/admin/users/${id}/block`, { blocked })
 export const getCategories = () => get('/categories')
 export const getMapsConfig = () => get('/config/maps')
@@ -105,6 +116,21 @@ export async function getProviders() {
 }
 
 export const getProvider = (id) => get(`/providers/${id}`)
+
+// Paginated provider list/search. opts: { q, category, sort, priority, lat, lng, limit, offset }
+export function searchProviders(opts = {}) {
+  const p = new URLSearchParams()
+  if (opts.q) p.set('q', opts.q)
+  if (opts.category) p.set('category', opts.category)
+  if (opts.sort) p.set('sort', opts.sort)
+  if (opts.priority) p.set('priority', '1')
+  if (opts.lat != null && opts.lng != null) { p.set('lat', opts.lat); p.set('lng', opts.lng) }
+  p.set('limit', opts.limit ?? 20)
+  p.set('offset', opts.offset ?? 0)
+  return get(`/providers?${p.toString()}`)
+}
+export const getRecommendedProviders = (limit = 20, offset = 0) =>
+  get(`/providers?sort=recommended&limit=${limit}&offset=${offset}`)
 // The logged-in provider's own profile (works even while unverified).
 export const getMyProviderProfile = () => get('/me/provider')
 export const getBookings = () => get('/bookings')

@@ -1,15 +1,26 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useProvidersStore } from '../../stores/providers'
+import { ref, computed, watch, onMounted } from 'vue'
 import * as api from '../../services/api'
+import { useInfiniteList } from '../../composables/useInfiniteList'
 import AppIcon from '../../components/AppIcon.vue'
 
-const providersStore = useProvidersStore()
-const filter = ref('Pending')
+const filter = ref('Pending')   // Pending | Approved | All
 const expanded = ref(null)
 const decisions = ref({})
+const counts = ref({ pending: 0, approved: 0 })
 
-onMounted(() => providersStore.load())
+// Load only the providers for the active filter, 20 at a time, more on scroll.
+const verifiedParam = computed(() =>
+  filter.value === 'Pending' ? 0 : filter.value === 'Approved' ? 1 : undefined)
+const { items: shown, loading, done, sentinel, reset } = useInfiniteList(
+  (offset, size) => api.getAdminProviders({ verified: verifiedParam.value, limit: size, offset }), 20)
+watch(filter, reset)
+
+async function loadStats() { try { counts.value = await api.getVerifyStats() } catch { /* non-fatal */ } }
+onMounted(loadStats)
+
+const rejectedCount = computed(() => Object.values(decisions.value).filter(d => d === 'rejected').length)
+const stats = computed(() => ({ pending: counts.value.pending, approved: counts.value.approved, rejected: rejectedCount.value }))
 
 function statusOf(p) {
   if (decisions.value[p.id] === 'rejected') return 'Rejected'
@@ -23,25 +34,16 @@ const STATUS_STYLE = {
   Rejected: { c: 'var(--fx-error)', bg: 'var(--fx-error-soft)' },
 }
 
-const shown = computed(() =>
-  providersStore.providers.filter(p => filter.value === 'All' || statusOf(p) === filter.value))
-
-const stats = computed(() => {
-  const approved = providersStore.providers.filter(p => p.is_verified).length
-  const rejected = Object.values(decisions.value).filter(d => d === 'rejected').length
-  const pending = providersStore.providers.filter(p => !p.is_verified).length - rejected
-  return { pending: Math.max(0, pending), approved, rejected }
-})
-
 async function approve(id) {
   await api.setProviderVerification(id, true)
-  providersStore.setVerified(id, true)
   decisions.value[id] = 'approved'
+  counts.value.pending = Math.max(0, counts.value.pending - 1)
+  counts.value.approved += 1
+  if (filter.value === 'Pending') shown.value = shown.value.filter(p => p.id !== id)
 }
 
 async function reject(id) {
   await api.setProviderVerification(id, false)
-  providersStore.setVerified(id, false)
   decisions.value[id] = 'rejected'
 }
 </script>
@@ -67,7 +69,7 @@ async function reject(id) {
     </div>
 
     <div class="d-flex mb-3">
-      <div v-for="t in ['All','Pending','Approved','Rejected']" :key="t" role="button"
+      <div v-for="t in ['Pending','Approved','All']" :key="t" role="button"
            class="flex-fill text-center" style="padding:8px 0;font-size:12px;border-bottom:2px solid"
            :style="{ fontWeight: filter === t ? 700 : 500, color: filter === t ? 'var(--fx-accent)' : 'var(--fx-muted)', borderColor: filter === t ? 'var(--fx-accent)' : 'var(--fx-border)' }"
            @click="filter = t">{{ t }}</div>
@@ -128,7 +130,9 @@ async function reject(id) {
           </div>
         </div>
       </div>
-      <div v-if="!shown.length" class="text-center py-4" style="color:var(--fx-muted)">No providers in this filter.</div>
+      <div ref="sentinel" style="height:1px"></div>
+      <div v-if="loading" class="text-center py-3" style="color:var(--fx-muted);font-size:13px">Loading…</div>
+      <div v-else-if="done && !shown.length" class="text-center py-4" style="color:var(--fx-muted)">No providers in this filter.</div>
     </div>
   </div>
 </template>

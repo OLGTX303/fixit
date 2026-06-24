@@ -120,6 +120,10 @@ return function (App $app): void {
                 ->add(new RoleGuard(['admin']));
             $secure->get('/admin/users', [$admin, 'listUsers'])
                 ->add(new RoleGuard(['admin']));
+            $secure->get('/admin/category-stats', [$admin, 'categoryStats'])
+                ->add(new RoleGuard(['admin']));
+            $secure->get('/admin/verify-stats', [$admin, 'verifyStats'])
+                ->add(new RoleGuard(['admin']));
             $secure->patch('/admin/users/{id}/block', [$admin, 'blockUser'])
                 ->add(new RoleGuard(['admin']));
             $secure->get('/admin/reviews', [$admin, 'listReviews'])

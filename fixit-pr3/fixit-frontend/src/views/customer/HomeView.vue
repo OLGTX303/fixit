@@ -1,26 +1,33 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
+import * as api from '../../services/api'
+import { useInfiniteList } from '../../composables/useInfiniteList'
 import CategoryGrid from '../../components/CategoryGrid.vue'
-import ProviderCardWide from '../../components/ProviderCardWide.vue'
+import ProviderGridCard from '../../components/ProviderGridCard.vue'
 import fixitLogo from '../../assets/fixit-logo.svg'
 
-const providersStore = useProvidersStore()
 const auth   = useAuthStore()
 const router = useRouter()
 const search = ref('')
+
+const categories = ref([])
+const sortBy = ref('recommended')
 
 function runSearch() {
   const q = search.value.trim()
   router.push({ name: 'search', query: q ? { q } : {} })
 }
 
-onMounted(() => providersStore.load())
+// Recommended providers: load 20 at a time, fetch more as you scroll.
+const { items: recommended, loading, done, sentinel, reset } = useInfiniteList(
+  (offset, size) => api.searchProviders({ sort: sortBy.value, limit: size, offset }), 20)
+watch(sortBy, reset)
 
-const topRated = computed(() =>
-  [...providersStore.verified].sort((a, b) => b.avg_rating - a.avg_rating).slice(0, 8))
+onMounted(async () => {
+  try { categories.value = await api.getCategories() } catch { /* non-fatal */ }
+})
 
 const initials = computed(() =>
   (auth.user?.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
@@ -79,21 +86,27 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
           <span class="fx-headline">Service Categories</span>
           <button class="hv-link" @click="router.push({ name: 'search' })">View All</button>
         </div>
-        <CategoryGrid :categories="providersStore.categories" @select="openCategory" />
+        <CategoryGrid :categories="categories" @select="openCategory" />
       </section>
 
-      <!-- Top Rated Nearby — horizontal snap scroll -->
+      <!-- Recommended for you — responsive card grid (2 cols mobile / 6 desktop) -->
       <section style="padding:8px 0 18px">
         <div class="hv-section-head">
-          <span class="fx-headline">Top Rated Nearby</span>
-          <button class="hv-link" @click="router.push({ name: 'search' })">Explore Map</button>
+          <span class="fx-headline">Recommended for you</span>
+          <select v-model="sortBy" class="hv-sort" aria-label="Sort providers">
+            <option value="recommended">Recommended</option>
+            <option value="rating">Top rated</option>
+            <option value="price">Price: low → high</option>
+          </select>
         </div>
 
-        <div v-if="providersStore.loading"
-             style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">Loading…</div>
-        <div v-else class="hv-stack">
-          <ProviderCardWide v-for="p in topRated" :key="p.id" :provider="p" @select="openProvider" />
+        <div class="hv-grid">
+          <ProviderGridCard v-for="p in recommended" :key="p.id" :provider="p" @select="openProvider" />
         </div>
+        <div ref="sentinel" style="height:1px"></div>
+        <div v-if="loading" style="text-align:center;padding:18px 0;color:var(--fx-muted);font-size:13px">Loading…</div>
+        <div v-else-if="done && recommended.length" style="text-align:center;padding:14px 0;color:var(--fx-muted-soft);font-size:12px">— end —</div>
+        <div v-else-if="done && !recommended.length" style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">No providers yet.</div>
       </section>
     </div>
   </div>
@@ -178,13 +191,19 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   font-size: 14px; font-weight: 600; color: var(--fx-accent);
   font-family: inherit; padding: 0;
 }
-
-/* vertical stack of full-width provider cards */
-.hv-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.hv-sort {
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--fx-text);
+  border: 1.5px solid var(--fx-border); border-radius: 999px;
+  padding: 6px 12px; background: #fff; cursor: pointer;
 }
-/* make the wide card fill the column when stacked vertically */
-.hv-stack :deep(.pcw) { width: 100%; }
+
+/* Recommended grid — 2 cards per row on mobile, 6 per row on desktop. */
+.hv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 992px) {
+  .hv-grid { grid-template-columns: repeat(6, 1fr); gap: 16px; }
+}
 </style>

@@ -1,34 +1,33 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import * as api from '../../services/api'
-import { useProvidersStore } from '../../stores/providers'
+import { useInfiniteList } from '../../composables/useInfiniteList'
 
-const providersStore = useProvidersStore()
-const users = ref([])
 const tab = ref('users')
 const query = ref('')
+const sortBy = ref('name')
 const blocking = ref(new Set())
 
-onMounted(async () => {
-  users.value = await api.getUsers()
-  await providersStore.load()
-})
+// ── Users: infinite scroll (load 20, more on scroll) ─────────────────────────
+const total = ref(0)
+const counts = ref({ total: 0, customers: 0, providers: 0, blocked: 0 })
+const { items: users, loading: loadingUsers, done, sentinel, reset } = useInfiniteList(async (offset, size) => {
+  const res = await api.getUsers({ q: query.value.trim(), limit: size, offset, sort: sortBy.value })
+  total.value = res.total || 0
+  counts.value = res.counts || counts.value
+  return res.users || []
+}, 20)
 
-const filtered = computed(() =>
-  users.value.filter(u => u.name.toLowerCase().includes(query.value.toLowerCase())))
+let searchTimer = null
+watch(query, () => { clearTimeout(searchTimer); searchTimer = setTimeout(reset, 350) })
+watch(sortBy, reset)
 
-const summary = computed(() => ({
-  total: users.value.length,
-  customers: users.value.filter(u => u.role === 'customer').length,
-  providers: users.value.filter(u => u.role === 'provider').length,
-  blocked: users.value.filter(u => u.is_blocked).length,
-}))
+const summary = computed(() => counts.value)
 
 function statusOf(u) {
   if (u.is_blocked) return 'Blocked'
   if (u.role !== 'provider') return 'Active'
-  const p = providersStore.providers.find(x => x.user_id === u.id)
-  return p?.is_verified ? 'Active' : 'Pending'
+  return u.provider_verified ? 'Active' : 'Pending'
 }
 const STATUS_STYLE = {
   Active:   { c: 'var(--fx-success)', bg: 'var(--fx-success-soft)' },
@@ -41,14 +40,22 @@ async function toggleBlock(u) {
   const next = !u.is_blocked
   await api.blockUser(u.id, next)
   u.is_blocked = next ? 1 : 0
+  counts.value.blocked += next ? 1 : -1
   blocking.value.delete(u.id)
 }
 
+// ── Categories tab (lazy; counts via a cheap aggregate, not the full list) ───
+const categories = ref([])
+const catCounts = ref({})
 const categoriesWithCounts = computed(() =>
-  providersStore.categories.map(c => ({
-    ...c,
-    count: providersStore.providers.filter(p => p.category_ids.includes(c.id)).length,
-  })))
+  categories.value.map(c => ({ ...c, count: catCounts.value[c.id] || 0 })))
+async function loadCategories() {
+  if (categories.value.length) return
+  const [cats, stats] = await Promise.all([api.getCategories(), api.getCategoryStats()])
+  categories.value = cats
+  catCounts.value = stats || {}
+}
+watch(tab, (t) => { if (t === 'categories') loadCategories() })
 </script>
 
 <template>
@@ -63,7 +70,15 @@ const categoriesWithCounts = computed(() =>
 
     <!-- ── Users tab ── -->
     <template v-if="tab==='users'">
-      <input class="fx-input mb-3" v-model="query" placeholder="Search users…" />
+      <div class="d-flex gap-2 mb-3">
+        <input class="fx-input" style="flex:1" v-model="query" placeholder="Search users…" />
+        <select v-model="sortBy" class="um-sort" aria-label="Sort users">
+          <option value="name">Name A–Z</option>
+          <option value="role">Role</option>
+          <option value="blocked">Blocked first</option>
+          <option value="recent">Newest</option>
+        </select>
+      </div>
 
       <!-- Stats -->
       <div class="um-stats mb-3">
@@ -74,8 +89,11 @@ const categoriesWithCounts = computed(() =>
         </div>
       </div>
 
+      <div v-if="loadingUsers && !users.length" style="text-align:center;padding:20px;color:var(--fx-muted);font-size:13px">Loading…</div>
+      <div v-else-if="done && !users.length" style="text-align:center;padding:20px;color:var(--fx-muted);font-size:13px">No users found.</div>
+
       <div class="d-flex flex-column gap-2">
-        <div v-for="u in filtered" :key="u.id"
+        <div v-for="u in users" :key="u.id"
              class="fx-card d-flex align-items-center gap-3"
              style="padding:12px 14px"
              :style="u.is_blocked ? 'opacity:0.65' : ''">
@@ -103,6 +121,13 @@ const categoriesWithCounts = computed(() =>
           </button>
         </div>
       </div>
+
+      <!-- infinite-scroll sentinel + states -->
+      <div ref="sentinel" style="height:1px"></div>
+      <div v-if="loadingUsers && users.length" class="um-page-info" style="text-align:center;padding:14px">Loading…</div>
+      <div v-else-if="users.length" class="um-page-info" style="text-align:center;padding:14px">
+        {{ users.length }} of {{ total }} shown<span v-if="done"> · end</span>
+      </div>
     </template>
 
     <!-- ── Categories tab ── -->
@@ -122,6 +147,13 @@ const categoriesWithCounts = computed(() =>
 </template>
 
 <style scoped>
+.um-sort { font-family:inherit; font-size:13px; font-weight:600; color:var(--fx-text);
+  border:1.5px solid var(--fx-border); border-radius:10px; padding:0 12px; background:#fff; cursor:pointer; }
+.um-pager { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:16px; }
+.um-page-info { font-size:13px; color:var(--fx-muted); font-weight:600; }
+.um-page-btn { font-family:inherit; font-size:13px; font-weight:700; color:var(--fx-accent);
+  border:1.5px solid var(--fx-accent); border-radius:999px; padding:6px 16px; background:#fff; cursor:pointer; }
+.um-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
 .um-tabs { display:flex; background:var(--fx-border-soft); border-radius:12px; padding:3px; gap:2px; }
 .um-tab  { flex:1; padding:8px 0; border:none; border-radius:9px; font-size:13px; font-weight:600;
            background:transparent; color:var(--fx-muted); cursor:pointer; }

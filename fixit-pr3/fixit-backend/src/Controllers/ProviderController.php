@@ -15,9 +15,20 @@ final class ProviderController
     public function list(Request $request, Response $response): Response
     {
         $params = $request->getQueryParams();
-        $filters = !empty($params['category']) ? ['category' => (int) $params['category']] : [];
+        $filters = [];
+        if (!empty($params['category'])) $filters['category'] = (int) $params['category'];
+        if (!empty($params['q']))        $filters['q'] = trim((string) $params['q']);
+        if (!empty($params['priority'])) $filters['priority'] = 1;
+        if (isset($params['offset']))    $filters['offset'] = (int) $params['offset'];
+        if (isset($params['lat'], $params['lng'])) {
+            $filters['lat'] = (float) $params['lat'];
+            $filters['lng'] = (float) $params['lng'];
+        }
+        $limit = isset($params['limit']) ? min(50, max(1, (int) $params['limit'])) : 0;
+        $sort = in_array($params['sort'] ?? '', ['recommended', 'rating', 'price', 'distance'], true)
+            ? (string) $params['sort'] : '';
 
-        $providers = (new ProviderModel())->listEnriched(true, $filters);
+        $providers = (new ProviderModel())->listEnriched(true, $filters, $limit, $sort);
         return ResponseHelper::json($response, $providers);
     }
 

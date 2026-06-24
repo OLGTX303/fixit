@@ -1,14 +1,15 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useProvidersStore } from '../../stores/providers'
+import * as api from '../../services/api'
+import { useInfiniteList } from '../../composables/useInfiniteList'
 import { getUserLocation, distanceKmFrom, isNativeApp } from '../../services/geolocation'
 import RatingStars from '../../components/RatingStars.vue'
 
-const providersStore = useProvidersStore()
 const route  = useRoute()
 const router = useRouter()
 
+const categories = ref([])
 const q        = ref(route.query.q ? String(route.query.q) : '')
 const category = ref(route.query.category ? Number(route.query.category) : null)
 const sortMode = ref('distance')   // 'distance' | 'rating' | 'price'
@@ -21,16 +22,37 @@ const locating      = ref(false)
 watch(() => route.query.q,        v => { q.value        = v ? String(v)  : '' })
 watch(() => route.query.category, v => { category.value = v ? Number(v)  : null })
 
+const isDiscovery = computed(() => !q.value.trim() && category.value == null)
+
+// ── Server-paginated results: 20 at a time, more on scroll ───────────────────
+const { items: results, loading, done, sentinel, reset } = useInfiniteList(async (offset, size) => {
+  if (isDiscovery.value) return []   // discovery view shows curated content, not a query
+  const distance = sortMode.value === 'distance'
+  return api.searchProviders({
+    q: q.value.trim(),
+    category: category.value || undefined,
+    sort: sortMode.value,
+    priority: priorityOnly.value || undefined,
+    lat: distance ? userCenter.value[0] : undefined,
+    lng: distance ? userCenter.value[1] : undefined,
+    limit: size,
+    offset,
+  })
+}, 20)
+
+let qTimer = null
+watch(q, () => { clearTimeout(qTimer); qTimer = setTimeout(reset, 350) })
+watch([category, sortMode, priorityOnly], reset)
+
 onMounted(async () => {
-  await providersStore.load()
+  try { categories.value = await api.getCategories() } catch { /* non-fatal */ }
   locating.value = true
   try {
-    userCenter.value   = await getUserLocation()
+    userCenter.value    = await getUserLocation()
     locationLabel.value = isNativeApp() ? 'Your location' : 'Near you'
+    if (sortMode.value === 'distance' && !isDiscovery.value) reset()
   } finally { locating.value = false }
 })
-
-const isDiscovery = computed(() => !q.value.trim() && category.value == null)
 
 // ── Trending discovery content ─────────────────────────────────────────────
 const TRENDING = [
@@ -50,37 +72,16 @@ const HOT_CATEGORIES = [
   'Roofing', 'Handyman',
 ]
 
-// ── Filtered results ───────────────────────────────────────────────────────
-function categoryName(id) {
-  return providersStore.categories.find(c => c.id === id)?.name || ''
-}
-function matchesQuery(p) {
-  const term = q.value.trim().toLowerCase()
-  if (!term) return true
-  return [p.name, p.location, ...(p.category_ids || []).map(categoryName)]
-    .join(' ').toLowerCase().includes(term)
-}
+// Distance is shown per loaded card (ranking is done server-side).
 function distanceKm(p) {
   return distanceKmFrom(userCenter.value[0], userCenter.value[1], p)
 }
-
-const filtered = computed(() => {
-  let list = providersStore.verified
-    .map(p => ({ ...p, _distance: distanceKm(p) }))
-    .filter(p => category.value == null || p.category_ids.includes(category.value))
-    .filter(matchesQuery)
-  if (priorityOnly.value) list = list.filter(p => p.is_priority)
-  if (sortMode.value === 'rating')   list.sort((a, b) => b.avg_rating - a.avg_rating)
-  else if (sortMode.value === 'price') list.sort((a, b) => a.base_rate - b.base_rate)
-  else list.sort((a, b) => a._distance - b._distance)
-  return list
-})
 
 function openProvider(p) { router.push({ name: 'provider-profile', params: { id: p.id } }) }
 function clearSearch()   { q.value = ''; category.value = null }
 function setTrending(t)  { q.value = t }
 function setCategoryName(name) {
-  const cat = providersStore.categories.find(c => c.name.toLowerCase() === name.toLowerCase())
+  const cat = categories.value.find(c => c.name.toLowerCase() === name.toLowerCase())
   if (cat) category.value = cat.id
   else q.value = name
 }
@@ -94,7 +95,7 @@ function cycleSortMode() {
 }
 
 const activeCategoryName = computed(() =>
-  category.value ? providersStore.categories.find(c => c.id === category.value)?.name : null)
+  category.value ? categories.value.find(c => c.id === category.value)?.name : null)
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
@@ -196,7 +197,7 @@ function initials(name) {
 
       <!-- Result count -->
       <div class="sv-result-count">
-        {{ filtered.length }} provider{{ filtered.length !== 1 ? 's' : '' }} found
+        {{ results.length }}{{ done ? '' : '+' }} provider{{ results.length !== 1 ? 's' : '' }} found
         <span v-if="q" style="color:var(--fx-muted)"> for "{{ q }}"</span>
         <span v-if="activeCategoryName" style="color:var(--fx-muted)"> · {{ activeCategoryName }}</span>
       </div>
@@ -204,7 +205,7 @@ function initials(name) {
       <!-- Listing cards (Meituan style) -->
       <div class="sv-list">
         <div
-          v-for="p in filtered" :key="p.id"
+          v-for="p in results" :key="p.id"
           class="sv-card liquid-glass"
           @click="openProvider(p)"
         >
@@ -229,8 +230,8 @@ function initials(name) {
               <RatingStars :rating="p.avg_rating" :size="11" />
               <span class="sv-card-rating">{{ p.avg_rating.toFixed(1) }}</span>
               <span class="sv-card-reviews">{{ p.review_count }} reviews</span>
-              <span v-if="p._distance != null" class="sv-card-dist">
-                · {{ p._distance.toFixed(1) }}km
+              <span v-if="p.latitude != null" class="sv-card-dist">
+                · {{ distanceKm(p).toFixed(1) }}km
               </span>
             </div>
             <div class="sv-card-tags">
@@ -240,7 +241,12 @@ function initials(name) {
           </div>
         </div>
 
-        <div v-if="!filtered.length" class="sv-empty">
+        <!-- infinite-scroll sentinel + states -->
+        <div ref="sentinel" style="height:1px"></div>
+        <div v-if="loading" style="text-align:center;padding:18px;color:var(--fx-muted);font-size:13px">Loading…</div>
+        <div v-else-if="done && results.length" style="text-align:center;padding:14px;color:var(--fx-muted-soft);font-size:12px">— end of results —</div>
+
+        <div v-if="done && !results.length" class="sv-empty">
           <span class="material-symbols-outlined" style="font-size:48px;opacity:.3">search_off</span>
           <p>No providers match{{ q ? ` "${q}"` : ' these filters' }}.</p>
         </div>

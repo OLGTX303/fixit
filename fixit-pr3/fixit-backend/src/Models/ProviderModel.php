@@ -25,8 +25,34 @@ final class ProviderModel
         return $row ?: null;
     }
 
+    /** @return array{pending:int,approved:int} for the admin verify dashboard */
+    public function verificationCounts(): array
+    {
+        $out = ['pending' => 0, 'approved' => 0];
+        foreach (Connection::get()->query('SELECT is_verified, COUNT(*) c FROM ProviderProfile GROUP BY is_verified') as $r) {
+            if ((int) $r['is_verified'] === 1) $out['approved'] = (int) $r['c'];
+            else $out['pending'] = (int) $r['c'];
+        }
+        return $out;
+    }
+
+    /** @return array<int,int> category_id => verified-provider count */
+    public function categoryCounts(): array
+    {
+        $rows = Connection::get()->query(
+            'SELECT pc.category_id, COUNT(*) c
+             FROM ProviderCategory pc
+             JOIN ProviderProfile pp ON pp.id = pc.provider_id
+             WHERE pp.is_verified = 1
+             GROUP BY pc.category_id'
+        )->fetchAll();
+        $out = [];
+        foreach ($rows as $r) $out[(int) $r['category_id']] = (int) $r['c'];
+        return $out;
+    }
+
     /** @return list<array<string,mixed>> */
-    public function listEnriched(bool $verifiedOnly = true, array $filters = []): array
+    public function listEnriched(bool $verifiedOnly = true, array $filters = [], int $limit = 0, string $sort = ''): array
     {
         $sql = 'SELECT p.*, u.name, u.email, u.phone, u.avatar_url
                 FROM ProviderProfile p
@@ -36,6 +62,8 @@ final class ProviderModel
 
         if ($verifiedOnly) {
             $sql .= ' AND p.is_verified = 1';
+        } elseif (isset($filters['verified'])) {
+            $sql .= ' AND p.is_verified = ' . ((int) $filters['verified'] === 1 ? '1' : '0');
         }
 
         if (!empty($filters['category'])) {
@@ -46,7 +74,40 @@ final class ProviderModel
             $params['category'] = (int) $filters['category'];
         }
 
-        $sql .= ' ORDER BY p.id';
+        if (!empty($filters['priority'])) {
+            $sql .= ' AND p.is_priority = 1';
+        }
+
+        if (!empty($filters['q'])) {
+            // distinct placeholders — native PDO prepares can't reuse one name
+            $sql .= ' AND (u.name LIKE :qa OR p.location LIKE :qb OR EXISTS (
+                SELECT 1 FROM ProviderCategory pc2
+                JOIN ServiceCategory sc ON sc.id = pc2.category_id
+                WHERE pc2.provider_id = p.id AND sc.name LIKE :qc))';
+            $like = '%' . $filters['q'] . '%';
+            $params['qa'] = $like; $params['qb'] = $like; $params['qc'] = $like;
+        }
+
+        if ($sort === 'distance' && isset($filters['lat'], $filters['lng'])) {
+            // squared-euclidean nearest (good enough to rank by proximity)
+            $sql .= ' ORDER BY (POW(p.latitude - :lat, 2) + POW(p.longitude - :lng, 2)) ASC, p.id';
+            $params['lat'] = (float) $filters['lat'];
+            $params['lng'] = (float) $filters['lng'];
+        } elseif ($sort === 'rating') {
+            $sql .= ' ORDER BY p.avg_rating DESC, p.id';
+        } elseif ($sort === 'price') {
+            $sql .= ' ORDER BY p.base_rate ASC, p.id';
+        } elseif ($sort === 'recommended') {
+            $sql .= ' ORDER BY p.is_priority DESC, p.avg_rating DESC, p.id DESC';
+        } else {
+            $sql .= ' ORDER BY p.id';
+        }
+
+        if ($limit > 0) {
+            $sql .= ' LIMIT ' . $limit;                       // already an int, safe to inline
+            $off = isset($filters['offset']) ? max(0, (int) $filters['offset']) : 0;
+            if ($off > 0) $sql .= ' OFFSET ' . $off;
+        }
         $stmt = Connection::get()->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();

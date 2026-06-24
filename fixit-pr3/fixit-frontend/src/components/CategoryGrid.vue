@@ -12,6 +12,7 @@ import roofing     from '../assets/category-icons/roofing.svg'
 import carpentry   from '../assets/category-icons/carpentry.svg'
 import poolService from '../assets/category-icons/pool-service.svg'
 import handyman    from '../assets/category-icons/handyman.svg'
+import { categoryIcon, categoryTint } from '../services/categoryIcons'
 
 const props = defineProps({ categories: { type: Array, default: () => [] } })
 defineEmits(['select'])
@@ -58,7 +59,9 @@ const PAGE_LABELS = ['Core Services', 'More Services']
 const activePage  = ref(0)
 const viewportRef = ref(null)
 
-const metaFor = (name) => META[name] || { icon: null, tint: 'rgba(255,102,53,0.12)' }
+// Exact-match META first (curated icon + tint); otherwise resolve an icon by
+// keyword so granular categories (Pipe Repair, Garden Trim…) still get an image.
+const metaFor = (name) => META[name] || { icon: categoryIcon(name), tint: categoryTint(name) }
 
 // ── Touch swipe (non-passive touchmove so we can preventDefault) ──────────
 let tx0 = 0, ty0 = 0, dragging = false
