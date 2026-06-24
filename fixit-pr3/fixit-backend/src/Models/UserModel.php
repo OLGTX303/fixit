@@ -106,6 +106,54 @@ final class UserModel
         return $stmt->fetchAll();
     }
 
+    /** One page of users (search + sort), with provider verification joined in. */
+    public function listPaged(string $q, int $limit, int $offset, string $sort): array
+    {
+        $where = '';
+        $params = [];
+        if ($q !== '') {
+            $where = ' WHERE (u.name LIKE :qa OR u.email LIKE :qb)';
+            $params['qa'] = '%' . $q . '%'; $params['qb'] = '%' . $q . '%';
+        }
+        $order = match ($sort) {
+            'role'    => 'u.role ASC, u.name ASC',
+            'recent'  => 'u.id DESC',
+            'blocked' => 'u.is_blocked DESC, u.name ASC',
+            default   => 'u.name ASC',
+        };
+        $limit = max(1, $limit); $offset = max(0, $offset);
+        $stmt = Connection::get()->prepare(
+            "SELECT u.id, u.name, u.email, u.role, u.phone, u.avatar_url, u.is_blocked,
+                    pp.is_verified AS provider_verified
+             FROM User u
+             LEFT JOIN ProviderProfile pp ON pp.user_id = u.id
+             $where ORDER BY $order LIMIT $limit OFFSET $offset"
+        );
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function countFiltered(string $q): int
+    {
+        if ($q === '') return (int) Connection::get()->query('SELECT COUNT(*) FROM User')->fetchColumn();
+        $stmt = Connection::get()->prepare('SELECT COUNT(*) FROM User WHERE name LIKE :qa OR email LIKE :qb');
+        $stmt->execute(['qa' => '%' . $q . '%', 'qb' => '%' . $q . '%']);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** @return array{total:int,customers:int,providers:int,blocked:int} */
+    public function roleCounts(): array
+    {
+        $out = ['total' => 0, 'customers' => 0, 'providers' => 0, 'blocked' => 0];
+        foreach (Connection::get()->query('SELECT role, COUNT(*) c FROM User GROUP BY role') as $r) {
+            $out['total'] += (int) $r['c'];
+            if ($r['role'] === 'customer') $out['customers'] = (int) $r['c'];
+            if ($r['role'] === 'provider') $out['providers'] = (int) $r['c'];
+        }
+        $out['blocked'] = (int) Connection::get()->query('SELECT COUNT(*) FROM User WHERE is_blocked = 1')->fetchColumn();
+        return $out;
+    }
+
     public function setBlocked(int $id, bool $blocked): void
     {
         Connection::get()->prepare('UPDATE User SET is_blocked = :b WHERE id = :id')

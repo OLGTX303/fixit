@@ -18,7 +18,18 @@ final class AdminController
 {
     public function allProviders(Request $request, Response $response): Response
     {
-        return ResponseHelper::json($response, (new ProviderModel())->listEnriched(false, []));
+        $p = $request->getQueryParams();
+        $filters = [];
+        if (isset($p['verified']) && $p['verified'] !== '') $filters['verified'] = (int) $p['verified'];
+        if (isset($p['offset'])) $filters['offset'] = (int) $p['offset'];
+        $limit = isset($p['limit']) ? min(50, max(1, (int) $p['limit'])) : 0;
+        return ResponseHelper::json($response, (new ProviderModel())->listEnriched(false, $filters, $limit));
+    }
+
+    /** Pending / approved provider counts for the verify dashboard. */
+    public function verifyStats(Request $request, Response $response): Response
+    {
+        return ResponseHelper::json($response, (new ProviderModel())->verificationCounts());
     }
 
     public function verifyProvider(Request $request, Response $response, array $args): Response
@@ -40,7 +51,23 @@ final class AdminController
 
     public function listUsers(Request $request, Response $response): Response
     {
-        return ResponseHelper::json($response, (new UserModel())->listAll());
+        $p = $request->getQueryParams();
+        $q = trim((string) ($p['q'] ?? ''));
+        $limit = min(100, max(1, (int) ($p['limit'] ?? 25)));
+        $offset = max(0, (int) ($p['offset'] ?? 0));
+        $sort = (string) ($p['sort'] ?? 'name');
+        $model = new UserModel();
+        return ResponseHelper::json($response, [
+            'users'  => $model->listPaged($q, $limit, $offset, $sort),
+            'total'  => $model->countFiltered($q),
+            'counts' => $model->roleCounts(),
+        ]);
+    }
+
+    /** Verified-provider count per category — for the admin Categories tab. */
+    public function categoryStats(Request $request, Response $response): Response
+    {
+        return ResponseHelper::json($response, (new \FixIt\Models\ProviderModel())->categoryCounts());
     }
 
     public function blockUser(Request $request, Response $response, array $args): Response
