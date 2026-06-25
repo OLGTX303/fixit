@@ -134,7 +134,8 @@ export const getRecommendedProviders = (limit = 20, offset = 0) =>
 // The logged-in provider's own profile (works even while unverified).
 export const getMyProviderProfile = () => get('/me/provider')
 export const getBookings = () => get('/bookings')
-export const getReviews = () => get('/admin/reviews')
+export const getReviews = ({ limit = 25, offset = 0 } = {}) =>
+  get(`/admin/reviews?limit=${limit}&offset=${offset}`)
 export const getStripeStats = () => get('/admin/stripe/stats')
 export const getReviewsForProvider = (providerId) => get(`/providers/${providerId}/reviews`)
 

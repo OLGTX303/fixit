@@ -22,7 +22,7 @@ final class AdminController
         $filters = [];
         if (isset($p['verified']) && $p['verified'] !== '') $filters['verified'] = (int) $p['verified'];
         if (isset($p['offset'])) $filters['offset'] = (int) $p['offset'];
-        $limit = isset($p['limit']) ? min(50, max(1, (int) $p['limit'])) : 0;
+        $limit = isset($p['limit']) ? min(50, max(1, (int) $p['limit'])) : 25;
         return ResponseHelper::json($response, (new ProviderModel())->listEnriched(false, $filters, $limit));
     }
 
@@ -80,7 +80,15 @@ final class AdminController
 
     public function listReviews(Request $request, Response $response): Response
     {
-        return ResponseHelper::json($response, (new ReviewModel())->all());
+        $p = $request->getQueryParams();
+        $limit = min(100, max(1, (int) ($p['limit'] ?? 25)));
+        $offset = max(0, (int) ($p['offset'] ?? 0));
+        $model = new ReviewModel();
+        return ResponseHelper::json($response, [
+            'reviews'    => $model->listPaged($limit, $offset),
+            'total'      => $model->countAll(),
+            'avg_rating' => $model->avgRating(),
+        ]);
     }
 
     public function listHarmReviews(Request $request, Response $response): Response

@@ -9,9 +9,9 @@ namespace FixIt\Support;
  */
 final class KycValidator
 {
-    private const MIN_CONFIDENCE = 55.0;
-    private const MAX_FRAUD_SCORE = 60.0;
-    private const MIN_OCR_CONFIDENCE = 30.0;
+    private const MIN_CONFIDENCE = 65.0;
+    private const MAX_FRAUD_SCORE = 40.0;
+    private const MIN_OCR_CONFIDENCE = 35.0;
 
     private const REQUIRED_CHECKS = [
         'resolution',

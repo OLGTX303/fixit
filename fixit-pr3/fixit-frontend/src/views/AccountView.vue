@@ -37,16 +37,16 @@ const walletBal  = computed(() => (wallet.balanceCents / 100).toFixed(2))
 const adminStats = ref({ users: 0, blocked: 0, providers: 0, pendingVerify: 0, bookings: 0, harmPending: 0 })
 async function loadAdminStats() {
   try {
-    const [users, providers, harm] = await Promise.all([
-      api.getUsers(),
-      api.getProviders(),
+    const [usersRes, verifyStats, harm] = await Promise.all([
+      api.getUsers({ limit: 1 }),
+      api.getVerifyStats(),
       api.getHarmReviews(),
     ])
     adminStats.value = {
-      users:         users.length,
-      blocked:       users.filter(u => u.is_blocked).length,
-      providers:     providers.length,
-      pendingVerify: providers.filter(p => !p.is_verified).length,
+      users:         usersRes.counts?.total ?? usersRes.total ?? 0,
+      blocked:       usersRes.counts?.blocked ?? 0,
+      providers:     (verifyStats.approved ?? 0) + (verifyStats.pending ?? 0),
+      pendingVerify: verifyStats.pending ?? 0,
       harmPending:   harm.filter(h => h.status === 'pending').length,
     }
   } catch {}

@@ -1,23 +1,33 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useBookingsStore } from '../../stores/bookings'
-import { useProvidersStore } from '../../stores/providers'
 import * as api from '../../services/api'
 
 const bookingsStore  = useBookingsStore()
-const providersStore = useProvidersStore()
 const users       = ref([])
+const userTotal   = ref(0)
 const reviews     = ref([])
+const verifyStats = ref({ pending: 0, approved: 0 })
 const stripeStats = ref(null)
 const loading     = ref(true)
 const filterStatus = ref('All')
 
+const reviewTotal = ref(0)
+const reviewAvg = ref(null)
+
 onMounted(async () => {
   await Promise.all([
     bookingsStore.load(),
-    providersStore.load(),
-    api.getUsers().then(u => { users.value = u }).catch(() => {}),
-    api.getReviews().then(r => { reviews.value = r }).catch(() => {}),
+    api.getUsers({ limit: 1 }).then(u => {
+      users.value = u.users || []
+      userTotal.value = u.counts?.total ?? u.total ?? users.value.length
+    }).catch(() => {}),
+    api.getReviews({ limit: 25 }).then(r => {
+      reviews.value = r.reviews || r
+      reviewTotal.value = r.total ?? reviews.value.length
+      reviewAvg.value = r.avg_rating ?? null
+    }).catch(() => {}),
+    api.getVerifyStats().then(v => { verifyStats.value = v }).catch(() => {}),
     api.getStripeStats().then(s => { stripeStats.value = s }).catch(() => {}),
   ])
   loading.value = false
@@ -35,11 +45,13 @@ const usingStripe    = computed(() => stripeRevCents.value > 0)
 const kpi = computed(() => ({
   revenue:   revenue.value,
   bookings:  bookings.value.length,
-  users:     users.value.length,
-  providers: providersStore.providers.length,
+  users:     userTotal.value,
+  providers: (verifyStats.value.approved ?? 0) + (verifyStats.value.pending ?? 0),
   pending:   bookings.value.filter(b => b.status === 'requested').length,
-  avgRating: reviews.value.length
-    ? (reviews.value.reduce((s, r) => s + r.rating, 0) / reviews.value.length).toFixed(1) : '—',
+  avgRating: reviewAvg.value != null
+    ? String(reviewAvg.value)
+    : (reviews.value.length
+      ? (reviews.value.reduce((s, r) => s + r.rating, 0) / reviews.value.length).toFixed(1) : '—'),
 }))
 
 // ── Base months (last 6) ──────────────────────────────────────────────
