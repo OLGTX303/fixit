@@ -70,12 +70,12 @@ final class CouponModel
         $stmt = Connection::get()->prepare(
             "SELECT * FROM Coupon
              WHERE is_active = 1
-               AND starts_at <= :now AND expires_at >= :now
+               AND starts_at <= :now_start AND expires_at >= :now_end
                AND (usage_limit IS NULL OR used_count < usage_limit)
                AND (scope = 'system' OR (scope = 'provider' AND provider_id = :pid))
              ORDER BY scope ASC, discount_value DESC, id DESC"
         );
-        $stmt->execute(['now' => $now, 'pid' => $providerId]);
+        $stmt->execute(['now_start' => $now, 'now_end' => $now, 'pid' => $providerId]);
         return array_map(fn ($row) => $this->format($row), $stmt->fetchAll());
     }
 
