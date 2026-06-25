@@ -119,10 +119,11 @@ final class ProviderModel
             $catById[(int) $c['id']] = $c;
         }
 
-        return array_map(
-            fn ($row) => self::stripContact($this->enrichRow($row, $catById)),
-            $rows
-        );
+        $map = fn ($row) => $this->enrichRow($row, $catById);
+        if ($verifiedOnly) {
+            $map = fn ($row) => self::stripContact($this->enrichRow($row, $catById));
+        }
+        return array_map($map, $rows);
     }
 
     public function getEnriched(int $id): ?array
