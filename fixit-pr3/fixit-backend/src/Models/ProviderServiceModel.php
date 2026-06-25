@@ -10,10 +10,12 @@ use FixIt\Database\Connection;
 final class ProviderServiceModel
 {
     /** @return array<int,array> */
-    public function listForProvider(int $providerId): array
+    public function listForProvider(int $providerId, int $limit = 100): array
     {
+        $limit = max(1, min(100, $limit));
         $stmt = Connection::get()->prepare(
-            'SELECT * FROM ProviderService WHERE provider_id = :pid ORDER BY sort_order ASC, id ASC'
+            "SELECT * FROM ProviderService WHERE provider_id = :pid
+             ORDER BY sort_order ASC, id ASC LIMIT {$limit}"
         );
         $stmt->execute(['pid' => $providerId]);
         return array_map([$this, 'map'], $stmt->fetchAll());

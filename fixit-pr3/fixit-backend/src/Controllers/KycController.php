@@ -182,6 +182,9 @@ final class KycController
         // failure (no face / gateway down) is recorded but stays inconclusive.
         $idImg = self::decodeImage($data['id_image'] ?? null);
         $selfieImg = self::decodeImage($data['selfie_image'] ?? null);
+        if (FaceMatchService::isConfigured() && (!$idImg || !$selfieImg)) {
+            return ResponseHelper::error($response, 'ID and selfie images are required for liveness verification', 422);
+        }
         if (FaceMatchService::isConfigured() && $idImg && $selfieImg) {
             $fm = (new FaceMatchService())->match($idImg['bin'], $idImg['mime'], $selfieImg['bin'], $selfieImg['mime']);
             $checks['face_match'] = [

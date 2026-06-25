@@ -23,6 +23,15 @@ final class WalletController
     public function get(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
+        if (!StripeService::isConfigured()) {
+            return ResponseHelper::json($response, [
+                'balance_cents' => 0,
+                'currency' => 'myr',
+                'transactions' => [],
+                'mode' => 'test',
+                'configured' => false,
+            ]);
+        }
         return ResponseHelper::json($response, $this->service()->getWallet((int) $user['id']));
     }
 

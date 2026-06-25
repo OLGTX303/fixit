@@ -34,11 +34,6 @@ final class BookingModel
                        cu.id AS cu_id, cu.name AS cu_name, cu.email AS cu_email, cu.role AS cu_role,
                        cu.phone AS cu_phone, cu.avatar_url AS cu_avatar_url,
                        COALESCE(cu.is_blocked, 0) AS cu_is_blocked,
-                       cu.stripe_test_customer_id AS cu_stripe_test_customer_id,
-                       cu.stripe_test_default_payment_method_id AS cu_stripe_test_default_payment_method_id,
-                       cu.stripe_test_payment_method_last4 AS cu_stripe_test_payment_method_last4,
-                       cu.stripe_test_payment_method_brand AS cu_stripe_test_payment_method_brand,
-                       cu.stripe_test_payment_method_created_at AS cu_stripe_test_payment_method_created_at,
                        sc.id AS sc_id, sc.name AS sc_name, sc.description AS sc_description, sc.icon_url AS sc_icon_url,
                        pp.id AS pp_id, pp.user_id AS pp_user_id, pp.bio AS pp_bio, pp.location AS pp_location,
                        pp.base_rate AS pp_base_rate, pp.rate_type AS pp_rate_type, pp.per_job_rate AS pp_per_job_rate,
@@ -153,10 +148,19 @@ final class BookingModel
         return $this->findEnriched((int) $pdo->lastInsertId()) ?? [];
     }
 
-    public function updateStatus(int $id, string $status): ?array
+    public function updateStatus(int $id, string $status, ?string $expectedCurrent = null): ?array
     {
-        $stmt = Connection::get()->prepare('UPDATE Job SET status = :status WHERE id = :id');
-        $stmt->execute(['id' => $id, 'status' => $status]);
+        $sql = 'UPDATE Job SET status = :status WHERE id = :id';
+        $params = ['id' => $id, 'status' => $status];
+        if ($expectedCurrent !== null) {
+            $sql .= ' AND status = :expected';
+            $params['expected'] = $expectedCurrent;
+        }
+        $stmt = Connection::get()->prepare($sql);
+        $stmt->execute($params);
+        if ($stmt->rowCount() === 0) {
+            return null;
+        }
         return $this->findEnriched($id);
     }
 
@@ -185,20 +189,7 @@ final class BookingModel
     /** @param array<string,mixed> $row */
     private function mapJoinedRow(array $row, array $catById): array
     {
-        $customer = [
-            'id' => (int) $row['cu_id'],
-            'name' => $row['cu_name'],
-            'email' => $row['cu_email'],
-            'role' => $row['cu_role'],
-            'phone' => $row['cu_phone'],
-            'avatar_url' => $row['cu_avatar_url'],
-            'is_blocked' => (int) $row['cu_is_blocked'],
-            'stripe_test_customer_id' => $row['cu_stripe_test_customer_id'],
-            'stripe_test_default_payment_method_id' => $row['cu_stripe_test_default_payment_method_id'],
-            'stripe_test_payment_method_last4' => $row['cu_stripe_test_payment_method_last4'],
-            'stripe_test_payment_method_brand' => $row['cu_stripe_test_payment_method_brand'],
-            'stripe_test_payment_method_created_at' => $row['cu_stripe_test_payment_method_created_at'],
-        ];
+        $customer = self::publicCustomerFields($row);
 
         $category = [
             'id' => (int) $row['sc_id'],
@@ -258,10 +249,41 @@ final class BookingModel
         ];
     }
 
+    /** Strip Stripe/payment PII from customer objects embedded in booking responses. */
+    public static function sanitizeCustomer(?array $user): ?array
+    {
+        if (!$user) {
+            return null;
+        }
+        return [
+            'id' => (int) $user['id'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'role' => $user['role'],
+            'phone' => $user['phone'] ?? null,
+            'avatar_url' => $user['avatar_url'] ?? null,
+            'is_blocked' => (int) ($user['is_blocked'] ?? 0),
+        ];
+    }
+
+    /** @param array<string,mixed> $row */
+    private static function publicCustomerFields(array $row): array
+    {
+        return [
+            'id' => (int) $row['cu_id'],
+            'name' => $row['cu_name'],
+            'email' => $row['cu_email'],
+            'role' => $row['cu_role'],
+            'phone' => $row['cu_phone'],
+            'avatar_url' => $row['cu_avatar_url'],
+            'is_blocked' => (int) $row['cu_is_blocked'],
+        ];
+    }
+
     /** @param array<string,mixed> $row */
     private function enrich(array $row): array
     {
-        $customer = $this->users->findById((int) $row['customer_id']);
+        $customer = self::sanitizeCustomer($this->users->findById((int) $row['customer_id']));
         $provider = $this->providers->getEnriched((int) $row['provider_id']);
         $category = $this->categories->find((int) $row['category_id']);
 

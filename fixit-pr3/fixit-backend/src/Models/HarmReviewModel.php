@@ -27,16 +27,20 @@ final class HarmReviewModel
     }
 
     /** @return list<array<string,mixed>> */
-    public function listPending(): array
+    public function listPending(int $limit = 50, int $offset = 0): array
     {
-        $stmt = Connection::get()->query(
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+        $stmt = Connection::get()->prepare(
             "SELECT h.*, u.name AS sender_name, m.sent_at AS message_sent_at
              FROM HarmMessageReview h
              JOIN User u ON u.id = h.sender_id
              JOIN Message m ON m.id = h.message_id
              WHERE h.harm_status IN ('flagged', 'blocked')
-             ORDER BY h.created_at DESC"
+             ORDER BY h.created_at DESC
+             LIMIT {$limit} OFFSET {$offset}"
         );
+        $stmt->execute();
         $rows = $stmt->fetchAll();
         return array_map(fn ($r) => $this->format($r), $rows);
     }

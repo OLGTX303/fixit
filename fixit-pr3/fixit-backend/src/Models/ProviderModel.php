@@ -119,7 +119,10 @@ final class ProviderModel
             $catById[(int) $c['id']] = $c;
         }
 
-        return array_map(fn ($row) => $this->enrichRow($row, $catById), $rows);
+        return array_map(
+            fn ($row) => self::stripContact($this->enrichRow($row, $catById)),
+            $rows
+        );
     }
 
     public function getEnriched(int $id): ?array
@@ -407,6 +410,22 @@ final class ProviderModel
         }
         $decoded = json_decode($raw, true);
         return is_array($decoded) ? $decoded : null;
+    }
+
+    public function hasJobs(int $providerId): bool
+    {
+        $stmt = Connection::get()->prepare(
+            'SELECT 1 FROM Job WHERE provider_id = :pid LIMIT 1'
+        );
+        $stmt->execute(['pid' => $providerId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** Remove direct contact PII from public provider cards. */
+    public static function stripContact(array $provider): array
+    {
+        unset($provider['email'], $provider['phone']);
+        return $provider;
     }
 
     public function delete(int $id): bool

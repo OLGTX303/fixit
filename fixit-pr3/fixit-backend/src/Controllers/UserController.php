@@ -56,7 +56,7 @@ final class UserController
         }
 
         $updated = $users->updateProfile($userId, $fields);
-        return ResponseHelper::json($response, ['user' => $updated]);
+        return ResponseHelper::json($response, ['user' => UserModel::toPublic($updated)]);
     }
 
     /** POST /api/users/me/email/otp — body: { email }. Sends a 6-digit code. */

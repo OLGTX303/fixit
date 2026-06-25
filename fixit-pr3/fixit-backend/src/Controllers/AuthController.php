@@ -96,7 +96,7 @@ final class AuthController
         );
 
         $token = self::issueToken($user);
-        return ResponseHelper::json($response, ['token' => $token, 'user' => $user], 201);
+        return ResponseHelper::json($response, ['token' => $token, 'user' => UserModel::toPublic($user)], 201);
     }
 
     /** POST /api/auth/register/otp — body: { email }. Emails a 6-digit code. */
@@ -201,9 +201,8 @@ final class AuthController
             return ResponseHelper::error($response, 'This account has been suspended. Contact support.', 403);
         }
 
-        unset($user['password_hash']);
         $token = self::issueToken($user);
-        return ResponseHelper::json($response, ['token' => $token, 'user' => $user]);
+        return ResponseHelper::json($response, ['token' => $token, 'user' => UserModel::toPublic($user)]);
     }
 
     private static function issueToken(array $user): string

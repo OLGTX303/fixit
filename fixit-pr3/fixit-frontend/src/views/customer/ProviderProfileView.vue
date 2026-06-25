@@ -315,7 +315,7 @@ function fmtDate(d) {
             </div>
             <div v-if="svc.description" class="ppv-svc-desc-line">{{ svc.description }}</div>
           </div>
-          <button class="ppv-book-pill" @click="router.push({name:'booking-form',params:{id:provider.id},query:{service:svc.name,price:svc.price}})">Book</button>
+          <button class="ppv-book-pill" @click="router.push({name:'booking-form',params:{id:provider.id},query:{service:svc.name,price:svc.price,service_id:svc.id}})">Book</button>
         </div>
       </div>
 

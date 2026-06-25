@@ -117,14 +117,32 @@ final class CryptoController
         }
 
         $data = (array) $request->getParsedBody();
-        $err = Validator::requireFields($data, ['encrypted_job_key', 'target_user_id', 'encrypted_job_key_for_target']);
+        $err = Validator::requireFields($data, ['encrypted_job_key']);
         if ($err) {
             return ResponseHelper::error($response, $err, 422);
         }
 
         $crypto = new CryptoModel();
         $crypto->saveJobKey($jobId, (int) $user['id'], (string) $data['encrypted_job_key']);
-        $crypto->saveJobKey($jobId, (int) $data['target_user_id'], (string) $data['encrypted_job_key_for_target']);
+
+        if (!empty($data['target_user_id']) && !empty($data['encrypted_job_key_for_target'])) {
+            $booking = (new BookingModel())->findEnriched($jobId);
+            if (!$booking) {
+                return ResponseHelper::error($response, 'Job not found', 404);
+            }
+            $targetId = (int) $data['target_user_id'];
+            $customerId = (int) $booking['customer_id'];
+            $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
+            $allowedPeers = [$customerId, $providerUserId];
+            if (!in_array($targetId, $allowedPeers, true) || $targetId === (int) $user['id']) {
+                return ResponseHelper::error($response, 'Invalid target_user_id for this job', 422);
+            }
+            $existing = $crypto->getJobKey($jobId, $targetId);
+            if ($existing && !empty($existing['encrypted_job_key'])) {
+                return ResponseHelper::error($response, 'Peer encryption key already provisioned', 409);
+            }
+            $crypto->saveJobKeyIfAbsent($jobId, $targetId, (string) $data['encrypted_job_key_for_target']);
+        }
 
         return ResponseHelper::json($response, ['saved' => true]);
     }

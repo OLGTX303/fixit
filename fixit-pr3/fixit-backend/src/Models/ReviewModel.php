@@ -9,8 +9,19 @@ use PDO;
 
 final class ReviewModel
 {
+    public function existsForJob(int $jobId): bool
+    {
+        $stmt = Connection::get()->prepare('SELECT 1 FROM Review WHERE job_id = :job LIMIT 1');
+        $stmt->execute(['job' => $jobId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function create(int $jobId, int $rating, ?string $comment, ?float $tipAmount = null, array $imageUrls = []): array
     {
+        if ($this->existsForJob($jobId)) {
+            throw new \RuntimeException('A review already exists for this job');
+        }
+
         $pdo = Connection::get();
         $imageJson = $imageUrls ? json_encode(array_values($imageUrls)) : null;
 

@@ -17,6 +17,23 @@ final class UserModel
         return $row ?: null;
     }
 
+    /** Strip Stripe identifiers from user objects returned to clients. */
+    public static function toPublic(?array $user): ?array
+    {
+        if (!$user) {
+            return null;
+        }
+        unset(
+            $user['stripe_test_customer_id'],
+            $user['stripe_test_default_payment_method_id'],
+            $user['stripe_test_payment_method_last4'],
+            $user['stripe_test_payment_method_brand'],
+            $user['stripe_test_payment_method_created_at'],
+            $user['password_hash']
+        );
+        return $user;
+    }
+
     public function findById(int $id): ?array
     {
         $stmt = Connection::get()->prepare(

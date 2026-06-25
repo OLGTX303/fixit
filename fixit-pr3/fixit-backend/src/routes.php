@@ -63,7 +63,7 @@ return function (App $app): void {
         $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites, $rateLimit
         ) {
             $secure->post('/providers/{id}/services', [$providerServices, 'create'])
                 ->add(new RoleGuard(['provider', 'admin']));
@@ -81,8 +81,8 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer', 'provider']));
             $secure->patch('/users/me', [$users, 'updateMe']);
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
-            $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp']);
-            $secure->post('/users/me/email/verify', [$users, 'verifyEmailOtp']);
+            $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp'])->add($rateLimit);
+            $secure->post('/users/me/email/verify', [$users, 'verifyEmailOtp'])->add($rateLimit);
             $secure->get('/payments/stripe/config', [$stripe, 'config']);
             $secure->post('/payments/stripe/customer', [$stripe, 'ensureCustomer']);
             $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent']);
@@ -93,7 +93,7 @@ return function (App $app): void {
             $secure->get('/crypto/pin/salt', [$crypto, 'getPinSalt']);
             $secure->get('/crypto/public-key', [$crypto, 'myPublicKey']);
             $secure->post('/crypto/pin/setup', [$crypto, 'setupPin']);
-            $secure->post('/crypto/pin/verify', [$crypto, 'verifyPin']);
+            $secure->post('/crypto/pin/verify', [$crypto, 'verifyPin'])->add($rateLimit);
             $secure->get('/jobs/{id}/crypto/peers', [$crypto, 'getJobPeers']);
             $secure->get('/jobs/{id}/crypto/key', [$crypto, 'getJobKey']);
             $secure->put('/jobs/{id}/crypto/key', [$crypto, 'saveJobKey']);

@@ -64,14 +64,20 @@ final class StripePaymentModel
     /** Succeeded charge for a booking, if any (newest first). */
     public function findSucceededByBooking(int $bookingId): ?array
     {
+        $all = $this->findAllSucceededByBooking($bookingId);
+        return $all[0] ?? null;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function findAllSucceededByBooking(int $bookingId): array
+    {
         $stmt = Connection::get()->prepare(
             "SELECT * FROM StripePayment
              WHERE booking_id = :bid AND status = 'succeeded'
-             ORDER BY id DESC LIMIT 1"
+             ORDER BY id DESC"
         );
         $stmt->execute(['bid' => $bookingId]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $row ?: null;
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /** Mark booking payment refunded — idempotent guard against double-refund. */

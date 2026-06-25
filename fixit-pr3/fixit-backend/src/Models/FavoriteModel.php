@@ -40,7 +40,7 @@ final class FavoriteModel
 
         $providerModel = new ProviderModel();
         return array_map(
-            fn ($row) => $providerModel->enrichFromJoinRow($row, $catById),
+            fn ($row) => ProviderModel::stripContact($providerModel->enrichFromJoinRow($row, $catById)),
             $rows
         );
     }
@@ -49,7 +49,7 @@ final class FavoriteModel
     public function providerIdsForUser(int $userId): array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT provider_id FROM Favorite WHERE user_id = :uid ORDER BY created_at DESC'
+            'SELECT provider_id FROM Favorite WHERE user_id = :uid ORDER BY created_at DESC LIMIT 500'
         );
         $stmt->execute(['uid' => $userId]);
         return array_map('intval', array_column($stmt->fetchAll(), 'provider_id'));

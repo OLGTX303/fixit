@@ -6,6 +6,7 @@ namespace FixIt\Controllers;
 
 use FixIt\Models\BookingModel;
 use FixIt\Models\ReviewModel;
+use FixIt\Services\StripeService;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -36,8 +37,12 @@ final class ReviewController
         if ((int) $booking['customer_id'] !== (int) $user['id']) {
             return ResponseHelper::error($response, 'Only the customer may review this job', 403);
         }
-        if (!in_array($booking['status'], ['completed', 'reviewed'], true)) {
+        if ($booking['status'] !== 'completed') {
             return ResponseHelper::error($response, 'Job must be completed before reviewing', 422);
+        }
+
+        if ((new ReviewModel())->existsForJob($jobId)) {
+            return ResponseHelper::error($response, 'A review already exists for this job', 409);
         }
 
         $tipAmount = null;
@@ -55,17 +60,35 @@ final class ReviewController
             }
         }
 
-        $review = (new ReviewModel())->create(
-            $jobId,
-            $rating,
-            isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null,
-            $tipAmount,
-            $imageUrls
-        );
-
-        if ($booking['status'] === 'completed') {
-            $bookingModel->updateStatus($jobId, 'reviewed');
+        try {
+            $review = (new ReviewModel())->create(
+                $jobId,
+                $rating,
+                isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null,
+                $tipAmount,
+                $imageUrls
+            );
+        } catch (\RuntimeException $e) {
+            return ResponseHelper::error($response, $e->getMessage(), 409);
         }
+
+        if ($tipAmount !== null && $tipAmount > 0) {
+            if (!StripeService::isConfigured()) {
+                return ResponseHelper::error($response, 'Review saved but tips require Stripe to be configured', 422);
+            }
+            try {
+                (new StripeService())->payWithSavedMethod(
+                    (int) $user['id'],
+                    (int) round($tipAmount * 100),
+                    null,
+                    'myr'
+                );
+            } catch (\RuntimeException $e) {
+                return ResponseHelper::error($response, 'Review saved but tip payment failed: ' . $e->getMessage(), 402);
+            }
+        }
+
+        $bookingModel->updateStatus($jobId, 'reviewed');
 
         return ResponseHelper::json($response, $review, 201);
     }
