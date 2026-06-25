@@ -9,6 +9,7 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(true)
+const loadError = ref('')
 const busy = ref(false)
 const error = ref('')
 const configured = ref(false)
@@ -50,6 +51,10 @@ onMounted(async () => {
       await refreshSaved()
     }
   } catch (e) {
+    // A failed config request (expired session, network, Stripe.js) is NOT the
+    // same as "keys missing" — surface it as a load error so we don't falsely
+    // tell the user to edit the server .env.
+    loadError.value = e.message || 'Could not load the payment module'
     error.value = e.message
   } finally {
     loading.value = false
@@ -167,6 +172,13 @@ function startReplace() {
     </div>
 
     <div v-if="loading" class="text-center py-5" style="color:var(--fx-muted)">Loading payment module…</div>
+
+    <div v-else-if="loadError" class="fx-card" style="padding:16px">
+      <p style="font-size:13px;color:var(--fx-muted);margin:0 0 10px">
+        Couldn't load the payment module. Your session may have expired — try reloading or signing in again.
+      </p>
+      <button class="btn btn-sm btn-outline-secondary" @click="$router.go(0)">Reload</button>
+    </div>
 
     <div v-else-if="!configured" class="fx-card" style="padding:16px">
       <p style="font-size:13px;color:var(--fx-muted);margin:0">
