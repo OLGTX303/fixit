@@ -65,7 +65,7 @@ CREATE TABLE Job (
   customer_id INT NOT NULL,
   provider_id INT NOT NULL,
   category_id INT NOT NULL,
-  status ENUM('requested','accepted','in_progress','completed','reviewed') NOT NULL DEFAULT 'requested',
+  status ENUM('requested','accepted','in_progress','completed','reviewed','inquiry','cancelled') NOT NULL DEFAULT 'requested',
   scheduled_at DATETIME NOT NULL,
   address VARCHAR(255) NOT NULL,
   total DECIMAL(10,2) NULL,

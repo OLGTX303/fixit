@@ -14,23 +14,35 @@ final class FavoriteModel
         $limit = max(1, min(50, $limit));
         $offset = max(0, $offset);
         $stmt = Connection::get()->prepare(
-            "SELECT provider_id FROM Favorite
-             WHERE user_id = :uid
-             ORDER BY created_at DESC, id DESC
+            "SELECT p.*, u.name, u.email, u.phone, u.avatar_url,
+                    (SELECT GROUP_CONCAT(pc.category_id ORDER BY pc.category_id)
+                     FROM ProviderCategory pc WHERE pc.provider_id = p.id) AS category_ids_csv,
+                    (SELECT COUNT(*) FROM Review r
+                     INNER JOIN Job j ON j.id = r.job_id WHERE j.provider_id = p.id) AS review_count
+             FROM Favorite f
+             INNER JOIN ProviderProfile p ON p.id = f.provider_id
+             INNER JOIN User u ON u.id = p.user_id
+             WHERE f.user_id = :uid
+             ORDER BY f.created_at DESC, f.id DESC
              LIMIT {$limit} OFFSET {$offset}"
         );
         $stmt->execute(['uid' => $userId]);
-        $ids = array_column($stmt->fetchAll(), 'provider_id');
+        $rows = $stmt->fetchAll();
+        if (!$rows) {
+            return [];
+        }
+
+        $categoryModel = new CategoryModel();
+        $catById = [];
+        foreach ($categoryModel->all() as $c) {
+            $catById[(int) $c['id']] = $c;
+        }
 
         $providerModel = new ProviderModel();
-        $out = [];
-        foreach ($ids as $pid) {
-            $p = $providerModel->getEnriched((int) $pid);
-            if ($p) {
-                $out[] = $p;
-            }
-        }
-        return $out;
+        return array_map(
+            fn ($row) => $providerModel->enrichFromJoinRow($row, $catById),
+            $rows
+        );
     }
 
     /** @return list<int> */

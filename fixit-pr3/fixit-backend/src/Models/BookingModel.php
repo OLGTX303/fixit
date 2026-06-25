@@ -28,18 +28,50 @@ final class BookingModel
      */
     public function listForUser(array $user, int $limit = 0, int $offset = 0, ?string $statusFilter = null): array
     {
-        $sql = "SELECT * FROM Job WHERE status != 'inquiry'";
+        $sql = "SELECT j.id, j.customer_id, j.provider_id, j.category_id, j.status,
+                       j.scheduled_at, j.address, j.total, j.notes,
+                       j.recurrence_type, j.recurrence_end_date,
+                       cu.id AS cu_id, cu.name AS cu_name, cu.email AS cu_email, cu.role AS cu_role,
+                       cu.phone AS cu_phone, cu.avatar_url AS cu_avatar_url,
+                       COALESCE(cu.is_blocked, 0) AS cu_is_blocked,
+                       cu.stripe_test_customer_id AS cu_stripe_test_customer_id,
+                       cu.stripe_test_default_payment_method_id AS cu_stripe_test_default_payment_method_id,
+                       cu.stripe_test_payment_method_last4 AS cu_stripe_test_payment_method_last4,
+                       cu.stripe_test_payment_method_brand AS cu_stripe_test_payment_method_brand,
+                       cu.stripe_test_payment_method_created_at AS cu_stripe_test_payment_method_created_at,
+                       sc.id AS sc_id, sc.name AS sc_name, sc.description AS sc_description, sc.icon_url AS sc_icon_url,
+                       pp.id AS pp_id, pp.user_id AS pp_user_id, pp.bio AS pp_bio, pp.location AS pp_location,
+                       pp.base_rate AS pp_base_rate, pp.rate_type AS pp_rate_type, pp.per_job_rate AS pp_per_job_rate,
+                       pp.is_priority AS pp_is_priority, pp.is_verified AS pp_is_verified, pp.kyc_doc_url AS pp_kyc_doc_url,
+                       pp.kyc_status AS pp_kyc_status, pp.kyc_id_type AS pp_kyc_id_type,
+                       pp.kyc_id_confidence AS pp_kyc_id_confidence, pp.kyc_id_checks AS pp_kyc_id_checks,
+                       pp.kyc_liveness_passed AS pp_kyc_liveness_passed, pp.kyc_liveness_score AS pp_kyc_liveness_score,
+                       pp.kyc_color_sequence_hash AS pp_kyc_color_sequence_hash,
+                       pp.kyc_liveness_checks AS pp_kyc_liveness_checks, pp.kyc_submitted_at AS pp_kyc_submitted_at,
+                       pp.avg_rating AS pp_avg_rating, pp.latitude AS pp_latitude, pp.longitude AS pp_longitude,
+                       pp.services_json AS pp_services_json, pp.cover_url AS pp_cover_url,
+                       pu.name AS pp_name, pu.email AS pp_email, pu.phone AS pp_phone, pu.avatar_url AS pp_avatar_url,
+                       (SELECT GROUP_CONCAT(pc.category_id ORDER BY pc.category_id)
+                        FROM ProviderCategory pc WHERE pc.provider_id = pp.id) AS pp_category_ids_csv,
+                       (SELECT COUNT(*) FROM Review r
+                        INNER JOIN Job j2 ON j2.id = r.job_id WHERE j2.provider_id = pp.id) AS pp_review_count
+                FROM Job j
+                INNER JOIN User cu ON cu.id = j.customer_id
+                INNER JOIN ProviderProfile pp ON pp.id = j.provider_id
+                INNER JOIN User pu ON pu.id = pp.user_id
+                INNER JOIN ServiceCategory sc ON sc.id = j.category_id
+                WHERE j.status != 'inquiry'";
         $params = [];
 
         if ($user['role'] === 'customer') {
-            $sql .= ' AND customer_id = :uid';
+            $sql .= ' AND j.customer_id = :uid';
             $params['uid'] = $user['id'];
         } elseif ($user['role'] === 'provider') {
             $profile = (new ProviderModel())->findByUserId((int) $user['id']);
             if (!$profile) {
                 return [];
             }
-            $sql .= ' AND provider_id = :pid';
+            $sql .= ' AND j.provider_id = :pid';
             $params['pid'] = (int) $profile['id'];
         }
 
@@ -57,18 +89,24 @@ final class BookingModel
                     $placeholders[] = ':' . $key;
                     $params[$key] = $st;
                 }
-                $sql .= ' AND status IN (' . implode(',', $placeholders) . ')';
+                $sql .= ' AND j.status IN (' . implode(',', $placeholders) . ')';
             }
         }
 
-        $sql .= ' ORDER BY scheduled_at DESC, id DESC';
+        $sql .= ' ORDER BY j.scheduled_at DESC, j.id DESC';
         $limit = max(1, min(50, $limit > 0 ? $limit : 50));
         $offset = max(0, $offset);
         $sql .= " LIMIT {$limit} OFFSET {$offset}";
         $stmt = Connection::get()->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
-        return array_map(fn ($row) => $this->enrich($row), $rows);
+
+        $catById = [];
+        foreach ($this->categories->all() as $c) {
+            $catById[(int) $c['id']] = $c;
+        }
+
+        return array_map(fn ($row) => $this->mapJoinedRow($row, $catById), $rows);
     }
 
     public function findEnriched(int $id): ?array
@@ -142,6 +180,82 @@ final class BookingModel
             return $profile && (int) $booking['provider_id'] === (int) $profile['id'];
         }
         return false;
+    }
+
+    /** @param array<string,mixed> $row */
+    private function mapJoinedRow(array $row, array $catById): array
+    {
+        $customer = [
+            'id' => (int) $row['cu_id'],
+            'name' => $row['cu_name'],
+            'email' => $row['cu_email'],
+            'role' => $row['cu_role'],
+            'phone' => $row['cu_phone'],
+            'avatar_url' => $row['cu_avatar_url'],
+            'is_blocked' => (int) $row['cu_is_blocked'],
+            'stripe_test_customer_id' => $row['cu_stripe_test_customer_id'],
+            'stripe_test_default_payment_method_id' => $row['cu_stripe_test_default_payment_method_id'],
+            'stripe_test_payment_method_last4' => $row['cu_stripe_test_payment_method_last4'],
+            'stripe_test_payment_method_brand' => $row['cu_stripe_test_payment_method_brand'],
+            'stripe_test_payment_method_created_at' => $row['cu_stripe_test_payment_method_created_at'],
+        ];
+
+        $category = [
+            'id' => (int) $row['sc_id'],
+            'name' => $row['sc_name'],
+            'description' => $row['sc_description'],
+            'icon_url' => $row['sc_icon_url'],
+        ];
+
+        $providerRow = [
+            'id' => (int) $row['pp_id'],
+            'user_id' => (int) $row['pp_user_id'],
+            'bio' => $row['pp_bio'],
+            'location' => $row['pp_location'],
+            'base_rate' => $row['pp_base_rate'],
+            'rate_type' => $row['pp_rate_type'],
+            'per_job_rate' => $row['pp_per_job_rate'],
+            'is_priority' => $row['pp_is_priority'],
+            'is_verified' => $row['pp_is_verified'],
+            'kyc_doc_url' => $row['pp_kyc_doc_url'],
+            'kyc_status' => $row['pp_kyc_status'],
+            'kyc_id_type' => $row['pp_kyc_id_type'],
+            'kyc_id_confidence' => $row['pp_kyc_id_confidence'],
+            'kyc_id_checks' => $row['pp_kyc_id_checks'],
+            'kyc_liveness_passed' => $row['pp_kyc_liveness_passed'],
+            'kyc_liveness_score' => $row['pp_kyc_liveness_score'],
+            'kyc_color_sequence_hash' => $row['pp_kyc_color_sequence_hash'],
+            'kyc_liveness_checks' => $row['pp_kyc_liveness_checks'],
+            'kyc_submitted_at' => $row['pp_kyc_submitted_at'],
+            'avg_rating' => $row['pp_avg_rating'],
+            'latitude' => $row['pp_latitude'],
+            'longitude' => $row['pp_longitude'],
+            'services_json' => $row['pp_services_json'],
+            'cover_url' => $row['pp_cover_url'],
+            'name' => $row['pp_name'],
+            'email' => $row['pp_email'],
+            'phone' => $row['pp_phone'],
+            'avatar_url' => $row['pp_avatar_url'],
+            'category_ids_csv' => $row['pp_category_ids_csv'],
+            'review_count' => $row['pp_review_count'],
+        ];
+
+        return [
+            'id'                   => (int) $row['id'],
+            'customer_id'          => (int) $row['customer_id'],
+            'provider_id'          => (int) $row['provider_id'],
+            'category_id'          => (int) $row['category_id'],
+            'status'               => $row['status'],
+            'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
+            'address'              => $row['address'],
+            'total'                => $row['total'] !== null ? (float) $row['total'] : null,
+            'notes'                => $row['notes'],
+            'recurrence_type'      => $row['recurrence_type'] ?? 'none',
+            'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,
+            'customer'             => $customer,
+            'provider'             => $this->providers->enrichFromJoinRow($providerRow, $catById),
+            'category'             => $category,
+        ];
     }
 
     /** @param array<string,mixed> $row */

@@ -39,15 +39,17 @@ final class ReviewModel
     }
 
     /** @return list<array<string,mixed>> */
-    public function forProvider(int $providerId): array
+    public function forProvider(int $providerId, int $limit = 50): array
     {
+        $limit = max(1, min(50, $limit));
         $stmt = Connection::get()->prepare(
-            'SELECT r.*, u.name AS customer_name, u.avatar_url AS customer_avatar
+            "SELECT r.*, u.name AS customer_name, u.avatar_url AS customer_avatar
              FROM Review r
              JOIN Job j ON j.id = r.job_id
              JOIN User u ON u.id = j.customer_id
              WHERE j.provider_id = :pid
-             ORDER BY r.created_at DESC'
+             ORDER BY r.created_at DESC
+             LIMIT {$limit}"
         );
         $stmt->execute(['pid' => $providerId]);
         return array_map(fn ($row) => $this->format($row), $stmt->fetchAll());

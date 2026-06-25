@@ -26,6 +26,7 @@ final class WalletModel
     /** @return array<int,array> newest first */
     public function list(int $userId, int $limit = 50): array
     {
+        $limit = max(1, min(50, $limit));
         $stmt = Connection::get()->prepare(
             "SELECT id, kind, amount_cents, currency, stripe_ref, status, note, created_at
              FROM WalletTransaction

@@ -144,10 +144,50 @@ final class ProviderModel
         return $this->enrichRow($row, $catById);
     }
 
+    /**
+     * Enrich a provider row from a JOIN (ProviderProfile + User).
+     * Pass category_ids_csv / review_count from subqueries to avoid N+1.
+     *
+     * @param array<string,mixed> $row
+     */
+    public function enrichFromJoinRow(array $row, ?array $catById = null): array
+    {
+        if ($catById === null) {
+            $categoryModel = new CategoryModel();
+            $categories = $categoryModel->all();
+            $catById = [];
+            foreach ($categories as $c) {
+                $catById[(int) $c['id']] = $c;
+            }
+        }
+
+        if (isset($row['category_ids_csv']) && $row['category_ids_csv'] !== null && $row['category_ids_csv'] !== '') {
+            $categoryIds = array_map('intval', explode(',', (string) $row['category_ids_csv']));
+        } else {
+            $categoryIds = $this->categoryIdsForProvider((int) $row['id']);
+        }
+
+        $reviewCount = isset($row['review_count'])
+            ? (int) $row['review_count']
+            : $this->reviewCountForProvider((int) $row['id']);
+
+        return $this->enrichRowWithMeta($row, $catById, $categoryIds, $reviewCount);
+    }
+
     /** @param array<string,mixed> $row */
     private function enrichRow(array $row, array $catById): array
     {
-        $categoryIds = $this->categoryIdsForProvider((int) $row['id']);
+        return $this->enrichRowWithMeta(
+            $row,
+            $catById,
+            $this->categoryIdsForProvider((int) $row['id']),
+            $this->reviewCountForProvider((int) $row['id'])
+        );
+    }
+
+    /** @param list<int> $categoryIds */
+    private function enrichRowWithMeta(array $row, array $catById, array $categoryIds, int $reviewCount): array
+    {
         $cats = array_values(array_filter(array_map(fn ($id) => $catById[$id] ?? null, $categoryIds)));
         $services = json_decode((string) ($row['services_json'] ?? '[]'), true);
         if (!is_array($services)) {
@@ -184,7 +224,7 @@ final class ProviderModel
             'phone' => $row['phone'],
             'categories' => $cats,
             'category_names' => array_map(fn ($c) => $c['name'], $cats),
-            'review_count' => $this->reviewCountForProvider((int) $row['id']),
+            'review_count' => $reviewCount,
             'cover_url'    => $row['cover_url'] ?? null,
             'avatar_url'   => $row['avatar_url'] ?? null,
         ];

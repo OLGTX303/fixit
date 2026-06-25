@@ -24,7 +24,7 @@ final class ProviderController
             $filters['lat'] = (float) $params['lat'];
             $filters['lng'] = (float) $params['lng'];
         }
-        $limit = isset($params['limit']) ? min(50, max(1, (int) $params['limit'])) : 0;
+        $limit = isset($params['limit']) ? min(50, max(1, (int) $params['limit'])) : 50;
         $sort = in_array($params['sort'] ?? '', ['recommended', 'rating', 'price', 'distance'], true)
             ? (string) $params['sort'] : '';
 

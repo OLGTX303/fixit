@@ -67,12 +67,16 @@ const navItems    = computed(() => NAVS[auth.role] || [])
 
 async function go(item) {
   if (item.jobRoute) {
-    const bookings  = useBookingsStore()
-    const providers = useProvidersStore()
-    await Promise.all([bookings.load(), providers.load()])
-    const profile = providers.providers.find((p) => p.user_id === auth.user?.id)
-    const job = profile
-      ? bookings.forProvider(profile.id).find((b) => b.status !== 'reviewed')
+    const bookings = useBookingsStore()
+    await bookings.load()
+    let providerId = null
+    if (auth.role === 'provider') {
+      const { getMyProviderProfile } = await import('./services/api')
+      const profile = await getMyProviderProfile().catch(() => null)
+      providerId = profile?.id ?? null
+    }
+    const job = providerId
+      ? bookings.forProvider(providerId).find((b) => b.status !== 'reviewed')
       : null
     router.push(job ? { name: item.to, params: { id: job.id } } : { name: 'pro-requests' })
     return
