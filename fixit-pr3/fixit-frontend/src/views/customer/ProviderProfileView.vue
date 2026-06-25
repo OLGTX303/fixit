@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useProvidersStore } from '../../stores/providers'
 import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
@@ -9,10 +8,10 @@ import RatingStars from '../../components/RatingStars.vue'
 
 const route   = useRoute()
 const router  = useRouter()
-const store   = useProvidersStore()
 const auth    = useAuthStore()
 
-const provider = computed(() => store.byId(route.params.id))
+// Load just this provider (fast), not the whole directory.
+const provider = ref(null)
 const reviews  = ref([])
 const catalog  = ref([])          // rich service catalog (ProviderService)
 const activeTab = ref('services')
@@ -58,7 +57,7 @@ function int(v) { return parseInt(v, 10) }
 
 onMounted(async () => {
   document.body.classList.add('provider-page')
-  await store.load()
+  try { provider.value = await api.getProvider(route.params.id) } catch {}
   inCart.value = isInCart()
   try { reviews.value = await api.getReviewsForProvider(route.params.id) } catch {}
   try { catalog.value = await api.getProviderServices(route.params.id) } catch {}
@@ -178,7 +177,7 @@ async function saveEdit() {
       longitude: provider.value.longitude,
       cover_url: coverUrl,
     })
-    await store.load()
+    provider.value = await api.getProvider(route.params.id)
     editing.value = false
   } catch(e) {
     editErr.value = e.message
