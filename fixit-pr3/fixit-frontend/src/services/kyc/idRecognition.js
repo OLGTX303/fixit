@@ -20,11 +20,11 @@ const ID_ASPECT_RANGES = [
 ]
 
 const THRESHOLDS = {
-  min_confidence: 55,
+  min_confidence: 65,
   min_long_edge: 500,
   min_gov_keywords: 2,
   min_ocr_chars: 16,
-  max_fraud_score: 60,
+  max_fraud_score: 40,
 }
 
 async function fileToImage(file) {
@@ -288,7 +288,13 @@ function withTimeout(promise, ms, label) {
 async function runOcr(canvas) {
   try {
     const { createWorker } = await withTimeout(import('tesseract.js'), 10000, 'ocr_load_timeout')
-    const worker = await withTimeout(createWorker('eng', 1, { logger: () => {} }), 15000, 'ocr_init_timeout')
+    // Serve worker/wasm/lang from our origin — no runtime CDN dependency.
+    const worker = await withTimeout(createWorker('eng', 1, {
+      logger: () => {},
+      workerPath: '/tesseract/worker.min.js',
+      corePath: '/tesseract/core',
+      langPath: '/tesseract/lang-data',
+    }), 15000, 'ocr_init_timeout')
     try {
       const { data } = await withTimeout(worker.recognize(canvas), 20000, 'ocr_timeout')
       return { text: data.text || '', confidence: Math.round(data.confidence ?? 0), unavailable: false }

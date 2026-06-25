@@ -402,6 +402,11 @@ final class StripeService
             'amount_cents' => $amountCents,
             'refund_ids' => $refundIds,
             'balance_cents' => $this->wallet->balanceCents($userId),
+            // TEST-ONLY: refunds platform top-up charges — not a real bank payout.
+            // Production needs Stripe Connect transfers to provider bank accounts.
+            'payout_method' => 'stripe_refund_test',
+            'test_mode' => true,
+            'warning' => 'Provider withdrawal uses Stripe test refunds, not a real bank payout. Use Stripe Connect for production.',
         ];
     }
 

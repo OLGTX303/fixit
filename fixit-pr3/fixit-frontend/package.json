@@ -6,6 +6,7 @@
   "description": "FixIt — on-demand local home-services marketplace (PR3 full-stack)",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/copy-tesseract.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",

@@ -59,6 +59,34 @@ final class ReviewModel
         return array_map(fn ($row) => $this->format($row), $stmt->fetchAll());
     }
 
+    /** @return list<array<string,mixed>> */
+    public function listPaged(int $limit, int $offset): array
+    {
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+        $stmt = Connection::get()->prepare(
+            'SELECT r.*, u.name AS customer_name, u.avatar_url AS customer_avatar
+             FROM Review r
+             JOIN Job j ON j.id = r.job_id
+             JOIN User u ON u.id = j.customer_id
+             ORDER BY r.created_at DESC
+             LIMIT ' . $limit . ' OFFSET ' . $offset
+        );
+        $stmt->execute();
+        return array_map(fn ($row) => $this->format($row), $stmt->fetchAll());
+    }
+
+    public function countAll(): int
+    {
+        return (int) Connection::get()->query('SELECT COUNT(*) FROM Review')->fetchColumn();
+    }
+
+    public function avgRating(): ?float
+    {
+        $avg = Connection::get()->query('SELECT AVG(rating) FROM Review')->fetchColumn();
+        return $avg !== null ? round((float) $avg, 1) : null;
+    }
+
     private function recalculateProviderRating(int $jobId): void
     {
         $stmt = Connection::get()->prepare(
