@@ -5,10 +5,13 @@ import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
+import { useFavoritesStore } from '../../stores/favorites'
 
 const route   = useRoute()
 const router  = useRouter()
 const auth    = useAuthStore()
+const favorites = useFavoritesStore()
+const isFav = computed(() => provider.value && favorites.has(provider.value.id))
 
 // Load just this provider (fast), not the whole directory.
 const provider = ref(null)
@@ -55,8 +58,14 @@ const isOwner = computed(() =>
   auth.user && provider.value && (int(auth.user.id) === int(provider.value.user_id)))
 function int(v) { return parseInt(v, 10) }
 
+async function toggleFavorite() {
+  if (!provider.value || auth.role !== 'customer') return
+  try { await favorites.toggle(provider.value.id) } catch {}
+}
+
 onMounted(async () => {
   document.body.classList.add('provider-page')
+  if (auth.role === 'customer') favorites.load().catch(() => {})
   try { provider.value = await api.getProvider(route.params.id) } catch {}
   inCart.value = isInCart()
   try { reviews.value = await api.getReviewsForProvider(route.params.id) } catch {}
@@ -217,6 +226,16 @@ function fmtDate(d) {
       <!-- Back button -->
       <button class="ppv-back-btn" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:20px">arrow_back</span>
+      </button>
+
+      <button
+        v-if="!isOwner && auth.role === 'customer'"
+        class="ppv-fav-btn"
+        :class="{ active: isFav }"
+        :aria-label="isFav ? 'Remove from favourites' : 'Add to favourites'"
+        @click.stop="toggleFavorite"
+      >
+        <span class="material-symbols-outlined" style="font-size:22px">favorite</span>
       </button>
 
       <!-- Edit cover (owner only) -->
@@ -499,6 +518,14 @@ function fmtDate(d) {
   background:rgba(0,0,0,.32); color:#fff; display:flex; align-items:center; justify-content:center;
   cursor:pointer;
 }
+.ppv-fav-btn {
+  position:absolute; top:14px; right:58px; z-index:2;
+  width:36px; height:36px; border-radius:50%; border:none;
+  background:rgba(0,0,0,.32); color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+}
+.ppv-fav-btn.active { color:#ef4444; }
+.ppv-fav-btn.active .material-symbols-outlined { font-variation-settings:'FILL' 1; }
 .ppv-edit-cover-btn {
   position:absolute; top:14px; right:14px; z-index:2;
   width:36px; height:36px; border-radius:50%;

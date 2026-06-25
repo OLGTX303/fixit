@@ -61,6 +61,28 @@ final class StripePaymentModel
         return array_column($stmt->fetchAll(\PDO::FETCH_ASSOC), 'stripe_payment_intent_id');
     }
 
+    /** Succeeded charge for a booking, if any (newest first). */
+    public function findSucceededByBooking(int $bookingId): ?array
+    {
+        $stmt = Connection::get()->prepare(
+            "SELECT * FROM StripePayment
+             WHERE booking_id = :bid AND status = 'succeeded'
+             ORDER BY id DESC LIMIT 1"
+        );
+        $stmt->execute(['bid' => $bookingId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /** Mark booking payment refunded — idempotent guard against double-refund. */
+    public function markRefunded(int $bookingId): void
+    {
+        Connection::get()->prepare(
+            "UPDATE StripePayment SET status = 'refunded', updated_at = NOW()
+             WHERE booking_id = :bid AND status = 'succeeded'"
+        )->execute(['bid' => $bookingId]);
+    }
+
     public function upsertFromPaymentIntent(
         int $userId,
         object $intent,

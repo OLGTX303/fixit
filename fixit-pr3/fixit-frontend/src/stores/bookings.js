@@ -19,7 +19,7 @@ export const useBookingsStore = defineStore('bookings', {
       if (this.loaded) return
       this.loading = true
       try {
-        this.bookings = await api.getBookings()
+        this.bookings = await api.getBookings({ limit: 50, offset: 0 })
         this.loaded = true
       } finally {
         this.loading = false

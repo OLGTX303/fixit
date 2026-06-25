@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import * as api from '../../services/api'
 import { useInfiniteList } from '../../composables/useInfiniteList'
+import { useFavoritesStore } from '../../stores/favorites'
 import CategoryGrid from '../../components/CategoryGrid.vue'
 import ProviderGridCard from '../../components/ProviderGridCard.vue'
 import fixitLogo from '../../assets/fixit-logo.svg'
 
 const auth   = useAuthStore()
 const router = useRouter()
+const favorites = useFavoritesStore()
 const search = ref('')
 
 const categories = ref([])
@@ -27,6 +29,7 @@ watch(sortBy, reset)
 
 onMounted(async () => {
   try { categories.value = await api.getCategories() } catch { /* non-fatal */ }
+  if (auth.role === 'customer') favorites.load().catch(() => {})
 })
 
 const initials = computed(() =>
@@ -101,7 +104,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
         </div>
 
         <div class="hv-grid">
-          <ProviderGridCard v-for="p in recommended" :key="p.id" :provider="p" @select="openProvider" />
+          <ProviderGridCard v-for="p in recommended" :key="p.id" :provider="p" show-favorite @select="openProvider" />
         </div>
         <div ref="sentinel" style="height:1px"></div>
         <div v-if="loading" style="text-align:center;padding:18px 0;color:var(--fx-muted);font-size:13px">Loading…</div>

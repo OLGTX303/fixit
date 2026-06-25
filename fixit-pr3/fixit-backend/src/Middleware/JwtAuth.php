@@ -6,6 +6,7 @@ namespace FixIt\Middleware;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use FixIt\Models\UserModel;
 use FixIt\Support\ResponseHelper;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -29,6 +30,11 @@ final class JwtAuth implements MiddlewareInterface
             $claims = JWT::decode($matches[1], new Key($_ENV['JWT_SECRET'] ?? 'dev-secret', 'HS256'));
         } catch (\Throwable) {
             return ResponseHelper::error(new SlimResponse(), 'Invalid or expired token', 401);
+        }
+
+        $userRow = (new UserModel())->findById((int) $claims->sub);
+        if (!$userRow || !empty($userRow['is_blocked'])) {
+            return ResponseHelper::error(new SlimResponse(), 'This account has been suspended', 403);
         }
 
         $user = [

@@ -20,10 +20,15 @@ final class BookingModel
         $this->users = new UserModel();
     }
 
-    /** @return list<array<string,mixed>> */
-    public function listForUser(array $user): array
+    /**
+     * Paginated booking list for the authenticated user. Inquiry threads are
+     * excluded — they are conversations, not orders.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function listForUser(array $user, int $limit = 0, int $offset = 0, ?string $statusFilter = null): array
     {
-        $sql = 'SELECT * FROM Job WHERE 1=1';
+        $sql = "SELECT * FROM Job WHERE status != 'inquiry'";
         $params = [];
 
         if ($user['role'] === 'customer') {
@@ -38,7 +43,28 @@ final class BookingModel
             $params['pid'] = (int) $profile['id'];
         }
 
-        $sql .= ' ORDER BY scheduled_at DESC';
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $groups = [
+                'pending'   => ['requested'],
+                'active'    => ['accepted', 'in_progress'],
+                'done'      => ['completed', 'reviewed'],
+                'cancelled' => ['cancelled'],
+            ];
+            if (isset($groups[$statusFilter])) {
+                $placeholders = [];
+                foreach ($groups[$statusFilter] as $i => $st) {
+                    $key = 'st' . $i;
+                    $placeholders[] = ':' . $key;
+                    $params[$key] = $st;
+                }
+                $sql .= ' AND status IN (' . implode(',', $placeholders) . ')';
+            }
+        }
+
+        $sql .= ' ORDER BY scheduled_at DESC, id DESC';
+        $limit = max(1, min(50, $limit > 0 ? $limit : 50));
+        $offset = max(0, $offset);
+        $sql .= " LIMIT {$limit} OFFSET {$offset}";
         $stmt = Connection::get()->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
