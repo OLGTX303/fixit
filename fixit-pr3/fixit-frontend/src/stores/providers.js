@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import * as api from '../services/api'
+import { getStoredUser } from '../services/api'
 
 // Holds the provider directory + categories. Shared by the customer Search view
 // and the admin Verification view — approving a provider in admin instantly
@@ -21,11 +22,19 @@ export const useProvidersStore = defineStore('providers', {
       if (this.loaded) return
       this.loading = true
       try {
-        const [providers, categories] = await Promise.all([
-          api.getProviders(), api.getCategories(),
-        ])
-        this.providers = providers
+        const user = getStoredUser()
+        const categories = await api.getCategories()
         this.categories = categories
+
+        if (user?.role === 'provider') {
+          const profile = await api.getMyProviderProfile()
+          this.providers = profile ? [profile] : []
+        } else if (user?.role === 'admin') {
+          // Admin lists use paginated getAdminProviders in each view — never bulk-load 15k.
+          this.providers = []
+        } else {
+          this.providers = await api.searchProviders({ limit: 50, offset: 0 })
+        }
         this.loaded = true
       } finally {
         this.loading = false

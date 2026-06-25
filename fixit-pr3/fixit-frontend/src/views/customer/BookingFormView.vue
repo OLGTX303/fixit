@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useBookingsStore } from '../../stores/bookings'
 import { useAuthStore } from '../../stores/auth'
+import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import AppIcon from '../../components/AppIcon.vue'
 
@@ -13,7 +14,7 @@ const providersStore = useProvidersStore()
 const bookingsStore = useBookingsStore()
 const auth = useAuthStore()
 
-const provider = computed(() => providersStore.byId(route.params.id))
+const provider = ref(null)
 
 // Booking form state (all v-model bound) — workflow #1 (Customer Booking).
 const form = ref({ date: '', time: '', address: '14 Maple Street, Apt 3', notes: '' })
@@ -37,7 +38,10 @@ const dates = computed(() => Array.from({ length: 5 }, (_, i) => {
 }))
 
 onMounted(async () => {
-  await providersStore.load()
+  await Promise.all([
+    providersStore.load(),
+    api.getProvider(route.params.id).then((p) => { provider.value = p }),
+  ])
   form.value.date = dates.value[0].iso
   form.value.time = times[0]
 })

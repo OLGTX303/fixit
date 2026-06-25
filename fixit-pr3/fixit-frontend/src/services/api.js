@@ -111,8 +111,12 @@ export const blockUser = (id, blocked) => patch(`/admin/users/${id}/block`, { bl
 export const getCategories = () => get('/categories')
 export const getMapsConfig = () => get('/config/maps')
 
-export async function getProviders() {
-  return getStoredUser()?.role === 'admin' ? get('/admin/providers') : get('/providers')
+export function getProviders({ limit = 20, offset = 0 } = {}) {
+  const user = getStoredUser()
+  if (user?.role === 'admin') {
+    return getAdminProviders({ limit, offset })
+  }
+  return searchProviders({ limit, offset })
 }
 
 export const getProvider = (id) => get(`/providers/${id}`)

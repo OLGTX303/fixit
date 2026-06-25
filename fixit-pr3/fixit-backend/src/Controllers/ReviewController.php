@@ -72,7 +72,9 @@ final class ReviewController
 
     public function forProvider(Request $request, Response $response, array $args): Response
     {
-        $reviews = (new ReviewModel())->forProvider((int) $args['id']);
+        $params = $request->getQueryParams();
+        $limit = isset($params['limit']) ? min(50, max(1, (int) $params['limit'])) : 50;
+        $reviews = (new ReviewModel())->forProvider((int) $args['id'], $limit);
         return ResponseHelper::json($response, $reviews);
     }
 }
