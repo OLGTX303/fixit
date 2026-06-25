@@ -72,9 +72,23 @@ final class AdminController
 
     public function blockUser(Request $request, Response $response, array $args): Response
     {
+        $admin = $request->getAttribute('user');
+        $targetId = (int) $args['id'];
+        if ($targetId === (int) $admin['id']) {
+            return ResponseHelper::error($response, 'Cannot block your own account', 422);
+        }
+
         $data = (array) $request->getParsedBody();
         $model = new UserModel();
-        $model->setBlocked((int) $args['id'], (bool) ($data['blocked'] ?? false));
+        $target = $model->findById($targetId);
+        if (!$target) {
+            return ResponseHelper::error($response, 'User not found', 404);
+        }
+        if ($target['role'] === 'admin' && ($data['blocked'] ?? false)) {
+            return ResponseHelper::error($response, 'Cannot block admin accounts', 422);
+        }
+
+        $model->setBlocked($targetId, (bool) ($data['blocked'] ?? false));
         return ResponseHelper::json($response, ['ok' => true]);
     }
 
@@ -93,7 +107,10 @@ final class AdminController
 
     public function listHarmReviews(Request $request, Response $response): Response
     {
-        return ResponseHelper::json($response, (new HarmReviewModel())->listPending());
+        $p = $request->getQueryParams();
+        $limit = min(100, max(1, (int) ($p['limit'] ?? 50)));
+        $offset = max(0, (int) ($p['offset'] ?? 0));
+        return ResponseHelper::json($response, (new HarmReviewModel())->listPending($limit, $offset));
     }
 
     public function stripeStats(Request $request, Response $response): Response

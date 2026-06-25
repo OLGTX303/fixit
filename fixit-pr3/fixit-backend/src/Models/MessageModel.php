@@ -9,12 +9,15 @@ use FixIt\Database\Connection;
 final class MessageModel
 {
     /** @return list<array<string,mixed>> */
-    public function forJob(int $jobId): array
+    public function forJob(int $jobId, int $limit = 200, int $offset = 0): array
     {
+        $limit = max(1, min(200, $limit));
+        $offset = max(0, $offset);
         $stmt = Connection::get()->prepare(
-            'SELECT id, job_id, sender_id, body, ciphertext, iv, is_encrypted,
+            "SELECT id, job_id, sender_id, body, ciphertext, iv, is_encrypted,
                     harm_status, harm_categories, content_hash, sent_at
-             FROM Message WHERE job_id = :jid ORDER BY sent_at ASC'
+             FROM Message WHERE job_id = :jid ORDER BY sent_at ASC
+             LIMIT {$limit} OFFSET {$offset}"
         );
         $stmt->execute(['jid' => $jobId]);
         return array_map(fn ($row) => $this->format($row), $stmt->fetchAll());

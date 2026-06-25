@@ -87,4 +87,15 @@ final class CryptoModel
         );
         $stmt->execute(['jid' => $jobId, 'uid' => $userId, 'ek' => $encryptedJobKey, 'ek2' => $encryptedJobKey]);
     }
+
+    /** First-write wins — used when a peer provisions the other party's wrapped key. */
+    public function saveJobKeyIfAbsent(int $jobId, int $userId, string $encryptedJobKey): bool
+    {
+        $stmt = Connection::get()->prepare(
+            'INSERT IGNORE INTO JobCryptoKey (job_id, user_id, encrypted_job_key)
+             VALUES (:jid, :uid, :ek)'
+        );
+        $stmt->execute(['jid' => $jobId, 'uid' => $userId, 'ek' => $encryptedJobKey]);
+        return $stmt->rowCount() > 0;
+    }
 }

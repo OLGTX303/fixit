@@ -88,7 +88,7 @@ final class StripePaymentController
 
         $amountCents = (int) $data['amount_cents'];
         $bookingId = isset($data['booking_id']) ? (int) $data['booking_id'] : null;
-        $currency = (string) ($data['currency'] ?? 'usd');
+        $currency = (string) ($data['currency'] ?? 'myr');
 
         try {
             $result = $this->service()->payWithSavedMethod(

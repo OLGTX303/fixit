@@ -60,16 +60,52 @@ final class WalletModel
     public function creditJobPayout(int $userId, int $cents, int $jobId, string $currency = 'myr'): bool
     {
         $ref = 'job_' . $jobId;
+        try {
+            $this->add($userId, 'payout', $cents, $currency, $ref, 'Job payout #' . $jobId . ' (after 15% fee)');
+            return true;
+        } catch (\PDOException $e) {
+            if (str_contains($e->getMessage(), 'uq_wallet_payout_job') || (int) ($e->errorInfo[1] ?? 0) === 1062) {
+                return false;
+            }
+            throw $e;
+        }
+    }
+
+    /** Reverse a prior job payout on cancel/refund. Idempotent. */
+    public function clawBackJobPayout(int $userId, int $jobId, string $currency = 'myr'): bool
+    {
+        $ref = 'job_' . $jobId;
         $pdo = Connection::get();
-        $chk = $pdo->prepare(
-            "SELECT 1 FROM WalletTransaction WHERE kind = 'payout' AND stripe_ref = :ref LIMIT 1"
+        $stmt = $pdo->prepare(
+            "SELECT amount_cents FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'payout' AND stripe_ref = :ref AND status = 'settled'
+             LIMIT 1"
         );
-        $chk->execute(['ref' => $ref]);
+        $stmt->execute(['uid' => $userId, 'ref' => $ref]);
+        $cents = $stmt->fetchColumn();
+        if ($cents === false) {
+            return false;
+        }
+        $clawRef = 'clawback_' . $jobId;
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction WHERE kind = 'adjustment' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['ref' => $clawRef]);
         if ($chk->fetchColumn()) {
             return false;
         }
-        $this->add($userId, 'payout', $cents, $currency, $ref, 'Job payout #' . $jobId . ' (after 15% fee)');
+        $this->add($userId, 'adjustment', -(int) $cents, $currency, $clawRef, 'Payout clawback for cancelled job #' . $jobId);
         return true;
+    }
+
+    /** Lock wallet rows and return settled balance — use inside a transaction. */
+    public function lockAndBalance(int $userId): int
+    {
+        $pdo = Connection::get();
+        $pdo->prepare(
+            'SELECT id FROM WalletTransaction WHERE user_id = :uid FOR UPDATE'
+        )->execute(['uid' => $userId]);
+        return $this->balanceCents($userId);
     }
 
     public function add(

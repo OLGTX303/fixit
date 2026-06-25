@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useBookingsStore } from '../../stores/bookings'
-import { useAuthStore } from '../../stores/auth'
+
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import AppIcon from '../../components/AppIcon.vue'
@@ -12,8 +12,6 @@ const route = useRoute()
 const router = useRouter()
 const providersStore = useProvidersStore()
 const bookingsStore = useBookingsStore()
-const auth = useAuthStore()
-
 const provider = ref(null)
 
 // Booking form state (all v-model bound) — workflow #1 (Customer Booking).
@@ -49,6 +47,7 @@ onMounted(async () => {
 // A specific service can be selected from the provider's catalog (Book button).
 const selectedService = route.query.service ? String(route.query.service) : null
 const servicePrice    = route.query.price ? parseFloat(route.query.price) : null
+const providerServiceId = route.query.service_id ? Number(route.query.service_id) : null
 
 const ESTIMATED_HOURS = 2
 const platformFee = 5
@@ -62,25 +61,29 @@ const canSubmit = computed(() => form.value.date && form.value.time && form.valu
 
 async function confirm() {
   submitting.value = true
+  try {
   const notes = selectedService
     ? `[${selectedService}] ${form.value.notes}`.trim()
     : form.value.notes
   const booking = await bookingsStore.create({
-    customer_id:          auth.user.id,
     provider_id:          provider.value.id,
     category_id:          provider.value.category_ids[0],
     scheduled_at:         `${form.value.date}T${form.value.time}`,
     address:              form.value.address,
     notes:                notes,
-    total:                total.value,
+    provider_service_id:  providerServiceId || undefined,
     recurrence_type:      recurring.value ? recurrenceType.value : 'none',
     recurrence_end_date:  recurring.value && recurrenceEndDate.value ? recurrenceEndDate.value : null,
   })
-  submitting.value = false
   router.push({
     name: 'payment',
-    query: { booking_id: booking.id, amount: total.value.toFixed(2) },
+    query: { booking_id: booking.id, amount: booking.total?.toFixed(2) ?? total.value.toFixed(2) },
   })
+  } catch (e) {
+    alert(e.message || 'Booking failed')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 

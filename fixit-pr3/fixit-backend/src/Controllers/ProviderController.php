@@ -38,7 +38,7 @@ final class ProviderController
         if (!$provider) {
             return ResponseHelper::error($response, 'Provider not found', 404);
         }
-        return ResponseHelper::json($response, $provider);
+        return ResponseHelper::json($response, ProviderModel::stripContact($provider));
     }
 
     /** GET /api/providers/me — the logged-in provider's OWN profile, even when
@@ -161,6 +161,10 @@ final class ProviderController
         }
         if ($user['role'] !== 'admin' && (int) $existing['user_id'] !== (int) $user['id']) {
             return ResponseHelper::error($response, 'Forbidden', 403);
+        }
+
+        if ($model->hasJobs($id)) {
+            return ResponseHelper::error($response, 'Cannot delete provider with existing bookings', 409);
         }
 
         $model->delete($id);

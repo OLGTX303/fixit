@@ -27,7 +27,10 @@ final class MessageController
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 
-        $messages = (new MessageModel())->forJob($jobId);
+        $params = $request->getQueryParams();
+        $limit = isset($params['limit']) ? (int) $params['limit'] : 200;
+        $offset = isset($params['offset']) ? (int) $params['offset'] : 0;
+        $messages = (new MessageModel())->forJob($jobId, $limit, $offset);
         return ResponseHelper::json($response, $messages);
     }
 
@@ -59,9 +62,16 @@ final class MessageController
             }
         }
 
-        $harmStatus = (string) ($data['harm_status'] ?? 'clear');
-        if (!in_array($harmStatus, ['clear', 'flagged', 'blocked'], true)) {
+        $harmCategories = is_array($data['harm_categories'] ?? null) ? $data['harm_categories'] : [];
+        $clientHarm = (string) ($data['harm_status'] ?? 'clear');
+        if (!in_array($clientHarm, ['clear', 'flagged', 'blocked'], true)) {
             return ResponseHelper::error($response, 'Invalid harm_status', 422);
+        }
+        // Never trust client "clear" when categories were flagged, or when the
+        // client explicitly reports blocked.
+        $harmStatus = $clientHarm;
+        if ($clientHarm === 'blocked' || count($harmCategories) > 0) {
+            $harmStatus = $clientHarm === 'blocked' ? 'blocked' : 'flagged';
         }
         if ($harmStatus === 'blocked') {
             return ResponseHelper::error($response, 'Message blocked by safety review', 422);
@@ -73,7 +83,7 @@ final class MessageController
             'iv' => $isEncrypted ? (string) $data['iv'] : null,
             'is_encrypted' => $isEncrypted,
             'harm_status' => $harmStatus,
-            'harm_categories' => $data['harm_categories'] ?? [],
+            'harm_categories' => $harmCategories,
             'content_hash' => $data['content_hash'] ?? null,
         ];
 

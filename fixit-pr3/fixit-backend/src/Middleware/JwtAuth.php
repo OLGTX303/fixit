@@ -37,11 +37,13 @@ final class JwtAuth implements MiddlewareInterface
             return ResponseHelper::error(new SlimResponse(), 'This account has been suspended', 403);
         }
 
+        // Role always comes from DB — a demoted admin must not keep admin access
+        // until the JWT expires.
         $user = [
             'id' => (int) $claims->sub,
-            'role' => (string) $claims->role,
-            'email' => (string) $claims->email,
-            'name' => (string) $claims->name,
+            'role' => (string) $userRow['role'],
+            'email' => (string) $userRow['email'],
+            'name' => (string) $userRow['name'],
         ];
         return $handler->handle($request->withAttribute('user', $user));
     }

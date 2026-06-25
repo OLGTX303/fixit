@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FixIt\Services;
 
+use FixIt\Database\Connection;
+use FixIt\Models\BookingModel;
 use FixIt\Models\StripePaymentModel;
 use FixIt\Models\UserModel;
 use FixIt\Models\WalletModel;
@@ -140,7 +142,7 @@ final class StripeService
     }
 
     /** Pay with saved off-session PaymentMethod; handles 3DS via requires_action. */
-    public function payWithSavedMethod(int $userId, int $amountCents, ?int $bookingId = null, string $currency = 'usd'): array
+    public function payWithSavedMethod(int $userId, int $amountCents, ?int $bookingId = null, string $currency = 'myr'): array
     {
         $user = $this->users->findById($userId);
         if (!$user) {
@@ -156,6 +158,24 @@ final class StripeService
 
         if ($amountCents < 50) {
             throw new \RuntimeException('Amount must be at least 50 cents');
+        }
+
+        $currency = strtolower($currency);
+        if ($currency !== 'myr') {
+            throw new \RuntimeException('Only MYR payments are supported');
+        }
+
+        $pdo = Connection::get();
+        $lockedBooking = false;
+        if ($bookingId !== null) {
+            $pdo->beginTransaction();
+            try {
+                $this->assertBookingPayable($userId, $bookingId, $amountCents, true);
+                $lockedBooking = true;
+            } catch (\Throwable $e) {
+                $pdo->rollBack();
+                throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
+            }
         }
 
         $this->verifyPaymentMethodOwnership($customerId, $pmId);
@@ -174,7 +194,17 @@ final class StripeService
             ]),
         ]);
 
-        $this->payments->upsertFromPaymentIntent($userId, $intent, $bookingId);
+        try {
+            $this->payments->upsertFromPaymentIntent($userId, $intent, $bookingId);
+            if ($lockedBooking) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($lockedBooking) {
+                $pdo->rollBack();
+            }
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
+        }
 
         $result = [
             'payment_intent_id' => $intent->id,
@@ -217,6 +247,11 @@ final class StripeService
             throw new \RuntimeException('Top-up must be at least 50 cents');
         }
 
+        $currency = strtolower($currency);
+        if ($currency !== 'myr') {
+            throw new \RuntimeException('Only MYR top-ups are supported');
+        }
+
         $user = $this->users->findById($userId);
         $customerId = $user['stripe_test_customer_id'] ?? null;
         $pmId = $user['stripe_test_default_payment_method_id'] ?? null;
@@ -257,7 +292,7 @@ final class StripeService
             throw new \RuntimeException('Top-up not completed: ' . $intent->status);
         }
 
-        $this->wallet->add($userId, 'topup', $amountCents, $currency, $intent->id, 'Wallet top-up (card)');
+        $this->creditWalletTopUpIfNeeded($userId, (string) $intent->id, $amountCents);
 
         return [
             'status' => 'succeeded',
@@ -279,52 +314,69 @@ final class StripeService
             throw new \RuntimeException('Withdraw must be at least 50 cents');
         }
 
-        $balance = $this->wallet->balanceCents($userId);
-        if ($amountCents > $balance) {
-            throw new \RuntimeException('Insufficient wallet balance');
+        $pdo = Connection::get();
+        $pdo->beginTransaction();
+        try {
+            $balance = $this->wallet->lockAndBalance($userId);
+            if ($amountCents > $balance) {
+                throw new \RuntimeException('Insufficient wallet balance');
+            }
+            $this->wallet->add(
+                $userId,
+                'withdraw',
+                -$amountCents,
+                $currency,
+                'withdraw_pending_' . bin2hex(random_bytes(6)),
+                'Withdrawal to card (pending refund)'
+            );
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
         }
 
         $need = $amountCents;
         $refundIds = [];
-        foreach ($this->wallet->topupIntents($userId) as $piId) {
-            if ($need <= 0) {
-                break;
+        try {
+            foreach ($this->wallet->topupIntents($userId) as $piId) {
+                if ($need <= 0) {
+                    break;
+                }
+                $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
+                $charge = $pi->latest_charge;
+                if (!$charge || $charge->status !== 'succeeded') {
+                    continue;
+                }
+                $refundable = (int) $charge->amount - (int) $charge->amount_refunded;
+                if ($refundable <= 0) {
+                    continue;
+                }
+                $chunk = min($need, $refundable);
+                $refund = $this->stripe->refunds->create([
+                    'charge' => $charge->id,
+                    'amount' => $chunk,
+                    'metadata' => [
+                        'fixit_user_id' => (string) $userId,
+                        'fixit_purpose' => 'wallet_withdraw',
+                    ],
+                ]);
+                $refundIds[] = $refund->id;
+                $need -= $chunk;
             }
-            $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
-            $charge = $pi->latest_charge;
-            if (!$charge || $charge->status !== 'succeeded') {
-                continue;
+            if ($need > 0) {
+                throw new \RuntimeException('Could not refund full amount — try a smaller withdraw');
             }
-            $refundable = (int) $charge->amount - (int) $charge->amount_refunded;
-            if ($refundable <= 0) {
-                continue;
-            }
-            $chunk = min($need, $refundable);
-            $refund = $this->stripe->refunds->create([
-                'charge' => $charge->id,
-                'amount' => $chunk,
-                'metadata' => [
-                    'fixit_user_id' => (string) $userId,
-                    'fixit_purpose' => 'wallet_withdraw',
-                ],
-            ]);
-            $refundIds[] = $refund->id;
-            $need -= $chunk;
+        } catch (\Throwable $e) {
+            $this->wallet->add(
+                $userId,
+                'adjustment',
+                $amountCents,
+                $currency,
+                'withdraw_rollback_' . bin2hex(random_bytes(6)),
+                'Withdrawal rollback — Stripe refund failed'
+            );
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
         }
-
-        if ($need > 0) {
-            // Should not happen given the balance check, but never over-promise money.
-            throw new \RuntimeException('Could not refund full amount — try a smaller withdraw');
-        }
-
-        $this->wallet->add(
-            $userId,
-            'withdraw',
-            -$amountCents,
-            $currency,
-            $refundIds[0] ?? null,
-            'Withdrawal to card (refund)'
-        );
 
         return [
             'status' => 'succeeded',
@@ -347,66 +399,37 @@ final class StripeService
             throw new \RuntimeException('Withdraw must be at least 50 cents');
         }
 
-        $balance = $this->wallet->balanceCents($userId);
-        if ($amountCents > $balance) {
-            throw new \RuntimeException('Insufficient wallet balance');
-        }
+        $pdo = Connection::get();
+        $pdo->beginTransaction();
+        try {
+            $balance = $this->wallet->lockAndBalance($userId);
+            if ($amountCents > $balance) {
+                throw new \RuntimeException('Insufficient wallet balance');
+            }
 
-        $need = $amountCents;
-        $refundIds = [];
-        foreach ($this->payments->refundableIntents() as $piId) {
-            if ($need <= 0) {
-                break;
-            }
-            try {
-                $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
-            } catch (ApiErrorException) {
-                continue;
-            }
-            $charge = $pi->latest_charge;
-            if (!$charge || $charge->status !== 'succeeded') {
-                continue;
-            }
-            $refundable = (int) $charge->amount - (int) $charge->amount_refunded;
-            if ($refundable <= 0) {
-                continue;
-            }
-            $chunk = min($need, $refundable);
-            $refund = $this->stripe->refunds->create([
-                'charge' => $charge->id,
-                'amount' => $chunk,
-                'metadata' => [
-                    'fixit_user_id' => (string) $userId,
-                    'fixit_purpose' => 'provider_withdraw',
-                ],
-            ]);
-            $refundIds[] = $refund->id;
-            $need -= $chunk;
+            // Test mode: debit the provider ledger only. Provider earnings are
+            // virtual credits — never refund unrelated customer top-up charges.
+            $this->wallet->add(
+                $userId,
+                'withdraw',
+                -$amountCents,
+                $currency,
+                'provider_payout_' . bin2hex(random_bytes(8)),
+                'Provider withdrawal (test ledger)'
+            );
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
         }
-
-        if ($need > 0) {
-            throw new \RuntimeException('No refundable Stripe charges available to fund this withdrawal');
-        }
-
-        $this->wallet->add(
-            $userId,
-            'withdraw',
-            -$amountCents,
-            $currency,
-            $refundIds[0] ?? null,
-            'Withdrawal to bank (Stripe refund)'
-        );
 
         return [
             'status' => 'succeeded',
             'amount_cents' => $amountCents,
-            'refund_ids' => $refundIds,
             'balance_cents' => $this->wallet->balanceCents($userId),
-            // TEST-ONLY: refunds platform top-up charges — not a real bank payout.
-            // Production needs Stripe Connect transfers to provider bank accounts.
-            'payout_method' => 'stripe_refund_test',
+            'payout_method' => 'ledger_test',
             'test_mode' => true,
-            'warning' => 'Provider withdrawal uses Stripe test refunds, not a real bank payout. Use Stripe Connect for production.',
+            'warning' => 'Provider withdrawal debits the test ledger only. Use Stripe Connect for production bank payouts.',
         ];
     }
 
@@ -418,39 +441,45 @@ final class StripeService
      */
     public function refundBookingIfPaid(int $bookingId, int $customerUserId): bool
     {
-        $payment = $this->payments->findSucceededByBooking($bookingId);
-        if (!$payment) {
+        $payments = $this->payments->findAllSucceededByBooking($bookingId);
+        if (!$payments) {
             return false;
         }
-        if ((int) $payment['user_id'] !== $customerUserId) {
-            throw new \RuntimeException('Payment owner mismatch');
+
+        $refundedAny = false;
+        foreach ($payments as $payment) {
+            if ((int) $payment['user_id'] !== $customerUserId) {
+                throw new \RuntimeException('Payment owner mismatch');
+            }
+
+            $piId = (string) $payment['stripe_payment_intent_id'];
+            $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
+            $charge = $pi->latest_charge ?? null;
+            if (!$charge || !isset($charge->id)) {
+                continue;
+            }
+
+            $refundable = (int) $charge->amount - (int) ($charge->amount_refunded ?? 0);
+            if ($refundable <= 0) {
+                continue;
+            }
+
+            $this->stripe->refunds->create([
+                'charge' => $charge->id,
+                'amount' => $refundable,
+                'metadata' => [
+                    'fixit_booking_id' => (string) $bookingId,
+                    'fixit_purpose' => 'booking_cancel',
+                    'stripe_mode' => 'test',
+                ],
+            ]);
+            $refundedAny = true;
         }
 
-        $piId = (string) $payment['stripe_payment_intent_id'];
-        $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
-        $charge = $pi->latest_charge ?? null;
-        if (!$charge || !isset($charge->id)) {
+        if ($refundedAny) {
             $this->payments->markRefunded($bookingId);
-            return false;
         }
-
-        $refundable = (int) $charge->amount - (int) ($charge->amount_refunded ?? 0);
-        if ($refundable <= 0) {
-            $this->payments->markRefunded($bookingId);
-            return false;
-        }
-
-        $this->stripe->refunds->create([
-            'charge' => $charge->id,
-            'amount' => $refundable,
-            'metadata' => [
-                'fixit_booking_id' => (string) $bookingId,
-                'fixit_purpose' => 'booking_cancel',
-                'stripe_mode' => 'test',
-            ],
-        ]);
-        $this->payments->markRefunded($bookingId);
-        return true;
+        return $refundedAny;
     }
 
     public function detachSavedPaymentMethod(int $userId): void
@@ -538,6 +567,51 @@ final class StripeService
             : null;
         if ($userId > 0) {
             $this->payments->upsertFromPaymentIntent($userId, $intent, $bookingId);
+            if (($intent->metadata->fixit_purpose ?? '') === 'wallet_topup') {
+                $this->creditWalletTopUpIfNeeded($userId, (string) $intent->id, (int) $intent->amount);
+            }
+        }
+    }
+
+    private function creditWalletTopUpIfNeeded(int $userId, string $piId, int $amountCents): void
+    {
+        $pdo = Connection::get();
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'topup' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['uid' => $userId, 'ref' => $piId]);
+        if ($chk->fetchColumn()) {
+            return;
+        }
+        $this->wallet->add($userId, 'topup', $amountCents, 'myr', $piId, 'Wallet top-up (card, 3DS confirmed)');
+    }
+
+    private function assertBookingPayable(int $userId, int $bookingId, int $amountCents, bool $forUpdate = false): void
+    {
+        $pdo = Connection::get();
+        $sql = 'SELECT customer_id, status, total FROM Job WHERE id = :id';
+        if ($forUpdate) {
+            $sql .= ' FOR UPDATE';
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['id' => $bookingId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new \RuntimeException('Booking not found');
+        }
+        if ((int) $row['customer_id'] !== $userId) {
+            throw new \RuntimeException('Booking does not belong to this user');
+        }
+        if (!in_array($row['status'], ['requested', 'accepted'], true)) {
+            throw new \RuntimeException('Booking is not payable in its current status');
+        }
+        if ($this->payments->findSucceededByBooking($bookingId)) {
+            throw new \RuntimeException('Booking has already been paid');
+        }
+        $expectedCents = (int) round(((float) ($row['total'] ?? 0)) * 100);
+        if ($expectedCents > 0 && $amountCents !== $expectedCents) {
+            throw new \RuntimeException('Payment amount does not match booking total');
         }
     }
 

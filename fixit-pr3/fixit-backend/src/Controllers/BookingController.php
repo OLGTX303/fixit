@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace FixIt\Controllers;
 
 use FixIt\Models\BookingModel;
+use FixIt\Models\CategoryModel;
 use FixIt\Models\ProviderModel;
+use FixIt\Models\ProviderServiceModel;
+use FixIt\Models\StripePaymentModel;
 use FixIt\Models\WalletModel;
 use FixIt\Services\StripeService;
 use FixIt\Support\ResponseHelper;
@@ -15,6 +18,9 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class BookingController
 {
+    private const PLATFORM_FEE = 5.0;
+    private const ESTIMATED_HOURS = 2;
+
     private const TRANSITIONS = [
         'requested' => ['accepted', 'cancelled'],
         'accepted' => ['in_progress', 'cancelled'],
@@ -61,6 +67,15 @@ final class BookingController
             return ResponseHelper::error($response, 'Provider not available', 422);
         }
 
+        $categoryId = (int) $data['category_id'];
+        if (!(new CategoryModel())->find($categoryId)) {
+            return ResponseHelper::error($response, 'Invalid category_id', 422);
+        }
+        $providerCategories = (new ProviderModel())->getEnriched((int) $data['provider_id'])['category_ids'] ?? [];
+        if (!in_array($categoryId, $providerCategories, true)) {
+            return ResponseHelper::error($response, 'Provider does not offer this category', 422);
+        }
+
         // Normalize to MySQL DATETIME; reject unparseable input as 422 (not a 500).
         $ts = strtotime(str_replace('T', ' ', (string) $data['scheduled_at']));
         if ($ts === false) {
@@ -77,13 +92,15 @@ final class BookingController
             $recurrenceEnd = date('Y-m-d', strtotime((string) $data['recurrence_end_date'])) ?: null;
         }
 
+        $computedTotal = self::computeBookingTotal($provider, $data);
+
         $booking = (new BookingModel())->create([
             'customer_id'          => (int) $user['id'],
             'provider_id'          => (int) $data['provider_id'],
-            'category_id'          => (int) $data['category_id'],
+            'category_id'          => $categoryId,
             'scheduled_at'         => $scheduledAt,
             'address'              => Validator::cleanText((string) $data['address'], 255),
-            'total'                => isset($data['total']) ? (float) $data['total'] : null,
+            'total'                => $computedTotal,
             'notes'                => isset($data['notes']) ? Validator::cleanText((string) $data['notes'], 2000) : null,
             'status'               => 'requested',
             'recurrence_type'      => $recurrenceType,
@@ -171,7 +188,15 @@ final class BookingController
                     return ResponseHelper::error($response, 'Refund failed: ' . $e->getMessage(), 502);
                 }
             }
-            return ResponseHelper::json($response, $model->updateStatus($id, 'cancelled'));
+            $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
+            if ($providerUserId > 0) {
+                (new WalletModel())->clawBackJobPayout($providerUserId, $id);
+            }
+            $updated = $model->updateStatus($id, 'cancelled', $current);
+            if (!$updated) {
+                return ResponseHelper::error($response, 'Booking status changed concurrently — refresh and retry', 409);
+            }
+            return ResponseHelper::json($response, $updated);
         }
 
         if ($user['role'] !== 'admin') {
@@ -181,14 +206,28 @@ final class BookingController
             }
         }
 
-        if ($user['role'] === 'customer' && $newStatus !== 'reviewed') {
-            return ResponseHelper::error($response, 'Customers may only mark jobs as reviewed', 403);
+        if ($user['role'] === 'customer') {
+            return ResponseHelper::error($response, 'Customers cannot change booking status directly', 403);
         }
         if ($user['role'] === 'provider' && $newStatus === 'reviewed') {
             return ResponseHelper::error($response, 'Providers cannot mark jobs as reviewed', 403);
         }
 
-        $updated = $model->updateStatus($id, $newStatus);
+        if ($newStatus === 'completed' && $current !== 'completed') {
+            $payment = (new StripePaymentModel())->findSucceededByBooking($id);
+            if (!$payment) {
+                return ResponseHelper::error($response, 'Cannot complete — booking has not been paid', 422);
+            }
+            $expectedCents = (int) round(((float) ($booking['total'] ?? 0)) * 100);
+            if ($expectedCents > 0 && (int) $payment['amount_cents'] < $expectedCents) {
+                return ResponseHelper::error($response, 'Cannot complete — payment amount is insufficient', 422);
+            }
+        }
+
+        $updated = $model->updateStatus($id, $newStatus, $user['role'] === 'admin' ? null : $current);
+        if (!$updated) {
+            return ResponseHelper::error($response, 'Booking status changed concurrently — refresh and retry', 409);
+        }
 
         // On first completion, credit the provider's real wallet ledger with their
         // payout (total minus 15% platform fee). Idempotent on the job id, so the
@@ -203,6 +242,31 @@ final class BookingController
         }
 
         return ResponseHelper::json($response, $updated);
+    }
+
+    /** Server-side price — never trust client-supplied totals. */
+    private static function computeBookingTotal(array $provider, array $data): float
+    {
+        $subtotal = 0.0;
+        if (!empty($data['provider_service_id'])) {
+            $svc = (new ProviderServiceModel())->find((int) $data['provider_service_id']);
+            if (
+                $svc
+                && (int) $svc['provider_id'] === (int) $provider['id']
+                && $svc['is_active']
+            ) {
+                $subtotal = (float) $svc['price'];
+            }
+        }
+        if ($subtotal <= 0) {
+            $rateType = $provider['rate_type'] ?? 'hourly';
+            if ($rateType === 'per_job' && isset($provider['per_job_rate'])) {
+                $subtotal = (float) $provider['per_job_rate'];
+            } else {
+                $subtotal = (float) $provider['base_rate'] * self::ESTIMATED_HOURS;
+            }
+        }
+        return round($subtotal + self::PLATFORM_FEE, 2);
     }
 
     public function delete(Request $request, Response $response, array $args): Response
