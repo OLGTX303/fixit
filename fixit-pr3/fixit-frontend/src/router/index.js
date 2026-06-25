@@ -23,6 +23,7 @@ const routes = [
   { path: '/book/:id', name: 'booking-form', component: () => import('../views/customer/BookingFormView.vue'), meta: { role: 'customer' } },
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
   { path: '/favorites', name: 'favorites', component: () => import('../views/customer/FavouritesView.vue'), meta: { role: 'customer' } },
+  { path: '/history', name: 'browsing-history', component: () => import('../views/customer/BrowsingHistoryView.vue'), meta: { role: 'customer' } },
   { path: '/cart', name: 'cart', component: () => import('../views/customer/CartView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id', name: 'job-detail', component: () => import('../views/customer/JobDetailView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },
@@ -46,6 +47,7 @@ const routes = [
   { path: '/admin/users', name: 'admin-users', component: () => import('../views/admin/UserManagementView.vue'), meta: { role: 'admin' } },
   { path: '/admin/bookings', name: 'admin-bookings', component: () => import('../views/admin/BookingReviewView.vue'), meta: { role: 'admin' } },
   { path: '/admin/harm-reviews', name: 'admin-harm', component: () => import('../views/admin/HarmReviewView.vue'), meta: { role: 'admin' } },
+  { path: '/admin/coupons', name: 'admin-coupons', component: () => import('../views/admin/AdminCouponsView.vue'), meta: { role: 'admin' } },
   { path: '/admin/chats', name: 'admin-chats', component: () => import('../views/admin/AdminChatView.vue'), meta: { role: 'admin' } },
 ]
 

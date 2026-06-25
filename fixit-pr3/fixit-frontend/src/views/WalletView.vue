@@ -5,6 +5,7 @@ import { useBookingsStore } from '../stores/bookings'
 import { useWalletStore } from '../stores/wallet'
 import { getStripe, mountSaveCardElement } from '../services/stripePayments'
 import * as api from '../services/api'
+import { useModalGuard } from '../composables/useModalGuard'
 
 const auth = useAuthStore()
 const bookingsStore = useBookingsStore()
@@ -25,6 +26,7 @@ onMounted(async () => {
 // ── Top-up / withdraw bottom sheet ───────────────────────────────────────────
 const TOPUP_OPTIONS = [10, 20, 50, 100, 200]
 const showSheet  = ref(false)
+useModalGuard(showSheet)
 const sheetMode  = ref('topup')  // 'topup' | 'withdraw'
 const topupAmt   = ref(null)
 const sheetStep  = ref('amount') // 'amount' | 'pay'
@@ -57,13 +59,11 @@ function openSheet(mode = 'topup') {
   stripeOk.value  = false
   useNewCard.value = false
   showSheet.value = true
-  document.body.classList.add('sheet-open')
 }
 const openWithdraw = () => openSheet('withdraw')
 
 function closeSheet() {
   showSheet.value = false
-  document.body.classList.remove('sheet-open')
   cardSession?.destroy()
   cardSession = null
   useNewCard.value = false
@@ -214,7 +214,6 @@ async function providerWithdraw() {
 
 onUnmounted(() => {
   cardSession?.destroy()
-  document.body.classList.remove('sheet-open')
 })
 
 // ── Provider income ─────────────────────────────────────────────────────────

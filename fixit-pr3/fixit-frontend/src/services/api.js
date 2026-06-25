@@ -198,16 +198,18 @@ function toServerDatetime(value) {
 export async function createBooking(payload) {
   const scheduled = payload.scheduled_at
     || (payload.date && payload.time ? `${payload.date}T${payload.time}` : null)
-  return post('/bookings', {
+  const body = {
     provider_id:          payload.provider_id,
     category_id:          payload.category_id,
     scheduled_at:         toServerDatetime(scheduled),
     address:              payload.address,
-    total:                payload.total,
     notes:                payload.notes,
     recurrence_type:      payload.recurrence_type || 'none',
     recurrence_end_date:  payload.recurrence_end_date || null,
-  })
+    provider_service_id:  payload.provider_service_id || undefined,
+  }
+  if (payload.coupon_code) body.coupon_code = payload.coupon_code
+  return post('/bookings', body)
 }
 
 export const setProviderVerification = (providerId, isVerified) =>
@@ -282,3 +284,32 @@ export function getFavorites({ limit = 20, offset = 0 } = {}) {
 }
 export const favoriteProvider = (providerId) => post(`/providers/${providerId}/favorite`)
 export const unfavoriteProvider = (providerId) => del(`/providers/${providerId}/favorite`)
+
+// ── Coupons ──────────────────────────────────────────────────────────────────
+export const validateCoupon = (payload) => post('/coupons/validate', payload)
+export function getAvailableCoupons(providerId) {
+  return get(`/coupons/available?provider_id=${providerId}`)
+}
+export const getMyCoupons = () => get('/me/coupons')
+export const createMyCoupon = (payload) => post('/me/coupons', payload)
+export const updateMyCoupon = (id, payload) => put(`/me/coupons/${id}`, payload)
+export const deleteMyCoupon = (id) => del(`/me/coupons/${id}`)
+export function getAdminCoupons({ limit = 25, offset = 0 } = {}) {
+  const p = new URLSearchParams()
+  p.set('limit', limit)
+  p.set('offset', offset)
+  return get(`/admin/coupons?${p.toString()}`)
+}
+export const createAdminCoupon = (payload) => post('/admin/coupons', payload)
+export const updateAdminCoupon = (id, payload) => put(`/admin/coupons/${id}`, payload)
+export const deleteAdminCoupon = (id) => del(`/admin/coupons/${id}`)
+
+// ── Browsing history ─────────────────────────────────────────────────────────
+export const recordBrowsingHistory = (providerId) => post('/me/history', { provider_id: providerId })
+export function getBrowsingHistory({ limit = 20, offset = 0 } = {}) {
+  const p = new URLSearchParams()
+  p.set('limit', limit)
+  p.set('offset', offset)
+  return get(`/me/history?${p.toString()}`)
+}
+export const clearBrowsingHistory = () => del('/me/history')

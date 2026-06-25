@@ -669,10 +669,14 @@ button.fx-card:hover {
 
 /* ─── Bottom Tab Nav → Liquid Glass Floating Dock ───────────────────── */
 body.sheet-open .fx-bottomnav,
-body.provider-page .fx-bottomnav {
+body.provider-page .fx-bottomnav,
+body.fx-modal-open .fx-bottomnav {
   transform: translateX(-50%) translateY(120%);
   pointer-events: none;
   transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+}
+body.fx-modal-open .fx-bottomnav {
+  display: none;
 }
 .fx-bottomnav {
   transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
@@ -769,10 +773,12 @@ body.fx-desktop {
     max-width: none;
   }
 
-  /* Exit right on sheet-open */
+  /* Exit right on sheet-open / modal */
   body.sheet-open .fx-bottomnav,
-  body.provider-page .fx-bottomnav {
+  body.provider-page .fx-bottomnav,
+  body.fx-modal-open .fx-bottomnav {
     transform: translateY(-50%) translateX(200%) !important;
+    display: none !important;
   }
 
   /* Icon-only items stacked in column */

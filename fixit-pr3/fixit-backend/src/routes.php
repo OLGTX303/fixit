@@ -8,7 +8,9 @@ use FixIt\Controllers\AvailabilityController;
 use FixIt\Controllers\BookingController;
 use FixIt\Controllers\CategoryController;
 use FixIt\Controllers\CryptoController;
+use FixIt\Controllers\CouponController;
 use FixIt\Controllers\FavoriteController;
+use FixIt\Controllers\HistoryController;
 use FixIt\Controllers\KycController;
 use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
@@ -40,10 +42,12 @@ return function (App $app): void {
     $wallet = new WalletController();
     $providerServices = new ProviderServiceController();
     $favorites = new FavoriteController();
+    $coupons = new CouponController();
+    $history = new HistoryController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices, $favorites
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices, $favorites, $coupons, $history
     ) {
         // Stripe webhook �?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
@@ -63,7 +67,7 @@ return function (App $app): void {
         $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites, $rateLimit
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites, $coupons, $history, $rateLimit
         ) {
             $secure->post('/providers/{id}/services', [$providerServices, 'create'])
                 ->add(new RoleGuard(['provider', 'admin']));
@@ -145,6 +149,36 @@ return function (App $app): void {
             $secure->post('/providers/{id}/favorite', [$favorites, 'add'])
                 ->add(new RoleGuard(['customer']));
             $secure->delete('/providers/{id}/favorite', [$favorites, 'remove'])
+                ->add(new RoleGuard(['customer']));
+
+            $secure->post('/coupons/validate', [$coupons, 'validate'])
+                ->add(new RoleGuard(['customer']));
+            $secure->get('/coupons/available', [$coupons, 'available'])
+                ->add(new RoleGuard(['customer']));
+
+            $secure->get('/me/coupons', [$coupons, 'listMine'])
+                ->add(new RoleGuard(['provider']));
+            $secure->post('/me/coupons', [$coupons, 'createMine'])
+                ->add(new RoleGuard(['provider']));
+            $secure->put('/me/coupons/{id}', [$coupons, 'updateMine'])
+                ->add(new RoleGuard(['provider']));
+            $secure->delete('/me/coupons/{id}', [$coupons, 'deleteMine'])
+                ->add(new RoleGuard(['provider']));
+
+            $secure->get('/admin/coupons', [$coupons, 'listAdmin'])
+                ->add(new RoleGuard(['admin']));
+            $secure->post('/admin/coupons', [$coupons, 'createAdmin'])
+                ->add(new RoleGuard(['admin']));
+            $secure->put('/admin/coupons/{id}', [$coupons, 'updateAdmin'])
+                ->add(new RoleGuard(['admin']));
+            $secure->delete('/admin/coupons/{id}', [$coupons, 'deleteAdmin'])
+                ->add(new RoleGuard(['admin']));
+
+            $secure->post('/me/history', [$history, 'record'])
+                ->add(new RoleGuard(['customer']));
+            $secure->get('/me/history', [$history, 'list'])
+                ->add(new RoleGuard(['customer']));
+            $secure->delete('/me/history', [$history, 'clear'])
                 ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);

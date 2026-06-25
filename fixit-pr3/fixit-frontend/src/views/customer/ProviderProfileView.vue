@@ -6,6 +6,7 @@ import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import { useFavoritesStore } from '../../stores/favorites'
+import { useModalGuard } from '../../composables/useModalGuard'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -65,7 +66,10 @@ async function toggleFavorite() {
 
 onMounted(async () => {
   document.body.classList.add('provider-page')
-  if (auth.role === 'customer') favorites.load().catch(() => {})
+  if (auth.role === 'customer') {
+    favorites.load().catch(() => {})
+    api.recordBrowsingHistory(Number(route.params.id)).catch(() => {})
+  }
   try { provider.value = await api.getProvider(route.params.id) } catch {}
   inCart.value = isInCart()
   try { reviews.value = await api.getReviewsForProvider(route.params.id) } catch {}
@@ -131,6 +135,8 @@ async function messageProvider() {
 }
 
 const editing      = ref(false)
+useModalGuard(editing)
+useModalGuard(lightboxUrl)
 const editBio      = ref('')
 const editLocation = ref('')
 const editRate     = ref('')

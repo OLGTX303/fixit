@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useChatCryptoStore } from '../stores/chatCrypto'
+import { useModalGuard } from '../composables/useModalGuard'
+
+useModalGuard()
 
 const props = defineProps({ mode: { type: String, required: true } }) // setup | unlock
 const emit  = defineEmits(['done'])

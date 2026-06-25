@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import * as api from '../../services/api'
 import { getStripe, mountSaveCardElement, payWithSavedCard } from '../../services/stripePayments'
 import AppIcon from '../../components/AppIcon.vue'
+import { useModalGuard } from '../../composables/useModalGuard'
+
+useModalGuard()
 
 const route = useRoute()
 const router = useRouter()

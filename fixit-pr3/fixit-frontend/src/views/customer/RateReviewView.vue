@@ -6,6 +6,9 @@ import { useProvidersStore } from '../../stores/providers'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import { useModalGuard } from '../../composables/useModalGuard'
+
+useModalGuard()
 
 const route = useRoute()
 const router = useRouter()

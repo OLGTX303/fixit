@@ -6,6 +6,7 @@ namespace FixIt\Controllers;
 
 use FixIt\Models\BookingModel;
 use FixIt\Models\CategoryModel;
+use FixIt\Models\CouponModel;
 use FixIt\Models\ProviderModel;
 use FixIt\Models\ProviderServiceModel;
 use FixIt\Models\StripePaymentModel;
@@ -94,20 +95,56 @@ final class BookingController
 
         $computedTotal = self::computeBookingTotal($provider, $data);
 
-        $booking = (new BookingModel())->create([
+        $couponId = null;
+        $discountAmount = 0.0;
+        $finalTotal = $computedTotal;
+
+        if (!empty($data['coupon_code'])) {
+            $couponModel = new CouponModel();
+            $validation = $couponModel->validate(
+                (string) $data['coupon_code'],
+                (int) $data['provider_id'],
+                $computedTotal,
+                (int) $user['id']
+            );
+            if (!$validation['valid']) {
+                return ResponseHelper::error($response, $validation['message'], 422);
+            }
+            $couponId = (int) $validation['coupon_id'];
+            $discountAmount = (float) $validation['discount_amount'];
+            $finalTotal = (float) $validation['final_total'];
+        }
+
+        $bookingModel = new BookingModel();
+        $booking = $bookingModel->create([
             'customer_id'          => (int) $user['id'],
             'provider_id'          => (int) $data['provider_id'],
             'category_id'          => $categoryId,
             'scheduled_at'         => $scheduledAt,
             'address'              => Validator::cleanText((string) $data['address'], 255),
-            'total'                => $computedTotal,
+            'total'                => $finalTotal,
+            'coupon_id'            => $couponId,
+            'discount_amount'      => $discountAmount > 0 ? $discountAmount : null,
             'notes'                => isset($data['notes']) ? Validator::cleanText((string) $data['notes'], 2000) : null,
             'status'               => 'requested',
             'recurrence_type'      => $recurrenceType,
             'recurrence_end_date'  => $recurrenceEnd,
         ]);
 
-        return ResponseHelper::json($response, $booking, 201);
+        if ($couponId !== null) {
+            $redeemed = (new CouponModel())->redeem(
+                $couponId,
+                (int) $user['id'],
+                (int) $booking['id'],
+                $discountAmount
+            );
+            if (!$redeemed) {
+                $bookingModel->delete((int) $booking['id']);
+                return ResponseHelper::error($response, 'Coupon could not be applied — please try again', 409);
+            }
+        }
+
+        return ResponseHelper::json($response, $bookingModel->findEnriched((int) $booking['id']) ?? $booking, 201);
     }
 
     /**
