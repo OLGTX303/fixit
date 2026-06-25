@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
 import { useInfiniteList } from '../../composables/useInfiniteList'
+import { useModalGuard } from '../../composables/useModalGuard'
 import * as api from '../../services/api'
 
 const auth = useAuthStore()
@@ -12,6 +13,7 @@ const router = useRouter()
 const activeTab = ref('all')
 const cancellingId = ref(null)
 const confirmId = ref(null)
+useModalGuard(confirmId)
 
 const TABS = [
   { key: 'all',       label: 'All' },

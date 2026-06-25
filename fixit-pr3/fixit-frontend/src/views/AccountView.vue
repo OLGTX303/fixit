@@ -71,7 +71,7 @@ async function onAvatarSelected(e) {
 // Customer quick actions (no Wallet — already in stats row)
 const CUSTOMER_QUICK = [
   { icon: 'star',          label: 'Favourites', to: 'favorites' },
-  { icon: 'history',       label: 'History',    to: 'job-tracker' },
+  { icon: 'history',       label: 'History',    to: 'browsing-history' },
   { icon: 'redeem',        label: 'Coupons',    to: null },
   { icon: 'shopping_cart', label: 'Cart',       to: 'cart' },
 ]
@@ -228,6 +228,18 @@ const CUSTOMER_QUICK = [
           <div class="adm-card-body">
             <div class="adm-card-title">Reviews</div>
             <div class="adm-card-sub">Moderate feedback</div>
+          </div>
+          <span class="material-symbols-outlined adm-chevron">chevron_right</span>
+        </button>
+
+        <!-- System coupons -->
+        <button class="adm-card" @click="router.push({ name: 'admin-coupons' })">
+          <div class="adm-card-icon" style="background:rgba(255,102,53,0.12);color:#FF6635">
+            <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">redeem</span>
+          </div>
+          <div class="adm-card-body">
+            <div class="adm-card-title">Coupons</div>
+            <div class="adm-card-sub">System-wide discounts</div>
           </div>
           <span class="material-symbols-outlined adm-chevron">chevron_right</span>
         </button>

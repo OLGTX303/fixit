@@ -29,7 +29,7 @@ final class BookingModel
     public function listForUser(array $user, int $limit = 0, int $offset = 0, ?string $statusFilter = null): array
     {
         $sql = "SELECT j.id, j.customer_id, j.provider_id, j.category_id, j.status,
-                       j.scheduled_at, j.address, j.total, j.notes,
+                       j.scheduled_at, j.address, j.total, j.coupon_id, j.discount_amount, j.notes,
                        j.recurrence_type, j.recurrence_end_date,
                        cu.id AS cu_id, cu.name AS cu_name, cu.email AS cu_email, cu.role AS cu_role,
                        cu.phone AS cu_phone, cu.avatar_url AS cu_avatar_url,
@@ -129,9 +129,10 @@ final class BookingModel
         $pdo = Connection::get();
         $stmt = $pdo->prepare(
             'INSERT INTO Job
-             (customer_id, provider_id, category_id, status, scheduled_at, address, total, notes,
-              recurrence_type, recurrence_end_date)
-             VALUES (:cid, :pid, :cat, :status, :scheduled, :address, :total, :notes, :rec_type, :rec_end)'
+             (customer_id, provider_id, category_id, status, scheduled_at, address, total,
+              coupon_id, discount_amount, notes, recurrence_type, recurrence_end_date)
+             VALUES (:cid, :pid, :cat, :status, :scheduled, :address, :total,
+                     :coupon_id, :discount, :notes, :rec_type, :rec_end)'
         );
         $stmt->execute([
             'cid'      => $data['customer_id'],
@@ -141,6 +142,8 @@ final class BookingModel
             'scheduled'=> $data['scheduled_at'],
             'address'  => $data['address'],
             'total'    => $data['total'] ?? null,
+            'coupon_id'=> $data['coupon_id'] ?? null,
+            'discount' => $data['discount_amount'] ?? null,
             'notes'    => $data['notes'] ?? null,
             'rec_type' => $data['recurrence_type'] ?? 'none',
             'rec_end'  => $data['recurrence_end_date'] ?? null,
@@ -240,6 +243,10 @@ final class BookingModel
             'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
             'address'              => $row['address'],
             'total'                => $row['total'] !== null ? (float) $row['total'] : null,
+            'coupon_id'            => isset($row['coupon_id']) && $row['coupon_id'] !== null
+                ? (int) $row['coupon_id'] : null,
+            'discount_amount'      => isset($row['discount_amount']) && $row['discount_amount'] !== null
+                ? (float) $row['discount_amount'] : null,
             'notes'                => $row['notes'],
             'recurrence_type'      => $row['recurrence_type'] ?? 'none',
             'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,
@@ -296,6 +303,10 @@ final class BookingModel
             'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
             'address'              => $row['address'],
             'total'                => $row['total'] !== null ? (float) $row['total'] : null,
+            'coupon_id'            => isset($row['coupon_id']) && $row['coupon_id'] !== null
+                ? (int) $row['coupon_id'] : null,
+            'discount_amount'      => isset($row['discount_amount']) && $row['discount_amount'] !== null
+                ? (float) $row['discount_amount'] : null,
             'notes'                => $row['notes'],
             'recurrence_type'      => $row['recurrence_type'] ?? 'none',
             'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,

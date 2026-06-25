@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useBookingsStore } from '../../stores/bookings'
+import { useModalGuard } from '../../composables/useModalGuard'
 
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
@@ -18,6 +19,15 @@ const provider = ref(null)
 const form = ref({ date: '', time: '', address: '14 Maple Street, Apt 3', notes: '' })
 const times = ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
 const submitting = ref(false)
+const couponCode = ref('')
+const couponMsg = ref('')
+const couponDiscount = ref(0)
+const couponApplied = ref(null)
+const availableCoupons = ref([])
+const showCouponPicker = ref(false)
+const applyingCoupon = ref(false)
+
+useModalGuard(showCouponPicker)
 
 // Recurring booking (stretch goal)
 const recurring = ref(false)
@@ -42,6 +52,9 @@ onMounted(async () => {
   ])
   form.value.date = dates.value[0].iso
   form.value.time = times[0]
+  try {
+    availableCoupons.value = await api.getAvailableCoupons(Number(route.params.id))
+  } catch { availableCoupons.value = [] }
 })
 
 // A specific service can be selected from the provider's catalog (Book button).
@@ -56,8 +69,51 @@ const subtotal = computed(() => {
   if (!provider.value) return 0
   return servicePrice != null ? servicePrice : provider.value.base_rate * ESTIMATED_HOURS
 })
-const total = computed(() => (provider.value ? subtotal.value + platformFee : 0))
+const preDiscountTotal = computed(() => (provider.value ? subtotal.value + platformFee : 0))
+const total = computed(() => Math.max(0, preDiscountTotal.value - couponDiscount.value))
 const canSubmit = computed(() => form.value.date && form.value.time && form.value.address)
+
+async function applyCoupon(code = couponCode.value) {
+  if (!provider.value || !code?.trim()) return
+  applyingCoupon.value = true
+  couponMsg.value = ''
+  try {
+    const res = await api.validateCoupon({
+      code: code.trim(),
+      provider_id: provider.value.id,
+      subtotal: preDiscountTotal.value,
+    })
+    if (!res.valid) {
+      couponApplied.value = null
+      couponDiscount.value = 0
+      couponMsg.value = res.message || 'Invalid coupon'
+      return
+    }
+    couponCode.value = code.trim().toUpperCase()
+    couponApplied.value = res.coupon || { code: couponCode.value }
+    couponDiscount.value = res.discount_amount || 0
+    couponMsg.value = res.message || 'Coupon applied'
+    showCouponPicker.value = false
+  } catch (e) {
+    couponApplied.value = null
+    couponDiscount.value = 0
+    couponMsg.value = e.message || 'Could not apply coupon'
+  } finally {
+    applyingCoupon.value = false
+  }
+}
+
+function clearCoupon() {
+  couponCode.value = ''
+  couponApplied.value = null
+  couponDiscount.value = 0
+  couponMsg.value = ''
+}
+
+function pickCoupon(c) {
+  couponCode.value = c.code
+  applyCoupon(c.code)
+}
 
 async function confirm() {
   submitting.value = true
@@ -74,6 +130,7 @@ async function confirm() {
     provider_service_id:  providerServiceId || undefined,
     recurrence_type:      recurring.value ? recurrenceType.value : 'none',
     recurrence_end_date:  recurring.value && recurrenceEndDate.value ? recurrenceEndDate.value : null,
+    coupon_code:          couponApplied.value ? couponCode.value : undefined,
   })
   router.push({
     name: 'payment',
@@ -169,6 +226,27 @@ async function confirm() {
       </template>
     </div>
 
+    <!-- Coupon -->
+    <div class="fx-card mb-3" style="padding:14px 16px">
+      <div class="fw-bold mb-2" style="font-size:14px">Coupon Code</div>
+      <div class="d-flex gap-2 mb-2">
+        <input class="fx-input flex-grow-1" v-model="couponCode" placeholder="Enter code" style="margin:0" />
+        <button class="btn btn-outline-primary" style="white-space:nowrap" :disabled="applyingCoupon" @click="applyCoupon()">
+          {{ applyingCoupon ? '…' : 'Apply' }}
+        </button>
+      </div>
+      <div v-if="couponMsg" style="font-size:12px" :style="{ color: couponDiscount > 0 ? 'var(--fx-success)' : '#ef4444' }">
+        {{ couponMsg }}
+      </div>
+      <div v-if="couponApplied" class="d-flex justify-content-between align-items-center mt-2" style="font-size:13px">
+        <span class="fw-semibold">{{ couponApplied.code }} applied</span>
+        <button class="btn btn-link p-0" style="font-size:12px" @click="clearCoupon">Remove</button>
+      </div>
+      <button v-if="availableCoupons.length" class="btn btn-link p-0 mt-1" style="font-size:12px" @click="showCouponPicker = true">
+        Browse {{ availableCoupons.length }} available coupon{{ availableCoupons.length > 1 ? 's' : '' }}
+      </button>
+    </div>
+
     <!-- Price estimate -->
     <div class="fx-card bg-accent-soft mb-3">
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
@@ -178,6 +256,10 @@ async function confirm() {
       <div class="d-flex justify-content-between mb-2" style="font-size:13px">
         <span style="color:var(--fx-muted)">Platform fee</span>
         <span class="fw-semibold">RM{{ platformFee.toFixed(2) }}</span>
+      </div>
+      <div v-if="couponDiscount > 0" class="d-flex justify-content-between mb-2" style="font-size:13px">
+        <span style="color:var(--fx-success)">Coupon discount</span>
+        <span class="fw-semibold" style="color:var(--fx-success)">-RM{{ couponDiscount.toFixed(2) }}</span>
       </div>
       <hr style="border-color:rgba(255,102,53,.2)" />
       <div class="d-flex justify-content-between align-items-center">
@@ -192,4 +274,41 @@ async function confirm() {
   </div>
 
   <div v-else class="fx-page text-center py-5" style="color:var(--fx-muted)">Loading…</div>
+
+  <Teleport to="body">
+    <div v-if="showCouponPicker" class="bf-cpn-backdrop" @click.self="showCouponPicker = false">
+      <div class="bf-cpn-sheet">
+        <div class="fw-bold mb-3" style="font-size:16px">Available Coupons</div>
+        <button
+          v-for="c in availableCoupons" :key="c.id"
+          class="bf-cpn-item" @click="pickCoupon(c)"
+        >
+          <span class="fw-bold">{{ c.code }}</span>
+          <span style="font-size:12px;color:var(--fx-muted)">
+            {{ c.discount_type === 'percent' ? `${c.discount_value}% off` : `RM${c.discount_value} off` }}
+            <span v-if="c.min_spend"> · min RM{{ c.min_spend }}</span>
+          </span>
+        </button>
+        <button class="btn btn-light w-100 mt-2" @click="showCouponPicker = false">Close</button>
+      </div>
+    </div>
+  </Teleport>
 </template>
+
+<style scoped>
+.bf-cpn-backdrop {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.bf-cpn-sheet {
+  width: 100%; max-width: 480px; background: var(--fx-card);
+  border-radius: 20px 20px 16px 16px; padding: 20px; max-height: 70vh; overflow-y: auto;
+}
+.bf-cpn-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px;
+  border-radius: 12px; border: 1px solid var(--fx-border); background: #fff; cursor: pointer;
+}
+</style>

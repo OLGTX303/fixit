@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import * as api from '../services/api'
 import SliderPuzzleCaptcha from '../components/SliderPuzzleCaptcha.vue'
+import { useModalGuard } from '../composables/useModalGuard'
 import { LEGAL_VERSION } from '../content/legal.js'
 
 const auth   = useAuthStore()
@@ -15,6 +16,7 @@ const acceptedPrivacy = ref(false)
 const captchaProof    = ref(null)
 const captchaRef      = ref(null)
 const showCaptcha     = ref(false)
+useModalGuard(showCaptcha)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
 // Email OTP — verify the email belongs to the registrant before creating the account.

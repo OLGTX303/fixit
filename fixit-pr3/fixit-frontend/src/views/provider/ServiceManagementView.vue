@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useProvidersStore } from '../../stores/providers'
+import { useModalGuard } from '../../composables/useModalGuard'
 import * as api from '../../services/api'
 
 const router         = useRouter()
@@ -11,7 +12,6 @@ const providersStore = useProvidersStore()
 
 const myProfile  = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
 const storageKey = computed(() => `fixit_svc_${auth.user?.id}`)
-const couponKey  = computed(() => `fixit_cpn_${auth.user?.id}`)
 
 // ── Cover photo — uploaded to R2 and saved on the provider (persists, shows
 //    to customers). Same R2 path as avatars: uploadImage → URL → cover_url. ──
@@ -208,37 +208,78 @@ async function saveRate() {
   finally { savingRate.value = false }
 }
 
-// ── Coupons ────────────────────────────────────────────────────────────
+// ── Coupons (server-persisted) ─────────────────────────────────────────
 const coupons        = ref([])
 const showCouponForm = ref(false)
 const editingCoupon  = ref(null)
-const cpnForm        = ref({ code: '', type: 'percent', value: '', min_order: '', expiry: '', active: true })
+const savingCoupon   = ref(false)
+const cpnForm        = ref({ code: '', discount_type: 'percent', discount_value: '', min_spend: '', expires_at: '', is_active: true })
 
-function loadCoupons() {
-  try { coupons.value = JSON.parse(localStorage.getItem(couponKey.value) || '[]') } catch { coupons.value = [] }
+useModalGuard(showProfileForm)
+useModalGuard(showServiceForm)
+useModalGuard(showCouponForm)
+
+async function loadCoupons() {
+  try { coupons.value = await api.getMyCoupons() } catch { coupons.value = [] }
 }
-function saveCoupons() { localStorage.setItem(couponKey.value, JSON.stringify(coupons.value)) }
+
+function defaultExpiry() {
+  const d = new Date()
+  d.setDate(d.getDate() + 30)
+  return d.toISOString().slice(0, 10)
+}
 
 function openAddCoupon() {
   editingCoupon.value = null
-  cpnForm.value = { code: '', type: 'percent', value: '', min_order: '', expiry: '', active: true }
+  cpnForm.value = { code: '', discount_type: 'percent', discount_value: '', min_spend: '', expires_at: defaultExpiry(), is_active: true }
   showCouponForm.value = true
 }
-function openEditCoupon(c) { editingCoupon.value = c; cpnForm.value = { ...c }; showCouponForm.value = true }
-function saveCoupon() {
-  if (!cpnForm.value.code || !cpnForm.value.value) return
-  cpnForm.value.code = cpnForm.value.code.toUpperCase().replace(/\s/g, '')
-  if (editingCoupon.value) {
-    const i = coupons.value.findIndex(c => c.code === editingCoupon.value.code)
-    if (i !== -1) coupons.value[i] = { ...cpnForm.value }
-  } else {
-    coupons.value.push({ ...cpnForm.value, id: Date.now() })
+function openEditCoupon(c) {
+  editingCoupon.value = c
+  cpnForm.value = {
+    code: c.code,
+    discount_type: c.discount_type,
+    discount_value: c.discount_value,
+    min_spend: c.min_spend || '',
+    expires_at: (c.expires_at || '').slice(0, 10),
+    is_active: c.is_active,
   }
-  saveCoupons(); showCouponForm.value = false
+  showCouponForm.value = true
 }
-function deleteCoupon(c) { coupons.value = coupons.value.filter(x => x.code !== c.code); saveCoupons() }
-function toggleCoupon(c)  { c.active = !c.active; saveCoupons() }
-function discountLabel(c) { return c.type === 'percent' ? `${c.value}% off` : `RM${c.value} off` }
+async function saveCoupon() {
+  if (!cpnForm.value.code || !cpnForm.value.discount_value) return
+  savingCoupon.value = true
+  try {
+    const payload = {
+      code: cpnForm.value.code,
+      discount_type: cpnForm.value.discount_type,
+      discount_value: parseFloat(cpnForm.value.discount_value),
+      min_spend: cpnForm.value.min_spend ? parseFloat(cpnForm.value.min_spend) : 0,
+      expires_at: cpnForm.value.expires_at,
+      is_active: cpnForm.value.is_active,
+    }
+    if (editingCoupon.value) await api.updateMyCoupon(editingCoupon.value.id, payload)
+    else await api.createMyCoupon(payload)
+    await loadCoupons()
+    showCouponForm.value = false
+  } catch (e) {
+    alert(e.message || 'Could not save coupon')
+  } finally { savingCoupon.value = false }
+}
+async function deleteCoupon(c) {
+  if (!confirm(`Delete coupon ${c.code}?`)) return
+  try { await api.deleteMyCoupon(c.id); await loadCoupons() }
+  catch (e) { alert(e.message || 'Could not delete') }
+}
+async function toggleCoupon(c) {
+  try {
+    await api.updateMyCoupon(c.id, { ...c, is_active: !c.is_active })
+    c.is_active = !c.is_active
+  } catch (e) { alert(e.message || 'Could not update') }
+}
+function discountLabel(c) {
+  return c.discount_type === 'percent' ? `${c.discount_value}% off` : `RM${c.discount_value} off`
+}
 
 // ── Util ───────────────────────────────────────────────────────────────
 function readFile(file) {
@@ -352,18 +393,18 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
       <div class="smv-section-label">Active Coupons</div>
 
       <div v-if="coupons.length" class="smv-service-list">
-        <div v-for="c in coupons" :key="c.code" class="smv-card smv-cpn-row">
+        <div v-for="c in coupons" :key="c.id" class="smv-card smv-cpn-row">
           <div class="smv-cpn-left">
-            <div class="smv-cpn-code" :class="{ inactive: !c.active }">{{ c.code }}</div>
+            <div class="smv-cpn-code" :class="{ inactive: !c.is_active }">{{ c.code }}</div>
             <div class="smv-cpn-meta">
               {{ discountLabel(c) }}
-              <span v-if="c.min_order"> · Min RM{{ c.min_order }}</span>
-              <span v-if="c.expiry"> · Expires {{ c.expiry }}</span>
+              <span v-if="c.min_spend"> · Min RM{{ c.min_spend }}</span>
+              <span v-if="c.expires_at"> · Expires {{ (c.expires_at || '').slice(0, 10) }}</span>
             </div>
           </div>
           <div class="smv-svc-actions">
             <label class="smv-toggle smv-toggle-sm">
-              <input type="checkbox" :checked="c.active" @change="toggleCoupon(c)" />
+              <input type="checkbox" :checked="c.is_active" @change="toggleCoupon(c)" />
               <span class="smv-slider"></span>
             </label>
             <button class="smv-icon-btn" @click="openEditCoupon(c)">
@@ -475,29 +516,29 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
         <div class="smv-field-row">
           <div class="smv-field-group" style="flex:1">
             <label class="smv-field-lbl">Discount Type</label>
-            <select class="smv-field-input" v-model="cpnForm.type">
+            <select class="smv-field-input" v-model="cpnForm.discount_type">
               <option value="percent">Percent (%)</option>
               <option value="fixed">Fixed (RM)</option>
             </select>
           </div>
           <div class="smv-field-group" style="flex:1">
             <label class="smv-field-lbl">Value *</label>
-            <input class="smv-field-input" v-model="cpnForm.value" type="number" min="0" :placeholder="cpnForm.type === 'percent' ? '10' : '5'" />
+            <input class="smv-field-input" v-model="cpnForm.discount_value" type="number" min="0" :placeholder="cpnForm.discount_type === 'percent' ? '10' : '5'" />
           </div>
         </div>
         <div class="smv-field-row">
           <div class="smv-field-group" style="flex:1">
             <label class="smv-field-lbl">Min Order (RM)</label>
-            <input class="smv-field-input" v-model="cpnForm.min_order" type="number" min="0" placeholder="0" />
+            <input class="smv-field-input" v-model="cpnForm.min_spend" type="number" min="0" placeholder="0" />
           </div>
           <div class="smv-field-group" style="flex:1">
             <label class="smv-field-lbl">Expiry Date</label>
-            <input class="smv-field-input" v-model="cpnForm.expiry" type="date" />
+            <input class="smv-field-input" v-model="cpnForm.expires_at" type="date" />
           </div>
         </div>
         <div class="smv-modal-footer">
           <button class="smv-modal-cancel" @click="showCouponForm = false">Cancel</button>
-          <button class="smv-modal-save" @click="saveCoupon" :disabled="!cpnForm.code || !cpnForm.value">Save</button>
+          <button class="smv-modal-save" @click="saveCoupon" :disabled="savingCoupon || !cpnForm.code || !cpnForm.discount_value">{{ savingCoupon ? 'Saving…' : 'Save' }}</button>
         </div>
       </div>
     </div>
