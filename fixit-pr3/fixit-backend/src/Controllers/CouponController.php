@@ -46,11 +46,10 @@ final class CouponController
     public function available(Request $request, Response $response): Response
     {
         $params = $request->getQueryParams();
+        // No provider_id → system-wide coupons only (customer "My Coupons" page).
+        // With a provider_id → system + that provider's coupons (checkout picker).
         $providerId = isset($params['provider_id']) ? (int) $params['provider_id'] : 0;
-        if ($providerId <= 0) {
-            return ResponseHelper::error($response, 'provider_id is required', 422);
-        }
-        if (!(new ProviderModel())->findRaw($providerId)) {
+        if ($providerId > 0 && !(new ProviderModel())->findRaw($providerId)) {
             return ResponseHelper::error($response, 'Provider not found', 404);
         }
         return ResponseHelper::json($response, $this->coupons->listAvailable($providerId));

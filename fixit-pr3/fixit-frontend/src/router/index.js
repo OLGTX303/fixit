@@ -24,6 +24,7 @@ const routes = [
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
   { path: '/favorites', name: 'favorites', component: () => import('../views/customer/FavouritesView.vue'), meta: { role: 'customer' } },
   { path: '/history', name: 'browsing-history', component: () => import('../views/customer/BrowsingHistoryView.vue'), meta: { role: 'customer' } },
+  { path: '/coupons', name: 'coupons', component: () => import('../views/customer/MyCouponsView.vue'), meta: { role: 'customer' } },
   { path: '/cart', name: 'cart', component: () => import('../views/customer/CartView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id', name: 'job-detail', component: () => import('../views/customer/JobDetailView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },
