@@ -24,11 +24,10 @@ sourcecoderepo/
 pr3/
 pr3.zip
 mcps/
-GROK_SMOKE_TASK.md
-GROK_REVIEW_TASK.md
+GROK_*.md
 CODE_REVIEW_FINDINGS.md
 agent-tools/
-grok_review.log
+grok_*.log
 
 # Smoke-test scratch artifacts
 *_smoke.ps1
