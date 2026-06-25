@@ -8,6 +8,7 @@ use FixIt\Controllers\AvailabilityController;
 use FixIt\Controllers\BookingController;
 use FixIt\Controllers\CategoryController;
 use FixIt\Controllers\CryptoController;
+use FixIt\Controllers\FavoriteController;
 use FixIt\Controllers\KycController;
 use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
@@ -38,10 +39,11 @@ return function (App $app): void {
     $availability = new AvailabilityController();
     $wallet = new WalletController();
     $providerServices = new ProviderServiceController();
+    $favorites = new FavoriteController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices, $favorites
     ) {
         // Stripe webhook �?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
@@ -61,7 +63,7 @@ return function (App $app): void {
         $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites
         ) {
             $secure->post('/providers/{id}/services', [$providerServices, 'create'])
                 ->add(new RoleGuard(['provider', 'admin']));
@@ -136,6 +138,13 @@ return function (App $app): void {
                 ->add(new RoleGuard(['admin']));
 
             $secure->post('/providers/{id}/inquiry', [$bookings, 'inquiry'])
+                ->add(new RoleGuard(['customer']));
+
+            $secure->get('/favorites', [$favorites, 'list'])
+                ->add(new RoleGuard(['customer']));
+            $secure->post('/providers/{id}/favorite', [$favorites, 'add'])
+                ->add(new RoleGuard(['customer']));
+            $secure->delete('/providers/{id}/favorite', [$favorites, 'remove'])
                 ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);

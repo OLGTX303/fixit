@@ -3,11 +3,15 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import * as api from '../../services/api'
 import { useInfiniteList } from '../../composables/useInfiniteList'
+import { useAuthStore } from '../../stores/auth'
+import { useFavoritesStore } from '../../stores/favorites'
 import { getUserLocation, distanceKmFrom, isNativeApp } from '../../services/geolocation'
 import RatingStars from '../../components/RatingStars.vue'
 
 const route  = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
+const favorites = useFavoritesStore()
 
 const categories = ref([])
 const q        = ref(route.query.q ? String(route.query.q) : '')
@@ -44,8 +48,15 @@ let qTimer = null
 watch(q, () => { clearTimeout(qTimer); qTimer = setTimeout(reset, 350) })
 watch([category, sortMode, priorityOnly], reset)
 
+async function toggleFavorite(e, providerId) {
+  e.stopPropagation()
+  if (auth.role !== 'customer') return
+  try { await favorites.toggle(providerId) } catch {}
+}
+
 onMounted(async () => {
   try { categories.value = await api.getCategories() } catch { /* non-fatal */ }
+  if (auth.role === 'customer') favorites.load().catch(() => {})
   locating.value = true
   try {
     userCenter.value    = await getUserLocation()
@@ -215,6 +226,16 @@ function initials(name) {
             <div v-else class="sv-card-initials">{{ initials(p.name) }}</div>
             <span v-if="p.is_priority" class="sv-priority-badge">⚡</span>
           </div>
+
+          <button
+            v-if="auth.role === 'customer'"
+            class="sv-fav-btn"
+            :class="{ active: favorites.has(p.id) }"
+            :aria-label="favorites.has(p.id) ? 'Remove from favourites' : 'Add to favourites'"
+            @click="toggleFavorite($event, p.id)"
+          >
+            <span class="material-symbols-outlined" style="font-size:18px">favorite</span>
+          </button>
 
           <!-- Details -->
           <div class="sv-card-body">
@@ -391,6 +412,17 @@ function initials(name) {
   transition: transform 0.16s ease;
 }
 .sv-card:active { transform: scale(0.98); }
+.sv-card { position: relative; }
+
+.sv-fav-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.92); color: var(--fx-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.sv-fav-btn.active { color: #ef4444; }
+.sv-fav-btn.active .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
 
 .sv-card-thumb {
   position: relative; flex-shrink: 0;

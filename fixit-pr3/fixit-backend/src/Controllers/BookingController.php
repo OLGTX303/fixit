@@ -7,6 +7,7 @@ namespace FixIt\Controllers;
 use FixIt\Models\BookingModel;
 use FixIt\Models\ProviderModel;
 use FixIt\Models\WalletModel;
+use FixIt\Services\StripeService;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -15,8 +16,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 final class BookingController
 {
     private const TRANSITIONS = [
-        'requested' => ['accepted'],
-        'accepted' => ['in_progress'],
+        'requested' => ['accepted', 'cancelled'],
+        'accepted' => ['in_progress', 'cancelled'],
         'in_progress' => ['completed'],
         'completed' => ['reviewed'],
     ];
@@ -24,7 +25,12 @@ final class BookingController
     public function list(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
-        $bookings = (new BookingModel())->listForUser($user);
+        $params = $request->getQueryParams();
+        // Default page size prevents unbounded loads when the client omits limit.
+        $limit = isset($params['limit']) ? (int) $params['limit'] : 50;
+        $offset = isset($params['offset']) ? (int) $params['offset'] : 0;
+        $status = isset($params['status']) ? (string) $params['status'] : null;
+        $bookings = (new BookingModel())->listForUser($user, $limit, $offset, $status);
         return ResponseHelper::json($response, $bookings);
     }
 
@@ -141,11 +147,33 @@ final class BookingController
 
         $data = (array) $request->getParsedBody();
         $newStatus = (string) ($data['status'] ?? '');
-        $allowedStatuses = ['requested', 'accepted', 'in_progress', 'completed', 'reviewed'];
+        $allowedStatuses = ['requested', 'accepted', 'in_progress', 'completed', 'reviewed', 'cancelled'];
         if (!in_array($newStatus, $allowedStatuses, true)) {
             return ResponseHelper::error($response, 'Invalid status value', 422);
         }
         $current = (string) $booking['status'];
+
+        // Customer (or admin) cancellation — refund Stripe if already paid.
+        if ($newStatus === 'cancelled') {
+            if ($user['role'] === 'provider') {
+                return ResponseHelper::error($response, 'Providers cannot cancel bookings', 403);
+            }
+            if ($user['role'] === 'customer' && (int) $booking['customer_id'] !== (int) $user['id']) {
+                return ResponseHelper::error($response, 'Forbidden', 403);
+            }
+            if ($user['role'] !== 'admin' && !in_array($current, ['requested', 'accepted'], true)) {
+                return ResponseHelper::error($response, "Cannot cancel from status {$current}", 422);
+            }
+            if (StripeService::isConfigured()) {
+                try {
+                    (new StripeService())->refundBookingIfPaid($id, (int) $booking['customer_id']);
+                } catch (\Throwable $e) {
+                    return ResponseHelper::error($response, 'Refund failed: ' . $e->getMessage(), 502);
+                }
+            }
+            return ResponseHelper::json($response, $model->updateStatus($id, 'cancelled'));
+        }
+
         if ($user['role'] !== 'admin') {
             $allowed = self::TRANSITIONS[$current] ?? [];
             if (!in_array($newStatus, $allowed, true)) {
@@ -191,7 +219,14 @@ final class BookingController
             if (!$profile || (int) $booking['provider_id'] !== (int) $profile['id'] || $booking['status'] !== 'requested') {
                 return ResponseHelper::error($response, 'Forbidden', 403);
             }
-        } elseif ($user['role'] !== 'admin' && (int) $booking['customer_id'] !== (int) $user['id']) {
+        } elseif ($user['role'] === 'customer') {
+            if ((int) $booking['customer_id'] !== (int) $user['id']) {
+                return ResponseHelper::error($response, 'Forbidden', 403);
+            }
+            if ($booking['status'] !== 'requested') {
+                return ResponseHelper::error($response, 'Only pending bookings can be deleted — use cancel instead', 403);
+            }
+        } elseif ($user['role'] !== 'admin') {
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 

@@ -410,6 +410,49 @@ final class StripeService
         ];
     }
 
+    /**
+     * Refund a succeeded Stripe charge tied to a booking. Idempotent: if the
+     * StripePayment row is already 'refunded', or the charge has nothing left to
+     * refund, this is a no-op — never issues a second Stripe Refund.
+     * Unpaid bookings (no succeeded StripePayment) return false.
+     */
+    public function refundBookingIfPaid(int $bookingId, int $customerUserId): bool
+    {
+        $payment = $this->payments->findSucceededByBooking($bookingId);
+        if (!$payment) {
+            return false;
+        }
+        if ((int) $payment['user_id'] !== $customerUserId) {
+            throw new \RuntimeException('Payment owner mismatch');
+        }
+
+        $piId = (string) $payment['stripe_payment_intent_id'];
+        $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
+        $charge = $pi->latest_charge ?? null;
+        if (!$charge || !isset($charge->id)) {
+            $this->payments->markRefunded($bookingId);
+            return false;
+        }
+
+        $refundable = (int) $charge->amount - (int) ($charge->amount_refunded ?? 0);
+        if ($refundable <= 0) {
+            $this->payments->markRefunded($bookingId);
+            return false;
+        }
+
+        $this->stripe->refunds->create([
+            'charge' => $charge->id,
+            'amount' => $refundable,
+            'metadata' => [
+                'fixit_booking_id' => (string) $bookingId,
+                'fixit_purpose' => 'booking_cancel',
+                'stripe_mode' => 'test',
+            ],
+        ]);
+        $this->payments->markRefunded($bookingId);
+        return true;
+    }
+
     public function detachSavedPaymentMethod(int $userId): void
     {
         $user = $this->users->findById($userId);

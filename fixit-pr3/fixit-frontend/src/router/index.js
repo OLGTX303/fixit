@@ -22,6 +22,7 @@ const routes = [
   { path: '/provider/:id', name: 'provider-profile', component: () => import('../views/customer/ProviderProfileView.vue') },
   { path: '/book/:id', name: 'booking-form', component: () => import('../views/customer/BookingFormView.vue'), meta: { role: 'customer' } },
   { path: '/jobs', name: 'job-tracker', component: () => import('../views/customer/JobTrackerView.vue'), meta: { role: 'customer' } },
+  { path: '/favorites', name: 'favorites', component: () => import('../views/customer/FavouritesView.vue'), meta: { role: 'customer' } },
   { path: '/cart', name: 'cart', component: () => import('../views/customer/CartView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id', name: 'job-detail', component: () => import('../views/customer/JobDetailView.vue'), meta: { role: 'customer' } },
   { path: '/jobs/:id/review', name: 'rate-review', component: () => import('../views/customer/RateReviewView.vue'), meta: { role: 'customer' } },

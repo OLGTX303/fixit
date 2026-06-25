@@ -133,7 +133,13 @@ export const getRecommendedProviders = (limit = 20, offset = 0) =>
   get(`/providers?sort=recommended&limit=${limit}&offset=${offset}`)
 // The logged-in provider's own profile (works even while unverified).
 export const getMyProviderProfile = () => get('/me/provider')
-export const getBookings = () => get('/bookings')
+export function getBookings({ limit = 0, offset = 0, status } = {}) {
+  const p = new URLSearchParams()
+  if (limit > 0) { p.set('limit', limit); p.set('offset', offset) }
+  if (status) p.set('status', status)
+  const qs = p.toString()
+  return get(`/bookings${qs ? `?${qs}` : ''}`)
+}
 export const getReviews = ({ limit = 25, offset = 0 } = {}) =>
   get(`/admin/reviews?limit=${limit}&offset=${offset}`)
 export const getStripeStats = () => get('/admin/stripe/stats')
@@ -262,3 +268,13 @@ export const saveProviderAvailability = (id, slots) => put(`/providers/${id}/ava
 // ── Admin: priority listing ──────────────────────────────────────────────────
 export const setProviderPriority = (id, isPriority) =>
   patch(`/admin/providers/${id}/priority`, { is_priority: isPriority })
+
+// ── Favourites ───────────────────────────────────────────────────────────────
+export function getFavorites({ limit = 20, offset = 0 } = {}) {
+  const p = new URLSearchParams()
+  p.set('limit', limit)
+  p.set('offset', offset)
+  return get(`/favorites?${p.toString()}`)
+}
+export const favoriteProvider = (providerId) => post(`/providers/${providerId}/favorite`)
+export const unfavoriteProvider = (providerId) => del(`/providers/${providerId}/favorite`)

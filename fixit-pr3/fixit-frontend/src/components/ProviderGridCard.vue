@@ -2,11 +2,17 @@
 import { computed } from 'vue'
 import RatingStars from './RatingStars.vue'
 import { categoryIcon, categoryTint } from '../services/categoryIcons'
+import { useAuthStore } from '../stores/auth'
+import { useFavoritesStore } from '../stores/favorites'
 
 const props = defineProps({
   provider: { type: Object, required: true },
+  showFavorite: { type: Boolean, default: false },
 })
 defineEmits(['select'])
+
+const auth = useAuthStore()
+const favorites = useFavoritesStore()
 
 const cover    = computed(() => props.provider.cover_url || null)
 const avatar   = computed(() => props.provider.avatar_url || null)
@@ -15,20 +21,37 @@ const catIcon  = computed(() => categoryIcon(category.value))
 const catTint  = computed(() => categoryTint(category.value))
 const initials = computed(() =>
   (props.provider.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())
+const isFav = computed(() => favorites.has(props.provider.id))
+
+async function toggleFavorite(e) {
+  e.stopPropagation()
+  if (auth.role !== 'customer') return
+  try {
+    await favorites.toggle(props.provider.id)
+  } catch { /* non-fatal */ }
+}
 </script>
 
 <template>
   <div class="pgc" role="button" @click="$emit('select', provider)">
     <div class="pgc-img">
-      <!-- background: cover photo, else the default category icon -->
       <img v-if="cover" :src="cover" :alt="provider.name" class="pgc-cover" loading="lazy" />
       <div v-else class="pgc-iconbg" :style="{ background: catTint }">
         <img :src="catIcon" :alt="category" class="pgc-icon" />
       </div>
 
+      <button
+        v-if="showFavorite && auth.role === 'customer'"
+        class="pgc-fav"
+        :class="{ active: isFav }"
+        :aria-label="isFav ? 'Remove from favourites' : 'Add to favourites'"
+        @click="toggleFavorite"
+      >
+        <span class="material-symbols-outlined" style="font-size:18px">favorite</span>
+      </button>
+
       <span class="pgc-cat">{{ category }}</span>
 
-      <!-- user avatar pinned to the bottom-left corner -->
       <div class="pgc-avatar">
         <img v-if="avatar" :src="avatar" :alt="provider.name" loading="lazy" />
         <span v-else>{{ initials }}</span>
@@ -61,7 +84,6 @@ const initials = computed(() =>
 .pgc-img { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
 .pgc-cover { width: 100%; height: 100%; object-fit: cover; }
 
-/* default category-icon background when there is no cover photo */
 .pgc-iconbg {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -71,6 +93,17 @@ const initials = computed(() =>
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.14));
 }
 
+.pgc-fav {
+  position: absolute; left: 6px; top: 6px; z-index: 2;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: rgba(255,255,255,0.92);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--fx-muted);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.pgc-fav.active { color: #ef4444; }
+.pgc-fav.active .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+
 .pgc-cat {
   position: absolute; right: 6px; top: 6px;
   background: rgba(0,0,0,0.55); color: #fff;
@@ -78,7 +111,6 @@ const initials = computed(() =>
   backdrop-filter: blur(4px);
 }
 
-/* avatar in the bottom-left corner of the picture */
 .pgc-avatar {
   position: absolute; left: 8px; bottom: 8px;
   width: 36px; height: 36px; border-radius: 50%; overflow: hidden;

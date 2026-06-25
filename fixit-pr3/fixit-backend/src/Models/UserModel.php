@@ -20,7 +20,7 @@ final class UserModel
     public function findById(int $id): ?array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT id, name, email, role, phone, avatar_url,
+            'SELECT id, name, email, role, phone, avatar_url, COALESCE(is_blocked, 0) AS is_blocked,
                     stripe_test_customer_id,
                     stripe_test_default_payment_method_id,
                     stripe_test_payment_method_last4,

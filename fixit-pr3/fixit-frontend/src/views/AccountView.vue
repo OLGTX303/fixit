@@ -70,7 +70,7 @@ async function onAvatarSelected(e) {
 
 // Customer quick actions (no Wallet — already in stats row)
 const CUSTOMER_QUICK = [
-  { icon: 'star',          label: 'Favourites', to: null },
+  { icon: 'star',          label: 'Favourites', to: 'favorites' },
   { icon: 'history',       label: 'History',    to: 'job-tracker' },
   { icon: 'redeem',        label: 'Coupons',    to: null },
   { icon: 'shopping_cart', label: 'Cart',       to: 'cart' },
