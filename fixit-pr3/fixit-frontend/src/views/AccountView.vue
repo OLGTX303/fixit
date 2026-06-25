@@ -72,7 +72,7 @@ async function onAvatarSelected(e) {
 const CUSTOMER_QUICK = [
   { icon: 'star',          label: 'Favourites', to: 'favorites' },
   { icon: 'history',       label: 'History',    to: 'browsing-history' },
-  { icon: 'redeem',        label: 'Coupons',    to: null },
+  { icon: 'redeem',        label: 'Coupons',    to: 'coupons' },
   { icon: 'shopping_cart', label: 'Cart',       to: 'cart' },
 ]
 </script>

@@ -288,7 +288,8 @@ export const unfavoriteProvider = (providerId) => del(`/providers/${providerId}/
 // ── Coupons ──────────────────────────────────────────────────────────────────
 export const validateCoupon = (payload) => post('/coupons/validate', payload)
 export function getAvailableCoupons(providerId) {
-  return get(`/coupons/available?provider_id=${providerId}`)
+  // No providerId → system-wide coupons only (customer My Coupons page).
+  return get(providerId ? `/coupons/available?provider_id=${providerId}` : '/coupons/available')
 }
 export const getMyCoupons = () => get('/me/coupons')
 export const createMyCoupon = (payload) => post('/me/coupons', payload)
