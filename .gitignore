@@ -23,6 +23,27 @@ vendor/
 sourcecoderepo/
 pr3/
 pr3.zip
+mcps/
+GROK_SMOKE_TASK.md
+
+# Smoke-test scratch artifacts
+*_smoke.ps1
+*_smoke.sh
+smoke_test.ps1
+deep_smoke.py
+login.json
+login_body.json
+prov*.json
+
+# Secrets that must never be committed (Android signing keystore, base64 dumps)
+*.base64.txt
+*.jks
+*.keystore
+fixit-release-key.*
+
+# Locally-generated OCR assets (regenerated at build by the prebuild step)
+fixit-pr3/fixit-frontend/public/tesseract/
+
 AGENTS.md
 CONTEXT-MAP.md
 **/CONTEXT.md
