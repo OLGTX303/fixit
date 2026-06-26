@@ -33,7 +33,7 @@ onMounted(async () => {
 })
 
 const initials = computed(() =>
-  (auth.user?.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
+  (auth.user?.name || '—').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
 
 function greeting() {
   const h = new Date().getHours()
@@ -92,7 +92,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
         <CategoryGrid :categories="categories" @select="openCategory" />
       </section>
 
-      <!-- Recommended for you — responsive card grid (2 cols mobile / 6 desktop) -->
+      <!-- Recommended for you �?responsive card grid (2 cols mobile / 6 desktop) -->
       <section style="padding:8px 0 18px">
         <div class="hv-section-head">
           <span class="fx-headline">Recommended for you</span>
@@ -158,7 +158,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
 }
 .hv-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-/* page content padding — full-bleed so the rail can scroll edge-to-edge */
+/* page content padding �?full-bleed so the rail can scroll edge-to-edge */
 .hv-content { max-width: 640px; margin: 0 auto; padding: 0 20px; }
 @media (min-width: 992px) { .hv-content { max-width: 980px; padding: 0 32px; } }
 
@@ -200,7 +200,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   padding: 6px 12px; background: #fff; cursor: pointer;
 }
 
-/* Recommended grid — 2 cards per row on mobile, 6 per row on desktop. */
+/* Recommended grid �?2 cards per row on mobile, 6 per row on desktop. */
 .hv-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

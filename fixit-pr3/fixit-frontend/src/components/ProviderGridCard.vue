@@ -20,7 +20,7 @@ const category = computed(() => props.provider.category_names?.[0] || 'Service')
 const catIcon  = computed(() => categoryIcon(category.value))
 const catTint  = computed(() => categoryTint(category.value))
 const initials = computed(() =>
-  (props.provider.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())
+  (props.provider.name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())
 const isFav = computed(() => favorites.has(props.provider.id))
 
 async function toggleFavorite(e) {

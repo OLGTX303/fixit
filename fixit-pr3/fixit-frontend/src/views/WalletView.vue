@@ -13,12 +13,12 @@ const wallet = useWalletStore()
 
 const isProvider = computed(() => auth.role === 'provider')
 
-// ── Wallet balance — from the server ledger (single source of truth) ─────────
+// ── Wallet balance �?from the server ledger (single source of truth) ─────────
 const balance = computed(() => wallet.balanceCents / 100)
 
 onMounted(async () => {
   await bookingsStore.load()
-  // Providers need the ledger too — their earnings are credited to the same
+  // Providers need the ledger too �?their earnings are credited to the same
   // real wallet when jobs complete, so "My Earnings" reads the server balance.
   try { await wallet.load() } catch { /* stripe may be unconfigured */ }
 })
@@ -86,7 +86,7 @@ async function mountNewCardForm() {
 async function proceedToPay() {
   if (!topupAmt.value) return
 
-  // Withdraw needs no card — refund prior top-ups straight away.
+  // Withdraw needs no card �?refund prior top-ups straight away.
   if (sheetMode.value === 'withdraw') {
     sheetStep.value = 'pay'
     return doWithdraw()
@@ -136,11 +136,11 @@ async function removeCard() {
 }
 
 // Real top-up: charges the card (Stripe sandbox PaymentIntent) and credits the
-// server ledger. No localStorage — the store holds the authoritative balance.
+// server ledger. No localStorage �?the store holds the authoritative balance.
 async function realTopUp() {
   const res = await wallet.topUp(Math.round(topupAmt.value * 100))
   if (res.requires_action) {
-    throw new Error('Card needs extra authentication — try a 4242 test card')
+    throw new Error('Card needs extra authentication �?try a 4242 test card')
   }
   stripeOk.value = true
   setTimeout(() => closeSheet(), 1800)
@@ -231,7 +231,7 @@ const avgPerJob = computed(() =>
 const transactions = computed(() => {
   const txs = []
   if (isProvider.value) {
-    // Real ledger entries — job payouts (and any withdrawals) from the server.
+    // Real ledger entries �?job payouts (and any withdrawals) from the server.
     wallet.transactions.forEach(tx => {
       const positive = tx.amount_cents > 0
       const label = tx.kind === 'payout' ? 'Job Payout'
@@ -262,7 +262,7 @@ const transactions = computed(() => {
       .filter(b => ['completed','reviewed'].includes(b.status))
       .forEach(b => txs.push({
         id: b.id,
-        label: `${b.category?.name || 'Service'} — #${b.id}`,
+        label: `${b.category?.name || 'Service'} · #${b.id}`,
         sub: b.provider?.name || 'Provider',
         amount: `-RM ${parseFloat(b.total_price || b.provider?.base_rate || 0).toFixed(2)}`,
         positive: false,
@@ -280,7 +280,7 @@ function fmtDate(d) {
 </script>
 
 <template>
-  <div class="wv-root">
+  <div class="wv-root fx-view-root">
     <header class="wv-header">
       <h1 class="wv-title">{{ isProvider ? 'My Earnings' : 'My Wallet' }}</h1>
     </header>
@@ -370,14 +370,8 @@ function fmtDate(d) {
 
     <!-- ── HALF-SCREEN BOTTOM SHEET ── -->
     <Teleport to="body">
-      <!-- Backdrop -->
-      <Transition name="fade">
-        <div v-if="showSheet" class="wv-backdrop" @click="closeSheet"></div>
-      </Transition>
-
-      <!-- Sheet panel -->
-      <Transition name="slide-up">
-        <div v-if="showSheet" class="wv-sheet">
+      <div v-if="showSheet" class="lg-overlay-center" @click.self="closeSheet">
+        <div class="lg-sheet liquid-glass-high wv-sheet" @click.stop>
           <!-- Drag handle -->
           <div class="wv-sheet-handle"></div>
 
@@ -521,13 +515,13 @@ function fmtDate(d) {
             </template>
           </div>
         </div>
-      </Transition>
+      </div>
     </Teleport>
   </div>
 </template>
 
 <style scoped>
-.wv-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 100px; }
+.wv-root { min-height: 100vh; padding-bottom: 100px; }
 
 .wv-header { padding: 16px 16px 12px; }
 .wv-title  { font-size: 20px; font-weight: 800; color: var(--fx-text); margin: 0; }
@@ -594,18 +588,11 @@ function fmtDate(d) {
 .wv-tx-amount { font-size: 14px; font-weight: 800; color: #ef4444; flex-shrink: 0; }
 .wv-tx-amount.positive { color: #22c55e; }
 
-/* ── Bottom sheet ─────────────────────────────────────────────────────────── */
-.wv-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.38);
-  z-index: 200; backdrop-filter: blur(2px);
-}
+/* ── Bottom sheet (glass via lg-sheet + liquid-glass-high) ─────────────── */
 .wv-sheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
-  background: var(--fx-bg, #f5f5f7);
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
   max-height: 62vh;
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .wv-sheet-handle {

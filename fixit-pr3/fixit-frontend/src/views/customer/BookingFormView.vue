@@ -15,7 +15,7 @@ const providersStore = useProvidersStore()
 const bookingsStore = useBookingsStore()
 const provider = ref(null)
 
-// Booking form state (all v-model bound) — workflow #1 (Customer Booking).
+// Booking form state (all v-model bound) �?workflow #1 (Customer Booking).
 const form = ref({ date: '', time: '', address: '14 Maple Street, Apt 3', notes: '' })
 const times = ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
 const submitting = ref(false)
@@ -276,8 +276,8 @@ async function confirm() {
   <div v-else class="fx-page text-center py-5" style="color:var(--fx-muted)">Loading…</div>
 
   <Teleport to="body">
-    <div v-if="showCouponPicker" class="bf-cpn-backdrop" @click.self="showCouponPicker = false">
-      <div class="bf-cpn-sheet">
+    <div v-if="showCouponPicker" class="lg-overlay-center" @click.self="showCouponPicker = false">
+      <div class="lg-sheet liquid-glass-high">
         <div class="fw-bold mb-3" style="font-size:16px">Available Coupons</div>
         <button
           v-for="c in availableCoupons" :key="c.id"
@@ -296,16 +296,6 @@ async function confirm() {
 </template>
 
 <style scoped>
-.bf-cpn-backdrop {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,0.45);
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom));
-}
-.bf-cpn-sheet {
-  width: 100%; max-width: 480px; background: var(--fx-card);
-  border-radius: 20px 20px 16px 16px; padding: 20px; max-height: 70vh; overflow-y: auto;
-}
 .bf-cpn-item {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px;

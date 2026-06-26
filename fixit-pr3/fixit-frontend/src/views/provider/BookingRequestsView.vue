@@ -51,7 +51,7 @@ const STATUS_COLOR = {
 </script>
 
 <template>
-  <div class="brv-root">
+  <div class="brv-root fx-view-root">
     <div class="brv-header">
       <h1 class="brv-title">My Jobs</h1>
       <span v-if="newJobs.length" class="brv-new-badge">{{ newJobs.length }} new</span>
@@ -75,7 +75,7 @@ const STATUS_COLOR = {
       <template v-if="tab==='new'">
         <div v-for="b in shown" :key="b.id" class="brv-card">
           <div class="brv-card-top">
-            <div class="brv-avatar">{{ (b.customer?.name||'?').split(' ').map(w=>w[0]).join('') }}</div>
+            <div class="brv-avatar">{{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}</div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
               <div class="brv-meta">{{ b.category?.name }} · {{ fmtDate(b.scheduled_at) }}</div>
@@ -102,7 +102,7 @@ const STATUS_COLOR = {
         <div v-for="b in shown" :key="b.id" class="brv-card">
           <div class="brv-card-top">
             <div class="brv-avatar" style="background:rgba(37,99,235,.12);color:#2563eb">
-              {{ (b.customer?.name||'?').split(' ').map(w=>w[0]).join('') }}
+              {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
             </div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
@@ -161,7 +161,7 @@ const STATUS_COLOR = {
         <div v-for="b in shown" :key="b.id" class="brv-card">
           <div class="brv-card-top">
             <div class="brv-avatar" style="background:rgba(124,58,237,.10);color:#7c3aed">
-              {{ (b.customer?.name||'?').split(' ').map(w=>w[0]).join('') }}
+              {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
             </div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
@@ -171,7 +171,7 @@ const STATUS_COLOR = {
           </div>
           <div class="brv-done-row">
             <span class="brv-status-chip" style="background:rgba(124,58,237,.10);color:#7c3aed">
-              {{ b.status === 'reviewed' ? '★ Reviewed' : 'Completed' }}
+              {{ b.status === 'reviewed' ? '✓ Reviewed' : 'Completed' }}
             </span>
             <button class="brv-btn ghost sm" @click="openChat(b)">
               <span class="material-symbols-outlined" style="font-size:14px">chat</span>

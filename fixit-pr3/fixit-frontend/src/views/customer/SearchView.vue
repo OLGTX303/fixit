@@ -109,12 +109,12 @@ const activeCategoryName = computed(() =>
   category.value ? categories.value.find(c => c.id === category.value)?.name : null)
 
 function initials(name) {
-  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+  return (name || '—').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 }
 </script>
 
 <template>
-  <div class="sv-root">
+  <div class="sv-root fx-view-root">
     <!-- ── Sticky search bar (always visible) ── -->
     <header class="sv-topbar liquid-glass">
       <div class="sv-search-pill">
@@ -127,7 +127,7 @@ function initials(name) {
           autocomplete="off"
           @keyup.enter="isDiscovery ? null : null"
         />
-        <button v-if="q || category" class="sv-clear" @click="clearSearch">✕</button>
+        <button v-if="q || category" class="sv-clear" @click="clearSearch">×</button>
       </div>
       <button class="sv-search-btn" @click="null">Search</button>
     </header>
@@ -147,13 +147,13 @@ function initials(name) {
         >{{ t }}</button>
       </div>
 
-      <!-- Hot rankings — 2 columns -->
+      <!-- Hot rankings �?2 columns -->
       <div class="sv-hot-row">
         <div class="sv-hot-col liquid-glass">
           <div class="sv-hot-head">
             <span class="sv-hot-fire">🔥</span>
             <span class="sv-hot-title">Top Services</span>
-            <button class="sv-hot-more" @click="null">More ›</button>
+            <button class="sv-hot-more" @click="null">More →</button>
           </div>
           <div
             v-for="(item, i) in HOT_SERVICES" :key="item"
@@ -202,7 +202,7 @@ function initials(name) {
           <span class="material-symbols-outlined" style="font-size:13px">expand_more</span>
         </button>
         <button class="sv-filter-chip priority" :class="{ active: priorityOnly }" @click="priorityOnly = !priorityOnly">
-          ⚡ Priority
+          ★ Priority
         </button>
       </div>
 
@@ -224,7 +224,7 @@ function initials(name) {
           <div class="sv-card-thumb">
             <img v-if="p.avatar_url" :src="p.avatar_url" :alt="p.name" class="sv-card-img" />
             <div v-else class="sv-card-initials">{{ initials(p.name) }}</div>
-            <span v-if="p.is_priority" class="sv-priority-badge">⚡</span>
+            <span v-if="p.is_priority" class="sv-priority-badge">★</span>
           </div>
 
           <button

@@ -17,7 +17,7 @@ function clearCache() {
 </script>
 
 <template>
-  <div class="stv-root">
+  <div class="stv-root fx-view-root">
     <!-- Header -->
     <div class="stv-header">
       <button class="stv-back" @click="router.back()">
@@ -134,7 +134,7 @@ function clearCache() {
 </template>
 
 <style scoped>
-.stv-root { background: var(--fx-bg); min-height: 100vh; padding-bottom: 40px; }
+.stv-root { min-height: 100vh; padding-bottom: 40px; }
 
 .stv-header {
   display: flex; align-items: center; justify-content: space-between;

@@ -25,7 +25,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="piv-root">
+  <div class="piv-root fx-view-root">
     <div class="piv-header">
       <button class="piv-back" @click="router.back()">
         <span class="material-symbols-outlined">arrow_back_ios</span>
@@ -59,7 +59,7 @@ async function save() {
 </template>
 
 <style scoped>
-.piv-root { background: var(--fx-bg); min-height: 100vh; }
+.piv-root { min-height: 100vh; }
 .piv-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 56px 16px 16px;

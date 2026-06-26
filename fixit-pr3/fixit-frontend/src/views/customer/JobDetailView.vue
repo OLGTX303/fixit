@@ -81,7 +81,7 @@ function drawMovingRoute() {
   // Pickup marker (green)
   pickupMarker = new gmaps.Marker({
     position: PICKUP, map,
-    label: makeLabel('取'),
+    label: makeLabel('—'),
     icon: {
       path: gmaps.SymbolPath.CIRCLE,
       scale: 18,
@@ -97,7 +97,7 @@ function drawMovingRoute() {
   // Destination marker (orange)
   destMarker = new gmaps.Marker({
     position: DEST, map,
-    label: makeLabel('送'),
+    label: makeLabel('—'),
     icon: {
       path: gmaps.SymbolPath.CIRCLE,
       scale: 18,
@@ -196,7 +196,7 @@ function stepActive(key) { return booking.value?.status === key }
 </script>
 
 <template>
-  <div class="jd-root">
+  <div class="jd-root fx-view-root">
     <!-- Top bar -->
     <header class="jd-topbar liquid-glass">
       <button class="jd-back" @click="router.back()">
@@ -329,7 +329,7 @@ function stepActive(key) { return booking.value?.status === key }
 </template>
 
 <style scoped>
-.jd-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 100px; }
+.jd-root { min-height: 100vh; padding-bottom: 100px; }
 
 /* Top bar */
 .jd-topbar {

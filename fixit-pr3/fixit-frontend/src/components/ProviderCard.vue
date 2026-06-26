@@ -9,7 +9,7 @@ const props = defineProps({
 defineEmits(['select'])
 
 const initials = computed(() =>
-  (props.provider.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
+  (props.provider.name || '—').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
 const roleLabel = computed(() => props.provider.category_names?.join(', ') || 'Provider')
 </script>
 

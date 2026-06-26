@@ -84,8 +84,9 @@ async function submit() {
 </script>
 
 <template>
-  <div class="pm-backdrop">
-    <div class="pm-card liquid-glass-high" style="border-radius:24px">
+  <Teleport to="body">
+  <div class="lg-overlay-center">
+    <div class="lg-modal liquid-glass-high pm-card">
       <!-- Shield icon -->
       <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px">
         <div class="pm-shield-wrap">
@@ -170,20 +171,14 @@ async function submit() {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>
-.pm-backdrop {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(17,24,39,0.30);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
 .pm-card {
-  width: 100%; max-width: 360px;
+  max-width: 360px;
   padding: 28px 24px;
+  border-radius: 24px;
   display: flex; flex-direction: column;
   animation: pm-in 0.25s cubic-bezier(0.34,1.56,0.64,1);
 }

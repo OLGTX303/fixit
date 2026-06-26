@@ -114,7 +114,7 @@ const lightboxUrl  = ref(null)
 function openLightbox(url) { lightboxUrl.value = url }
 
 async function messageProvider() {
-  // Reuse an existing conversation (any booking or prior inquiry) with this provider…
+  // Reuse an existing conversation (any booking or prior inquiry) with this provider.
   const bookingsStore = useBookingsStore()
   const existing = bookingsStore.bookings?.find(b =>
     String(b.provider_id) === String(provider.value?.id) ||
@@ -203,7 +203,7 @@ async function saveEdit() {
 
 // ── Initials helper ─────────────────────────────────────────────────────────
 const initials = computed(() =>
-  (provider.value?.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
+  (provider.value?.name || '—').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
 
 function ratingColor(r) {
   if (r >= 4) return '#22c55e'
@@ -223,7 +223,7 @@ function fmtDate(d) {
 
   <div v-else-if="!provider" class="ppv-empty">Provider not found</div>
 
-  <div v-else class="ppv-root">
+  <div v-else class="ppv-root fx-view-root">
 
     <!-- ── COVER BANNER ──────────────────────────────────────────────── -->
     <div class="ppv-cover" :style="provider.cover_url ? `background-image:url(${provider.cover_url})` : ''">
@@ -445,11 +445,8 @@ function fmtDate(d) {
 
     <!-- ── EDIT MODAL ────────────────────────────────────────────────── -->
     <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="editing" class="ppv-modal-backdrop" @click.self="editing=false"></div>
-      </Transition>
-      <Transition name="slide-up">
-        <div v-if="editing" class="ppv-modal">
+      <div v-if="editing" class="lg-overlay-center" @click.self="editing=false">
+        <div class="lg-sheet liquid-glass-high ppv-modal" @click.stop>
           <div class="ppv-modal-header">
             <span class="ppv-modal-title">Edit Profile</span>
             <button class="ppv-modal-close" @click="editing=false">
@@ -491,14 +488,14 @@ function fmtDate(d) {
             </button>
           </div>
         </div>
-      </Transition>
+      </div>
     </Teleport>
   </div>
 </template>
 
 <style scoped>
 /* ── Root ───────────────────────────────────────────────────────────────── */
-.ppv-root   { min-height: 100vh; background: var(--fx-bg); padding-bottom: 88px; }
+.ppv-root   { min-height: 100vh; padding-bottom: 88px; }
 .ppv-loading { display:flex; align-items:center; justify-content:center; height:100vh; }
 .ppv-empty   { display:flex; align-items:center; justify-content:center; height:100vh; color:var(--fx-muted); }
 
@@ -725,22 +722,12 @@ function fmtDate(d) {
 }
 .ppv-lightbox-img { max-width:92vw; max-height:88vh; border-radius:12px; object-fit:contain; }
 
-/* ── Edit modal ─────────────────────────────────────────────────────────── */
-.ppv-modal-backdrop {
-  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.40);
-  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-}
+/* ── Edit modal (glass via lg-sheet + liquid-glass-high) ───────────────── */
 .ppv-modal {
-  position:fixed; bottom:0; left:0; right:0; z-index:201;
-  /* opaque glass panel — var(--fx-card) is translucent, which let the page
-     content show through the modal. 0.92 white + blur reads as solid. */
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 5%, rgba(255,255,255,0.35) 0%, transparent 65%),
-    rgba(255,255,255,0.92);
-  backdrop-filter:blur(40px) saturate(1.6); -webkit-backdrop-filter:blur(40px) saturate(1.6);
-  border-radius:24px 24px 0 0;
-  max-height:90vh; display:flex; flex-direction:column;
-  box-shadow:0 -8px 40px rgba(0,0,0,.18);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 .ppv-modal-header {
   display:flex; align-items:center; justify-content:space-between;

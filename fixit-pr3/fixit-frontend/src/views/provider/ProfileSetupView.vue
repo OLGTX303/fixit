@@ -24,7 +24,7 @@ const rateType   = ref('hourly')
 const perJobRate = ref(80)
 
 // Availability calendar (stretch goal)
-// Each entry: { day_of_week: 0–6, start_time: 'HH:MM', end_time: 'HH:MM', auto_confirm: bool }
+// Each entry: { day_of_week: 0�?, start_time: 'HH:MM', end_time: 'HH:MM', auto_confirm: bool }
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const availSlots = ref([
   { day_of_week: 1, start_time: '09:00', end_time: '17:00', auto_confirm: true },
@@ -64,7 +64,7 @@ const kycStatusLabel = computed(() => {
 })
 const kycVerified = computed(() => myProfile.value?.is_verified)
 
-// Avatar — syncs to auth store so HomeView hv-avatar reflects it
+// Avatar �?syncs to auth store so HomeView hv-avatar reflects it
 const avatarFileInput = ref(null)
 const uploadingAvatar = ref(false)
 const avatarError     = ref('')
@@ -94,7 +94,7 @@ async function onCoverSelected(e) {
 
 // Derived: show real avatar if auth.user has one (uploaded in AccountView or here)
 const avatarUrl = computed(() => auth.user?.avatar_url || null)
-const initials  = computed(() => (form.value.name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
+const initials  = computed(() => (form.value.name || '—').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase())
 
 function pickAvatar() { avatarError.value = ''; avatarFileInput.value?.click() }
 async function onAvatarSelected(e) {
@@ -108,7 +108,7 @@ async function onAvatarSelected(e) {
       const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file)
     })
     const { user: updated } = await api.uploadAvatar(dataUrl)
-    // Update auth store → HomeView hv-avatar syncs automatically
+    // Update auth store �?HomeView hv-avatar syncs automatically
     auth.setUser(updated)
   } catch (err) { avatarError.value = err.message }
   finally { uploadingAvatar.value = false; if (avatarFileInput.value) avatarFileInput.value.value = '' }
@@ -209,7 +209,7 @@ async function save() {
     <div v-if="coverError" style="font-size:11px;color:var(--fx-error);margin-bottom:8px">{{ coverError }}</div>
     <input ref="coverFileInput" type="file" accept="image/*" style="display:none" @change="onCoverSelected" />
 
-    <!-- Avatar section — uploads sync to auth.user.avatar_url → HomeView badge -->
+    <!-- Avatar section �?uploads sync to auth.user.avatar_url �?HomeView badge -->
     <div class="psp-avatar-section fx-card mb-4">
       <div class="psp-avatar-wrap">
         <img v-if="avatarUrl" :src="avatarUrl" alt="avatar" class="psp-avatar-img" />
@@ -316,7 +316,7 @@ async function save() {
             <div class="psp-avail-day-label">{{ day }}</div>
             <div class="psp-avail-times">
               <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).start_time" />
-              <span style="color:var(--fx-muted);font-size:13px;padding:0 4px">–</span>
+              <span style="color:var(--fx-muted);font-size:13px;padding:0 4px">—</span>
               <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).end_time" />
             </div>
             <label class="psp-avail-auto">
@@ -348,7 +348,7 @@ async function save() {
           </div>
           <div style="flex:1;min-width:0">
             <div class="fw-semibold" style="font-size:15px">
-              {{ kycVerified ? 'Identity Verified ✓' : 'Verification Required' }}
+              {{ kycVerified ? 'Identity Verified …' : 'Verification Required' }}
             </div>
             <div style="font-size:12px;color:var(--fx-muted);margin-top:4px;line-height:1.5">
               {{ kycVerified
@@ -373,7 +373,7 @@ async function save() {
 
       <div v-if="kycVerified" style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">
         <span class="material-symbols-outlined" style="font-size:48px;color:#22c55e;display:block;font-variation-settings:'FILL' 1">verified_user</span>
-        All good — your identity is confirmed.
+        All good �?your identity is confirmed.
       </div>
     </div><!-- end kyc tab -->
 

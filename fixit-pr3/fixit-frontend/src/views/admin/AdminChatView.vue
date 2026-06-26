@@ -69,7 +69,7 @@ const STATUS = {
 }
 
 function bookingInitials(b) {
-  return (b.customer?.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return (b.customer?.name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 async function sendCs() {
@@ -108,7 +108,7 @@ async function sendCs() {
           </div>
           <div class="flex-grow-1" style="min-width:0">
             <div class="fw-semibold" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              {{ b.customer?.name?.split(' ')[0] }} ↔ {{ b.provider?.name?.split(' ')[0] }}
+              {{ b.customer?.name?.split(' ')[0] }} · {{ b.provider?.name?.split(' ')[0] }}
             </div>
             <div style="font-size:11px;color:var(--fx-muted);margin-top:2px">
               Job #{{ b.id }} · {{ b.category?.name || 'Service' }}
@@ -136,7 +136,7 @@ async function sendCs() {
           </div>
           <div class="flex-grow-1">
             <div class="fw-bold" style="font-size:15px">
-              {{ selected.customer?.name }} ↔ {{ selected.provider?.name }}
+              {{ selected.customer?.name }} · {{ selected.provider?.name }}
             </div>
             <div style="font-size:12px;color:var(--fx-muted)">
               Job #{{ selected.id }} · {{ selected.category?.name || 'Service' }}
@@ -151,7 +151,7 @@ async function sendCs() {
         <!-- CS notice -->
         <div class="e2e-bar">
           <span class="material-symbols-outlined" style="font-size:14px">support_agent</span>
-          Customer Service mode — messages you send appear as support in this conversation
+          Customer Service mode �?messages you send appear as support in this conversation
         </div>
 
         <!-- Messages -->

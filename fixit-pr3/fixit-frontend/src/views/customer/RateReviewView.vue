@@ -74,7 +74,7 @@ async function submit() {
       tip_amount: tipAmount.value !== '' ? parseFloat(tipAmount.value) : null,
       image_urls: imageUrls,
     })
-    // The backend marks the job 'reviewed' on review create — don't PATCH the
+    // The backend marks the job 'reviewed' on review create �?don't PATCH the
     // status again (reviewed→reviewed is rejected and used to abort navigation).
     const b = bookingsStore.byId(booking.value.id)
     if (b) b.status = 'reviewed'
@@ -100,7 +100,7 @@ async function submit() {
 
     <div class="text-center mb-4">
       <div class="fx-avatar mx-auto mb-2" style="width:64px;height:64px;font-size:24px">
-        {{ (booking.provider?.name || '?').split(' ').map(w => w[0]).join('') }}
+        {{ (booking.provider?.name || '—').split(' ').map(w => w[0]).join('') }}
       </div>
       <div class="fw-bold" style="font-size:18px">{{ booking.provider?.name }}</div>
       <div style="font-size:13px;color:var(--fx-muted)">{{ booking.category?.name }} · #{{ booking.id }}</div>
@@ -129,7 +129,7 @@ async function submit() {
       <div v-for="(p,i) in photos" :key="i" style="position:relative;width:72px;height:72px">
         <img :src="p.preview" style="width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid var(--fx-border)" />
         <button @click="removePhoto(i)"
-                style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:#ef4444;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1">✕</button>
+                style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:#ef4444;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1">×</button>
       </div>
       <label v-if="photos.length < maxPhotos"
              style="width:72px;height:72px;border-radius:10px;border:2px dashed var(--fx-border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--fx-muted)">
