@@ -89,7 +89,6 @@ function isActive(item) {
   const children = CHAT_CHILD_ROUTES[item.to]
   return children ? children.includes(route.name) : false
 }
-function logout() { auth.logout(); router.push({ name: 'login' }) }
 </script>
 
 <template>
@@ -104,39 +103,12 @@ function logout() { auth.logout(); router.push({ name: 'login' }) }
     <div class="fx-statusbar-bg" aria-hidden="true"></div>
 
     <template v-if="showShell">
-      <div class="fx-layout">
-        <!-- Glass side-nav (desktop ≥ 992px) -->
-        <aside class="fx-sidenav">
-          <div class="d-flex align-items-center gap-2 mb-4" style="padding:0 4px">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(180deg,#FF7D54,#FF6635);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 10px rgba(255,102,53,.28)">
-              <span class="material-symbols-outlined" style="color:#fff;font-size:20px;font-variation-settings:'FILL' 1">build</span>
-            </div>
-            <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--fx-text)">FixIt</span>
-          </div>
-          <button v-for="item in navItems" :key="item.label"
-                  class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
-            <span class="material-symbols-outlined" style="font-size:20px">{{ item.msIcon }}</span>
-            <span>{{ item.label }}</span>
-          </button>
-          <button class="nav-item mt-auto" @click="logout">
-            <span class="material-symbols-outlined" style="font-size:20px">logout</span>
-            <span>Log out</span>
-          </button>
-          <div style="padding:0 4px;margin-top:8px;font-size:12px;color:var(--fx-muted)">
-            {{ auth.user?.name }} · {{ auth.role }}
-          </div>
-        </aside>
+      <main class="fx-main">
+        <router-view />
+        <LegalFooter class="fx-app-legal" />
+      </main>
 
-        <div class="fx-content">
-          <main class="fx-main">
-            <router-view />
-            <LegalFooter class="fx-app-legal" />
-          </main>
-        </div>
-      </div>
-
-      <!-- Floating glass dock — Teleported to body so it's never trapped inside
-           any ancestor stacking context (e.g. the Google Maps z-index layer). -->
+      <!-- Floating liquid-glass dock — all viewports (Teleported to body) -->
       <Teleport to="body">
         <nav class="fx-bottomnav">
           <button v-for="item in navItems" :key="item.label"
