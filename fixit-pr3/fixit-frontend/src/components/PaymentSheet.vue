@@ -29,8 +29,12 @@ const useWallet = ref(true)
 
 const replaceMode = ref(false)
 const saveCardChecked = ref(true)
+const paidSuccess = ref(false)
 const paymentMount = ref(null)
 let cardSession = null
+let successTimer = null
+
+const SUCCESS_MS = 2000
 
 const amountDollars = computed(() => props.amount)
 const amountCents = computed(() =>
@@ -116,17 +120,36 @@ async function loadPaymentModule() {
 
 watch(openRef, async (isOpen) => {
   if (isOpen) {
+    paidSuccess.value = false
     replaceMode.value = false
     await loadPaymentModule()
   } else {
+    clearSuccessTimer()
     cardSession?.destroy()
     cardSession = null
   }
 }, { immediate: true })
 
 onUnmounted(() => {
+  clearSuccessTimer()
   cardSession?.destroy()
 })
+
+function clearSuccessTimer() {
+  if (successTimer) {
+    clearTimeout(successTimer)
+    successTimer = null
+  }
+}
+
+function showSuccessThenNavigate() {
+  paidSuccess.value = true
+  clearSuccessTimer()
+  successTimer = setTimeout(() => {
+    successTimer = null
+    emit('paid', props.bookingId)
+  }, SUCCESS_MS)
+}
 
 watch(showSaveForm, async (show) => {
   if (!props.open) return
@@ -193,7 +216,7 @@ async function confirmPay() {
     })
     if (result.paid || result.status === 'succeeded') {
       await wallet.load().catch(() => null)
-      emit('paid', props.bookingId)
+      showSuccessThenNavigate()
     } else {
       error.value = `Payment status: ${result.status}`
     }
@@ -224,42 +247,62 @@ function startReplace() {
 }
 
 function close() {
+  if (paidSuccess.value) return
   emit('close')
 }
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="lg-overlay-center" @click.self="close">
-      <div class="lg-sheet liquid-glass-high pv-sheet" @click.stop>
+    <div v-if="open" class="pv-overlay" @click.self="close">
+      <div class="lg-sheet liquid-glass-high acv-glass pv-sheet pv-sheet-enter" @click.stop>
         <div class="pv-sheet-handle"></div>
 
         <div class="pv-sheet-header">
-          <span class="pv-sheet-title">Payment</span>
-          <span class="pv-sheet-badge">Stripe {{ mode }}</span>
-          <button class="pv-sheet-close" type="button" aria-label="Close" @click="close">
+          <span class="pv-sheet-title">{{ paidSuccess ? 'Paid' : 'Payment' }}</span>
+          <span v-if="!paidSuccess" class="pv-sheet-badge">Stripe {{ mode }}</span>
+          <button
+            v-if="!paidSuccess"
+            class="pv-sheet-close"
+            type="button"
+            aria-label="Close"
+            @click="close"
+          >
             <span class="material-symbols-outlined" style="font-size:20px">close</span>
           </button>
         </div>
 
         <div class="pv-sheet-body">
-          <div v-if="loading" class="text-center py-4" style="color:var(--fx-muted)">Loading payment…</div>
+          <Transition name="pv-success" mode="out-in">
+          <div v-if="paidSuccess" key="success" class="pv-pay-success">
+            <div class="pv-success-ring" aria-hidden="true"></div>
+            <div class="pv-success-icon">
+              <span class="material-symbols-outlined" style="font-size:40px;font-variation-settings:'FILL' 1">check_circle</span>
+            </div>
+            <div class="pv-success-title">Payment successful!</div>
+            <div class="pv-success-sub">
+              RM{{ amountDollars?.toFixed(2) }} paid for booking #{{ bookingId }}
+            </div>
+            <div class="pv-success-hint">Taking you to your bookings…</div>
+          </div>
 
-          <div v-else-if="loadError" class="fx-card" style="padding:14px">
+          <div v-else-if="loading" key="loading" class="text-center py-4" style="color:var(--fx-muted)">Loading payment…</div>
+
+          <div v-else-if="loadError" key="error" class="pv-panel">
             <p style="font-size:13px;color:var(--fx-muted);margin:0 0 10px">
               Couldn't load payment. Try again or sign in again.
             </p>
             <button class="btn btn-sm btn-outline-secondary" type="button" @click="loadPaymentModule">Retry</button>
           </div>
 
-          <div v-else-if="!configured" class="fx-card" style="padding:14px">
+          <div v-else-if="!configured" key="unconfigured" class="pv-panel">
             <p style="font-size:13px;color:var(--fx-muted);margin:0">
               Stripe is not configured on the server.
             </p>
           </div>
 
-          <template v-else>
-            <div v-if="amountDollars" class="fx-card mb-3" style="background:var(--fx-accent-soft)">
+          <div v-else key="form">
+            <div v-if="amountDollars" class="pv-panel pv-panel-accent mb-3">
               <div class="d-flex justify-content-between align-items-center">
                 <span class="fw-semibold" style="font-size:14px">Amount due</span>
                 <span class="fw-bold text-accent" style="font-size:20px">RM{{ amountDollars.toFixed(2) }}</span>
@@ -271,7 +314,7 @@ function close() {
 
             <div v-if="error" class="alert alert-danger py-2 mb-3" style="font-size:13px">{{ error }}</div>
 
-            <div v-if="walletBalanceCents > 0" class="fx-card mb-3">
+            <div v-if="walletBalanceCents > 0" class="pv-panel mb-3">
               <div class="d-flex align-items-center gap-2 mb-2">
                 <span class="material-symbols-outlined" style="font-size:20px;color:#16a34a;font-variation-settings:'FILL' 1">account_balance_wallet</span>
                 <span class="fw-semibold" style="font-size:14px">Wallet balance</span>
@@ -297,7 +340,7 @@ function close() {
               </button>
             </div>
 
-            <div v-if="showSavedCard" class="fx-card mb-3">
+            <div v-if="showSavedCard" class="pv-panel mb-3">
               <div class="fw-semibold mb-2" style="font-size:14px">Saved card</div>
               <p style="font-size:13px;color:var(--fx-muted);margin-bottom:12px">{{ savedCardLabel }}</p>
               <div class="d-flex flex-column gap-2">
@@ -310,14 +353,14 @@ function close() {
               </div>
             </div>
 
-            <div v-if="showSaveForm" class="fx-card mb-3">
+            <div v-if="showSaveForm" class="pv-panel mb-3">
               <div class="fw-semibold mb-2" style="font-size:14px">
                 {{ replaceMode ? 'Replace card' : 'Save card for payment' }}
               </div>
               <p style="font-size:12px;color:var(--fx-muted)">
                 Test card <strong>4242 4242 4242 4242</strong>, any future expiry, any CVC.
               </p>
-              <div ref="paymentMount" class="mb-3" style="min-height:120px"></div>
+              <div ref="paymentMount" class="pv-card-mount mb-3"></div>
               <div v-if="!replaceMode" class="form-check mb-3">
                 <input :id="`save-card-${bookingId}`" v-model="saveCardChecked" class="form-check-input" type="checkbox" />
                 <label :for="`save-card-${bookingId}`" class="form-check-label" style="font-size:13px">
@@ -341,7 +384,8 @@ function close() {
             <p class="mb-0" style="font-size:11px;color:var(--fx-muted);text-align:center">
               Secured by Stripe. Card details never touch our servers.
             </p>
-          </template>
+          </div>
+          </Transition>
         </div>
       </div>
     </div>
@@ -349,17 +393,57 @@ function close() {
 </template>
 
 <style scoped>
+.pv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fx-z-modal-backdrop);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: rgba(255, 252, 248, 0.72);
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+}
+:global(body.fx-desktop) .pv-overlay {
+  align-items: center;
+  padding-bottom: 16px;
+}
+.pv-sheet-enter {
+  animation: pv-sheet-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes pv-sheet-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pv-success-enter-active {
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pv-success-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.pv-success-enter-from,
+.pv-success-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
 .pv-sheet {
   max-height: min(68vh, 640px);
   padding: 0;
   display: flex;
   flex-direction: column;
+  border: 0.5px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    var(--lg-edge),
+    0 12px 40px rgba(255, 102, 53, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.06);
 }
 .pv-sheet-handle {
   width: 40px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(255, 102, 53, 0.28);
   margin: 12px auto 0;
   flex-shrink: 0;
 }
@@ -369,7 +453,91 @@ function close() {
   gap: 8px;
   padding: 12px 16px 10px;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.55);
+}
+.pv-panel {
+  border-radius: 16px;
+  padding: 14px 16px;
+  background:
+    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255, 255, 255, 0.28) 0%, transparent 62%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, transparent 26%),
+    rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.58);
+  box-shadow: var(--lg-edge), 0 4px 14px rgba(255, 102, 53, 0.04);
+}
+.pv-panel-accent {
+  background:
+    radial-gradient(ellipse 50% 40% at 20% 10%, rgba(255, 140, 100, 0.22) 0%, transparent 60%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.24) 0%, transparent 28%),
+    rgba(255, 102, 53, 0.06);
+}
+.pv-card-mount {
+  min-height: 120px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 0.5px solid rgba(255, 255, 255, 0.65);
+}
+.pv-pay-success {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 12px 28px;
+  text-align: center;
+}
+.pv-success-ring {
+  position: absolute;
+  top: 28px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2px solid rgba(34, 197, 94, 0.35);
+  animation: pv-ring-pulse 1.2s ease-out infinite;
+}
+.pv-success-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pv-success-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.18);
+}
+.pv-success-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--fx-text);
+  animation: pv-fade-up 0.45s 0.12s both;
+}
+.pv-success-sub {
+  font-size: 14px;
+  color: var(--fx-muted);
+  animation: pv-fade-up 0.45s 0.22s both;
+}
+.pv-success-hint {
+  font-size: 12px;
+  color: var(--fx-muted);
+  margin-top: 4px;
+  animation: pv-fade-up 0.45s 0.32s both;
+}
+@keyframes pv-success-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  65% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes pv-ring-pulse {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  70% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+@keyframes pv-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .pv-sheet-title {
   flex: 1;
@@ -399,5 +567,22 @@ function close() {
   overflow-y: auto;
   padding: 16px;
   -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-sheet-enter {
+    animation: none;
+  }
+  .pv-success-enter-active,
+  .pv-success-leave-active {
+    transition: none;
+  }
+  .pv-success-icon,
+  .pv-success-ring,
+  .pv-success-title,
+  .pv-success-sub,
+  .pv-success-hint {
+    animation: none;
+  }
 }
 </style>

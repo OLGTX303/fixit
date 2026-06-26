@@ -27,7 +27,32 @@ export async function mountSaveCardElement(containerEl, { returnUrl } = {}) {
 
   const elements = stripe.elements({
     clientSecret,
-    appearance: { theme: 'stripe', variables: { colorPrimary: '#FF6635' } },
+    appearance: {
+      theme: 'stripe',
+      variables: {
+        colorPrimary: '#FF6635',
+        colorBackground: '#FFFFFF',
+        colorText: '#1a1a1a',
+        colorDanger: '#ef4444',
+        borderRadius: '12px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      },
+      rules: {
+        '.Input': {
+          backgroundColor: '#FFFFFF',
+          border: '1px solid rgba(255, 102, 53, 0.18)',
+          boxShadow: 'none',
+        },
+        '.Tab': {
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          border: '1px solid rgba(255, 255, 255, 0.65)',
+        },
+        '.Tab--selected': {
+          backgroundColor: 'rgba(255, 102, 53, 0.08)',
+          borderColor: 'rgba(255, 102, 53, 0.35)',
+        },
+      },
+    },
   })
   const paymentElement = elements.create('payment', {
     layout: 'tabs',
