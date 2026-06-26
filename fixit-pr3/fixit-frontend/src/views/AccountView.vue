@@ -252,6 +252,7 @@ const CUSTOMER_QUICK = [
     ══════════════════════════════════════════ -->
     <template v-else>
 
+      <div class="acv-body">
       <!-- Quick actions -->
       <div class="acv-card acv-glass lg-surface acv-quick-grid">
         <button v-for="q in CUSTOMER_QUICK" :key="q.label"
@@ -300,6 +301,7 @@ const CUSTOMER_QUICK = [
             <span class="acv-order-lbl">Cancelled</span>
           </button>
         </div>
+      </div>
       </div>
 
     </template>
@@ -367,7 +369,15 @@ const CUSTOMER_QUICK = [
 .acv-stat-lbl { font-size: 11px; color: rgba(255,255,255,0.80); }
 .acv-stat-div { width: 1px; height: 28px; background: rgba(255,255,255,0.25); }
 
-/* ── Admin feature cards ── */
+/* ── Customer content stack ── */
+.acv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px;
+}
+
+/* ── Admin feature cards (mobile: stack; desktop: grid in styles.css) ── */
 .adm-grid {
   display: flex; flex-direction: column; gap: 10px;
   padding: 0 12px;
@@ -388,6 +398,7 @@ const CUSTOMER_QUICK = [
 
 /* ── Customer glass panels ── */
 .acv-card { margin: 0 12px 12px; }
+.acv-body .acv-card { margin: 0; }
 .acv-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .acv-card-title   { font-size: 15px; font-weight: 800; color: var(--fx-text); letter-spacing: -0.02em; }
 .acv-see-all      {
@@ -437,6 +448,17 @@ const CUSTOMER_QUICK = [
   background: #FF6635; color: #fff; font-size: 9px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 6px rgba(255,102,53,0.35);
+}
+
+@media (min-width: 992px) {
+  .acv-body { padding: 0; gap: 16px; }
+  .adm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    padding: 0;
+  }
+  .acv-card { margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
