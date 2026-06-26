@@ -143,7 +143,8 @@ body.fx-desktop {
 .lg-surface,
 .liquid-glass,
 .fx-card,
-.glass-card {
+.glass-card,
+.acv-glass {
   position: relative;
   background: var(--lg-surface-bg);
   backdrop-filter: var(--lg-surface-blur);
@@ -350,6 +351,28 @@ body {
 .glass-card {
   border-radius: 22px;
   padding: 16px;
+}
+
+/* Account / profile panels — softer rim, no dark hairline on cream bg */
+.acv-glass {
+  border-radius: 16px;
+  padding: 16px;
+  border: none;
+  box-shadow:
+    var(--lg-edge),
+    0 4px 14px rgba(255,102,53,0.05),
+    0 8px 22px rgba(0,0,0,0.04);
+}
+.acv-glass.lg-interactive:hover,
+button.acv-glass.lg-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0   1.5px 0   rgba(255,255,255,0.95),
+    inset 1.5px 0   0   rgba(255,190,155,0.70),
+    inset -1.5px 0  0   rgba(155,185,255,0.65),
+    inset 0  -1.5px 0   rgba(170,195,255,0.42),
+    0 4px 14px rgba(255,102,53,0.08),
+    0 10px 28px rgba(0,0,0,0.06);
 }
 
 /* Level 2 — modals & overlay panels */
@@ -963,8 +986,12 @@ body.fx-desktop {
     padding: 0;
   }
   .acv-root:has(.acv-hero) .acv-card { margin: 0; }
-  .acv-root:has(.acv-hero) .acv-quick-grid { grid-column: 1; }
-  .acv-root:has(.acv-hero) .acv-card:not(.acv-quick-grid) { grid-column: 2; }
+  .acv-root:has(.acv-hero) .acv-quick-grid { grid-column: 1; align-self: stretch; }
+  .acv-root:has(.acv-hero) .acv-card:not(.acv-quick-grid) { grid-column: 2; align-self: stretch; }
+  .acv-root:has(.acv-hero) .acv-glass {
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
 
   /* ── Home ── */
   .hv-root {
