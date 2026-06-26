@@ -543,7 +543,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
       </div>
     </div>
 
-    <div style="height: calc(88px + env(safe-area-inset-bottom))"></div>
+    <div class="fx-mobile-spacer"></div>
   </div>
 </template>
 

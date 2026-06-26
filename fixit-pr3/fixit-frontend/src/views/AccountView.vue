@@ -300,7 +300,7 @@ const CUSTOMER_QUICK = [
 
     </template>
 
-    <div style="height: calc(88px + env(safe-area-inset-bottom))"></div>
+    <div class="fx-mobile-spacer"></div>
   </div>
 </template>
 

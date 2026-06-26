@@ -903,16 +903,187 @@ body.provider-page .fx-rightnav {
 }
 
 /* ─── Desktop UI ──────────────────────────────────────────────────────
-   Mobile: bottom dock. Desktop: right vertical rail + content inset. */
+   Mobile: bottom dock. Desktop: right rail + centered content columns. */
 body.fx-desktop {
+  --fx-content-max: 1080px;
+  --fx-content-wide: 1200px;
+  --fx-content-narrow: 640px;
+
   .fx-main {
-    padding-bottom: 24px;
-    padding-left: 32px;
-    padding-right: 112px;
+    padding-bottom: 32px;
+    padding-left: 40px;
+    padding-right: 120px;
   }
   .fx-bottomnav { display: none !important; }
   .fx-rightnav  { display: flex; }
-  .msg-split { height: 100vh; }
+
+  /* Centered page shells — never stretch edge-to-edge on wide screens */
+  .fx-view-root,
+  .fx-page {
+    max-width: var(--fx-content-max);
+    margin-inline: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .fx-view-root { padding-inline: 24px; }
+  .fx-page      { padding: 28px 24px; }
+  .fx-app-legal { max-width: var(--fx-content-max); padding-inline: 24px; }
+
+  .fx-mobile-spacer { display: none; }
+
+  /* Split chat panels */
+  .msg-split {
+    max-width: var(--fx-content-wide);
+    margin-inline: auto;
+    height: calc(100vh - env(safe-area-inset-top) - 20px);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--lg-surface-shadow);
+  }
+  .msg-panel-left { width: min(340px, 34%); }
+
+  /* ── Account (profile page only — not admin coupons) ── */
+  .acv-root:has(.acv-hero) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .acv-hero {
+    grid-column: 1 / -1;
+    margin: 0 0 4px;
+    border-radius: 24px;
+    padding-top: 44px;
+  }
+  .adm-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    padding: 0;
+  }
+  .acv-root:has(.acv-hero) .acv-card { margin: 0; }
+  .acv-root:has(.acv-hero) .acv-quick-grid { grid-column: 1; }
+  .acv-root:has(.acv-hero) .acv-card:not(.acv-quick-grid) { grid-column: 2; }
+
+  /* ── Home ── */
+  .hv-root {
+    max-width: var(--fx-content-wide);
+    margin-inline: auto;
+    width: 100%;
+  }
+  .hv-topbar {
+    max-width: var(--fx-content-wide);
+    margin-inline: auto;
+    border-radius: 0 0 20px 20px;
+  }
+  .hv-content {
+    max-width: 100%;
+    padding-inline: 32px;
+  }
+  .hv-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .hv-greeting { font-size: 32px; }
+
+  /* ── Lists → responsive card grids ── */
+  .jt-list,
+  .sv-list,
+  .wv-tx-list,
+  .mc-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .bh-grid,
+  .fv-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    padding-inline: 0;
+  }
+  .jt-card,
+  .sv-card,
+  .wv-tx,
+  .mc-card {
+    margin: 0;
+  }
+  .mc-list .mc-note { grid-column: 1 / -1; margin: 0 0 4px; }
+  .jt-header,
+  .jt-tabs,
+  .sv-discovery,
+  .sv-filters,
+  .sv-result-count,
+  .wv-header,
+  .bh-header,
+  .fv-header,
+  .mc-header,
+  .mc-note {
+    padding-inline: 0;
+  }
+
+  /* ── Search discovery ── */
+  .sv-hot-row { gap: 20px; }
+
+  /* ── Wallet ── */
+  .wv-root,
+  .jd-root,
+  .ppv-root,
+  .smv-root,
+  .phv-root { padding-bottom: 24px; }
+  .wv-hero { margin-inline: 0; }
+  .wv-section { padding-inline: 0; }
+
+  /* ── Provider profile ── */
+  .ppv-root { padding-inline: 0; }
+  .ppv-cover {
+    border-radius: 24px 24px 0 0;
+    margin-top: 8px;
+    min-height: 220px;
+  }
+  .ppv-meta-strip { padding-inline: 0; }
+
+  /* ── Service management ── */
+  .smv-service-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+    padding-inline: 0;
+  }
+  .smv-card { margin-inline: 0; }
+  .smv-header { padding-inline: 0; border-radius: 16px; margin-bottom: 8px; }
+  .smv-section-label { padding-inline: 0; }
+
+  /* ── Provider hub / booking requests ── */
+  .phv-hero { border-radius: 24px; margin-bottom: 16px; }
+  .brv-root {
+    max-width: var(--fx-content-max);
+    margin-inline: auto;
+    padding-inline: 24px;
+    padding-bottom: 32px;
+  }
+  .brv-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px;
+  }
+  .brv-card { margin: 0; }
+
+  /* ── Job detail ── */
+  .jd-root { padding-bottom: 24px; }
+  .jd-map { min-height: 400px; }
+  .jd-progress,
+  .jd-route,
+  .jd-provider-strip,
+  .jd-eta-bar { margin-inline: 0; }
+
+  /* Hover affordances (pointer devices) */
+  .jt-card:hover,
+  .sv-card:hover,
+  .adm-card:hover,
+  .conv-row:hover {
+    transform: translateY(-2px);
+  }
 }
 
 /* ─── Map ─────────────────────────────────────────────────────────────── */
@@ -925,10 +1096,8 @@ body.fx-desktop {
 
 /* ─── Page Container ─────────────────────────────────────────────────── */
 .fx-page { max-width: 640px; margin: 0 auto; padding: 16px 20px; }
-@media (min-width: 992px) { .fx-page { max-width: 820px; padding: 28px 32px; } }
-
 .fx-app-legal { max-width: 640px; margin: 24px auto 0; padding: 0 20px 16px; }
-@media (min-width: 992px) { .fx-app-legal { max-width: 820px; padding: 0 32px 8px; } }
+.fx-mobile-spacer { height: calc(88px + env(safe-area-inset-bottom)); }
 
 /* ─── Section headings ─────────────────────────────────────────────── */
 .fx-section-title {
