@@ -1,26 +1,141 @@
-name: Deploy to server
+name: Deploy & Android Release
 
-# Every push to master SSHes into the server (reachable via DDNS) and runs
-# redeploy.sh, which pulls the latest code and rebuilds frontend + backend.
+# Every push to master:
+#   1. SSH redeploy on the server (frontend + backend + migrations)
+#   2. Build a signed APK and publish a GitHub Release (OTA pickup)
 on:
   push:
     branches: [master]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-server
+  group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  deploy-server:
+    name: Deploy to server
     runs-on: ubuntu-latest
     steps:
       - name: SSH redeploy (frontend + backend + DB migrations)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: deploy                 # least-privilege CI user (key-only)
-          key: ${{ secrets.SSH_KEY }}      # private key; deploy may sudo ONLY redeploy.sh
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           command_timeout: 20m
           script: sudo -n /root/redeploy.sh
+
+  android-release:
+    name: Build & publish APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FRONTEND_DIR: fixit-pr3/fixit-frontend
+      VITE_API_URL: https://fixit.olgtx.com/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Android signing secrets
+        id: sign
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not configured — skipping APK build. Add keystore secrets to enable."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.sign.outputs.ready == 'true'
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - uses: actions/setup-java@v4
+        if: steps.sign.outputs.ready == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        if: steps.sign.outputs.ready == 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Resolve version
+        if: steps.sign.outputs.ready == 'true'
+        id: ver
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: |
+          BASE=$(node -p "require('./package.json').version")
+          # Monotonic build: 1.0.0 → 1.0.<run_number> for OTA comparison
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "name=${BASE%.*}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${BASE%.*}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build web + sync Capacitor
+        if: steps.sign.outputs.ready == 'true'
+        working-directory: ${{ env.FRONTEND_DIR }}
+        env:
+          VITE_API_URL: ${{ env.VITE_API_URL }}
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - name: Stamp version into Gradle
+        if: steps.sign.outputs.ready == 'true'
+        working-directory: ${{ env.FRONTEND_DIR }}/android
+        run: |
+          sed -i "s/versionName \".*\"/versionName \"${{ steps.ver.outputs.name }}\"/" app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode ${{ steps.ver.outputs.code }}/" app/build.gradle
+
+      - name: Write signing config
+        if: steps.sign.outputs.ready == 'true'
+        working-directory: ${{ env.FRONTEND_DIR }}/android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > release.keystore
+          printf 'storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$STORE_PASS" "$KEY_ALIAS" "$KEY_PASS" > signing.properties
+
+      - name: Assemble signed release APK
+        if: steps.sign.outputs.ready == 'true'
+        working-directory: ${{ env.FRONTEND_DIR }}/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK" ]; then
+            APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          fi
+          if [ ! -f "$APK" ]; then
+            echo "::error::Release APK not found"
+            exit 1
+          fi
+          cp "$APK" "$GITHUB_WORKSPACE/fixit-${{ steps.ver.outputs.name }}.apk"
+
+      - name: Publish GitHub Release (OTA)
+        if: steps.sign.outputs.ready == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: FixIt ${{ steps.ver.outputs.name }}
+          body: |
+            Auto-built from `${{ github.sha }}` on `${{ github.ref_name }}`.
+
+            Deployed to https://fixit.olgtx.com together with this APK.
+            Installed apps check `/api/app/latest` for OTA updates.
+          files: fixit-${{ steps.ver.outputs.name }}.apk
+          make_latest: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
