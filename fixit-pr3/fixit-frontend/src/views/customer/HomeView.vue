@@ -45,7 +45,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
 </script>
 
 <template>
-  <div>
+  <div class="hv-root">
     <!-- Top app bar -->
     <header class="hv-topbar">
       <div style="display:flex;align-items:center">
