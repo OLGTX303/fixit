@@ -45,6 +45,9 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK 36 (required by androidx.browser 1.9)
+        run: sdkmanager "platforms;android-36"
+
       - name: Resolve version
         id: ver
         run: |
