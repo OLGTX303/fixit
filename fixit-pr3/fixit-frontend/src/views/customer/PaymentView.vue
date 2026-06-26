@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import * as api from '../../services/api'
-import { getStripe, mountSaveCardElement, payWithSavedCard } from '../../services/stripePayments'
+import { getStripe, mountSaveCardElement, payBooking } from '../../services/stripePayments'
+import { useWalletStore } from '../../stores/wallet'
 import AppIcon from '../../components/AppIcon.vue'
 import { useModalGuard } from '../../composables/useModalGuard'
 
@@ -10,6 +11,7 @@ useModalGuard()
 
 const route = useRoute()
 const router = useRouter()
+const wallet = useWalletStore()
 
 const loading = ref(true)
 const loadError = ref('')
@@ -18,6 +20,7 @@ const error = ref('')
 const configured = ref(false)
 const saved = ref(null)
 const mode = ref('test')
+const useWallet = ref(true)
 
 const replaceMode = ref(false)
 const saveCardChecked = ref(true)
@@ -32,31 +35,61 @@ const amountDollars = computed(() => {
 const amountCents = computed(() =>
   amountDollars.value ? Math.round(amountDollars.value * 100) : null)
 
+const walletBalanceCents = computed(() => wallet.balanceCents)
+const walletBalanceLabel = computed(() => `RM${(walletBalanceCents.value / 100).toFixed(2)}`)
+
+const walletAppliedCents = computed(() => {
+  if (!useWallet.value || !amountCents.value) return 0
+  return Math.min(walletBalanceCents.value, amountCents.value)
+})
+
+const cardDueCents = computed(() => {
+  if (!amountCents.value) return 0
+  return Math.max(0, amountCents.value - walletAppliedCents.value)
+})
+
+const canPayWithWalletOnly = computed(() =>
+  amountCents.value > 0 && walletAppliedCents.value >= amountCents.value)
+
+const needsSavedCard = computed(() => cardDueCents.value > 0)
+
 const savedCardLabel = computed(() => {
   if (!saved.value?.has_saved_payment_method) return null
   const brand = (saved.value.brand || 'card').replace(/^./, (c) => c.toUpperCase())
-  return `Use saved test ${brand} ending in ${saved.value.last4}`
+  return `${brand} •••• ${saved.value.last4}`
 })
 
 const showSaveForm = computed(() =>
-  configured.value && (!saved.value?.has_saved_payment_method || replaceMode.value))
+  configured.value && needsSavedCard.value && (!saved.value?.has_saved_payment_method || replaceMode.value))
 
-const showSavedOptions = computed(() =>
-  configured.value && saved.value?.has_saved_payment_method && !replaceMode.value)
+const showSavedCard = computed(() =>
+  configured.value && needsSavedCard.value && saved.value?.has_saved_payment_method && !replaceMode.value)
+
+const payButtonLabel = computed(() => {
+  if (busy.value) return 'Processing…'
+  if (!amountCents.value) return 'Pay'
+  if (canPayWithWalletOnly.value) return `Pay ${walletBalanceLabel.value} from wallet`
+  if (walletAppliedCents.value > 0 && cardDueCents.value > 0) {
+    return `Pay RM${(walletAppliedCents.value / 100).toFixed(2)} wallet + RM${(cardDueCents.value / 100).toFixed(2)} card`
+  }
+  return savedCardLabel.value ? `Pay RM${amountDollars.value?.toFixed(2)} with card` : `Pay RM${amountDollars.value?.toFixed(2)}`
+})
 
 onMounted(async () => {
   try {
-    const { config } = await getStripe()
+    const [stripePack] = await Promise.all([
+      getStripe(),
+      wallet.load().catch(() => null),
+    ])
+    const { config } = stripePack
     configured.value = config.configured
     saved.value = config.saved_payment_method
     mode.value = config.mode || 'test'
+    useWallet.value = walletBalanceCents.value > 0
     if (route.query.setup === 'complete') {
       await refreshSaved()
     }
   } catch (e) {
-    // A failed config request (expired session, network, Stripe.js) is NOT the
-    // same as "keys missing" �?surface it as a load error so we don't falsely
-    // tell the user to edit the server .env.
     loadError.value = e.message || 'Could not load the payment module'
     error.value = e.message
   } finally {
@@ -115,19 +148,25 @@ async function saveTestCard() {
   }
 }
 
-async function paySaved() {
-  if (!amountCents.value) {
-    error.value = 'No payment amount specified'
+async function confirmPay() {
+  if (!bookingId.value) {
+    error.value = 'No booking specified'
     return
   }
+  if (needsSavedCard.value && !saved.value?.has_saved_payment_method) {
+    error.value = 'Save a card to pay the remaining balance'
+    return
+  }
+
   busy.value = true
   error.value = ''
   try {
-    const result = await payWithSavedCard({
-      amountCents: amountCents.value,
+    const result = await payBooking({
       bookingId: bookingId.value,
+      useWallet: useWallet.value && walletAppliedCents.value > 0,
     })
     if (result.paid || result.status === 'succeeded') {
+      await wallet.load().catch(() => null)
       router.push({
         name: 'job-tracker',
         query: { id: bookingId.value, paid: '1' },
@@ -178,7 +217,7 @@ function startReplace() {
 
     <div v-else-if="loadError" class="fx-card" style="padding:16px">
       <p style="font-size:13px;color:var(--fx-muted);margin:0 0 10px">
-        Couldn't load the payment module. Your session may have expired �?try reloading or signing in again.
+        Couldn't load the payment module. Your session may have expired — try reloading or signing in again.
       </p>
       <button class="btn btn-sm btn-outline-secondary" @click="$router.go(0)">Reload</button>
     </div>
@@ -203,41 +242,63 @@ function startReplace() {
 
       <div v-if="error" class="alert alert-danger py-2 mb-3" style="font-size:13px">{{ error }}</div>
 
-      <!-- Saved card path -->
-      <div v-if="showSavedOptions" class="fx-card mb-3">
+      <!-- Wallet -->
+      <div v-if="walletBalanceCents > 0" class="fx-card mb-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="material-symbols-outlined" style="font-size:20px;color:#16a34a;font-variation-settings:'FILL' 1">account_balance_wallet</span>
+          <span class="fw-semibold" style="font-size:14px">Wallet balance</span>
+          <span class="ms-auto fw-bold" style="font-size:15px;color:#16a34a">{{ walletBalanceLabel }}</span>
+        </div>
+        <div v-if="amountCents" class="form-check">
+          <input id="use-wallet" v-model="useWallet" class="form-check-input" type="checkbox" />
+          <label for="use-wallet" class="form-check-label" style="font-size:13px">
+            Use wallet balance first
+            <span v-if="useWallet && walletAppliedCents > 0" style="color:var(--fx-muted)">
+              (RM{{ (walletAppliedCents / 100).toFixed(2) }} applied)
+            </span>
+          </label>
+        </div>
+        <div v-if="amountCents && useWallet && cardDueCents > 0" style="font-size:12px;color:var(--fx-muted);margin-top:8px">
+          RM{{ (cardDueCents / 100).toFixed(2) }} will be charged to your saved card.
+        </div>
+      </div>
+
+      <!-- Pay CTA -->
+      <div v-if="amountCents && bookingId && (canPayWithWalletOnly || showSavedCard)" class="fx-card mb-3">
+        <button
+          class="btn btn-primary w-100"
+          :disabled="busy"
+          @click="confirmPay"
+        >
+          {{ payButtonLabel }}
+        </button>
+      </div>
+
+      <!-- Saved card -->
+      <div v-if="showSavedCard" class="fx-card mb-3">
         <div class="d-flex align-items-center gap-2 mb-2">
           <AppIcon name="shield" :size="18" />
-          <span class="fw-semibold" style="font-size:14px">Saved test card</span>
+          <span class="fw-semibold" style="font-size:14px">Saved card</span>
         </div>
-        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:12px">
-          {{ savedCardLabel }}
-        </p>
+        <p style="font-size:13px;color:var(--fx-muted);margin-bottom:12px">{{ savedCardLabel }}</p>
         <div class="d-flex flex-column gap-2">
-          <button
-            v-if="amountCents"
-            class="btn btn-primary w-100"
-            :disabled="busy"
-            @click="paySaved"
-          >
-            {{ busy ? 'Processing…' : savedCardLabel }}
-          </button>
           <button class="btn btn-outline-primary w-100" :disabled="busy" @click="startReplace">
-            Replace saved test card
+            Replace saved card
           </button>
           <button class="btn btn-outline-danger w-100" :disabled="busy" @click="removeSaved">
-            Remove saved test card
+            Remove saved card
           </button>
         </div>
       </div>
 
-      <!-- Save new card path -->
+      <!-- Save card when needed -->
       <div v-if="showSaveForm" class="fx-card mb-3">
         <div class="fw-semibold mb-2" style="font-size:14px">
-          {{ replaceMode ? 'Replace test card' : 'Save test card for future payments' }}
+          {{ replaceMode ? 'Replace card' : 'Save card for payment' }}
         </div>
         <p style="font-size:12px;color:var(--fx-muted)">
           Use Stripe test card <strong>4242 4242 4242 4242</strong>, any future expiry, any CVC.
-          Card details go directly to Stripe �?never stored on our servers.
+          Card details go directly to Stripe — never stored on our servers.
         </p>
 
         <div ref="paymentMount" class="mb-3" style="min-height:120px"></div>
@@ -245,7 +306,7 @@ function startReplace() {
         <div v-if="!replaceMode" class="form-check mb-3">
           <input id="save-card" v-model="saveCardChecked" class="form-check-input" type="checkbox" />
           <label for="save-card" class="form-check-label" style="font-size:13px">
-            Save test card for future payments
+            Save card for future payments
           </label>
         </div>
 
@@ -254,7 +315,7 @@ function startReplace() {
           :disabled="busy || !saveCardChecked"
           @click="saveTestCard"
         >
-          {{ busy ? 'Saving…' : 'Save test card' }}
+          {{ busy ? 'Saving…' : 'Save card' }}
         </button>
 
         <button
@@ -268,7 +329,7 @@ function startReplace() {
       </div>
 
       <div v-if="!amountCents && !showSaveForm && saved?.has_saved_payment_method" class="fx-card" style="font-size:13px;color:var(--fx-muted)">
-        Your test card is saved. Book a service to pay with it.
+        Your card is saved. Book a service to pay with wallet or card.
       </div>
 
       <p class="mt-3 mb-0" style="font-size:11px;color:var(--fx-muted);text-align:center">

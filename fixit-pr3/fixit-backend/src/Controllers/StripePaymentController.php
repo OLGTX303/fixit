@@ -77,6 +77,26 @@ final class StripePaymentController
         }
     }
 
+    public function payBooking(Request $request, Response $response): Response
+    {
+        $user = $request->getAttribute('user');
+        $data = (array) $request->getParsedBody();
+        $err = Validator::requireFields($data, ['booking_id']);
+        if ($err) {
+            return ResponseHelper::error($response, $err, 422);
+        }
+
+        $bookingId = (int) $data['booking_id'];
+        $useWallet = filter_var($data['use_wallet'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+        try {
+            $result = $this->service()->payBooking((int) $user['id'], $bookingId, $useWallet);
+            return ResponseHelper::json($response, $result);
+        } catch (\RuntimeException $e) {
+            return ResponseHelper::error($response, $e->getMessage(), 400);
+        }
+    }
+
     public function payWithSavedMethod(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');

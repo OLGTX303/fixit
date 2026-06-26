@@ -83,3 +83,24 @@ export async function payWithSavedCard({ amountCents, bookingId, currency = 'myr
 
   return result
 }
+
+/** Pay booking with wallet balance, card, or both (wallet applied first). */
+export async function payBooking({ bookingId, useWallet = true }) {
+  const { stripe } = await getStripe()
+  const result = await api.payBooking({
+    booking_id: bookingId,
+    use_wallet: useWallet,
+  })
+
+  if (result.requires_action && result.client_secret) {
+    const { error, paymentIntent } = await stripe.confirmCardPayment(result.client_secret)
+    if (error) throw new Error(error.message)
+    return {
+      ...result,
+      status: paymentIntent?.status ?? result.status,
+      paid: paymentIntent?.status === 'succeeded',
+    }
+  }
+
+  return result
+}

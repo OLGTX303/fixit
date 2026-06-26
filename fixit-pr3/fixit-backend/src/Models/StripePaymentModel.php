@@ -89,6 +89,35 @@ final class StripePaymentModel
         )->execute(['bid' => $bookingId]);
     }
 
+    /** Record a succeeded booking payment (wallet-only, card, or split). */
+    public function recordSucceededBookingPayment(
+        int $userId,
+        int $bookingId,
+        string $paymentRef,
+        int $amountCents,
+        string $currency = 'myr'
+    ): void {
+        $pdo = Connection::get();
+        $stmt = $pdo->prepare(
+            'INSERT INTO StripePayment
+             (user_id, booking_id, stripe_payment_intent_id, amount_cents, currency, status)
+             VALUES (:uid, :bid, :pi, :amount, :currency, :status)
+             ON DUPLICATE KEY UPDATE
+             amount_cents = VALUES(amount_cents),
+             currency = VALUES(currency),
+             status = VALUES(status),
+             updated_at = NOW()'
+        );
+        $stmt->execute([
+            'uid' => $userId,
+            'bid' => $bookingId,
+            'pi' => $paymentRef,
+            'amount' => $amountCents,
+            'currency' => strtolower($currency),
+            'status' => 'succeeded',
+        ]);
+    }
+
     public function upsertFromPaymentIntent(
         int $userId,
         object $intent,

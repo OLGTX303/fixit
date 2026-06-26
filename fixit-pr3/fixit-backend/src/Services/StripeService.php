@@ -225,6 +225,236 @@ final class StripeService
         return $result;
     }
 
+    /**
+     * Pay a booking with wallet balance, saved card, or both (wallet first).
+     * Amount is always taken from the booking total on the server.
+     */
+    public function payBooking(int $userId, int $bookingId, bool $useWallet = true): array
+    {
+        $pdo = Connection::get();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT customer_id, status, total FROM Job WHERE id = :id FOR UPDATE'
+            );
+            $stmt->execute(['id' => $bookingId]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                throw new \RuntimeException('Booking not found');
+            }
+            if ((int) $row['customer_id'] !== $userId) {
+                throw new \RuntimeException('Booking does not belong to this user');
+            }
+
+            $amountCents = (int) round(((float) ($row['total'] ?? 0)) * 100);
+            if ($amountCents < 50) {
+                throw new \RuntimeException('Booking total is too small to pay');
+            }
+            if ($this->payments->findSucceededByBooking($bookingId)) {
+                throw new \RuntimeException('Booking has already been paid');
+            }
+            if (!in_array($row['status'], ['requested', 'accepted'], true)) {
+                throw new \RuntimeException('Booking is not payable in its current status');
+            }
+
+            $walletApplied = 0;
+            if ($useWallet) {
+                $balance = $this->wallet->lockAndBalance($userId);
+                $walletApplied = min(max(0, $balance), $amountCents);
+            }
+            $cardCents = $amountCents - $walletApplied;
+
+            if ($cardCents > 0) {
+                $user = $this->users->findById($userId);
+                if (empty($user['stripe_test_default_payment_method_id'])) {
+                    throw new \RuntimeException('Save a card to pay the remaining balance');
+                }
+            }
+
+            $cardResult = null;
+            if ($cardCents > 0) {
+                $cardResult = $this->chargeSavedCardAmount(
+                    $userId,
+                    $cardCents,
+                    $bookingId,
+                    [
+                        'fixit_wallet_cents' => (string) $walletApplied,
+                        'fixit_booking_total_cents' => (string) $amountCents,
+                    ]
+                );
+            }
+
+            if ($cardResult !== null && ($cardResult['status'] ?? '') === 'requires_action') {
+                $pdo->commit();
+                return [
+                    'payment_intent_id' => $cardResult['payment_intent_id'],
+                    'status' => 'requires_action',
+                    'requires_action' => true,
+                    'client_secret' => $cardResult['client_secret'],
+                    'amount_cents' => $amountCents,
+                    'wallet_applied_cents' => $walletApplied,
+                    'card_amount_cents' => $cardCents,
+                    'currency' => 'myr',
+                ];
+            }
+
+            if ($walletApplied > 0) {
+                $this->debitWalletForBooking($userId, $bookingId, $walletApplied);
+            }
+
+            if ($cardCents > 0 && $cardResult !== null) {
+                $this->payments->recordSucceededBookingPayment(
+                    $userId,
+                    $bookingId,
+                    (string) $cardResult['payment_intent_id'],
+                    $amountCents,
+                    'myr'
+                );
+            } else {
+                $this->payments->recordSucceededBookingPayment(
+                    $userId,
+                    $bookingId,
+                    'wallet_booking_' . $bookingId,
+                    $amountCents,
+                    'myr'
+                );
+            }
+
+            $pdo->commit();
+            return [
+                'paid' => true,
+                'status' => 'succeeded',
+                'amount_cents' => $amountCents,
+                'wallet_applied_cents' => $walletApplied,
+                'card_amount_cents' => $cardCents,
+                'currency' => 'myr',
+            ];
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage());
+        }
+    }
+
+    /** @param array<string,string> $extraMetadata */
+    private function chargeSavedCardAmount(
+        int $userId,
+        int $amountCents,
+        int $bookingId,
+        array $extraMetadata = []
+    ): array {
+        $user = $this->users->findById($userId);
+        if (!$user) {
+            throw new \RuntimeException('User not found');
+        }
+
+        $customerId = $user['stripe_test_customer_id'] ?? null;
+        $pmId = $user['stripe_test_default_payment_method_id'] ?? null;
+        if (!$customerId || !$pmId) {
+            throw new \RuntimeException('No saved payment method');
+        }
+        if ($amountCents < 50) {
+            throw new \RuntimeException('Card amount must be at least 50 cents');
+        }
+
+        $this->verifyPaymentMethodOwnership($customerId, $pmId);
+
+        $intent = $this->stripe->paymentIntents->create([
+            'amount' => $amountCents,
+            'currency' => 'myr',
+            'customer' => $customerId,
+            'payment_method' => $pmId,
+            'off_session' => true,
+            'confirm' => true,
+            'metadata' => array_merge([
+                'fixit_user_id' => (string) $userId,
+                'fixit_booking_id' => (string) $bookingId,
+                'stripe_mode' => 'test',
+            ], $extraMetadata),
+        ]);
+
+        $result = [
+            'payment_intent_id' => $intent->id,
+            'status' => $intent->status,
+            'amount_cents' => $amountCents,
+            'currency' => 'myr',
+        ];
+
+        if ($intent->status === 'requires_action' && $intent->next_action) {
+            $result['requires_action'] = true;
+            $result['client_secret'] = $intent->client_secret;
+        }
+
+        if ($intent->status === 'succeeded') {
+            $result['paid'] = true;
+        }
+
+        return $result;
+    }
+
+    private function debitWalletForBooking(int $userId, int $bookingId, int $walletCents): void
+    {
+        if ($walletCents <= 0) {
+            return;
+        }
+        $ref = 'booking_pay_' . $bookingId;
+        $pdo = Connection::get();
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'booking_pay' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['uid' => $userId, 'ref' => $ref]);
+        if ($chk->fetchColumn()) {
+            return;
+        }
+        $this->wallet->add(
+            $userId,
+            'booking_pay',
+            -$walletCents,
+            'myr',
+            $ref,
+            'Booking #' . $bookingId . ' payment (wallet)'
+        );
+    }
+
+    private function creditWalletBookingRefund(int $userId, int $bookingId): bool
+    {
+        $ref = 'booking_pay_' . $bookingId;
+        $pdo = Connection::get();
+        $stmt = $pdo->prepare(
+            "SELECT amount_cents FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'booking_pay' AND stripe_ref = :ref AND status = 'settled'
+             LIMIT 1"
+        );
+        $stmt->execute(['uid' => $userId, 'ref' => $ref]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) {
+            return false;
+        }
+        $debited = abs((int) $row['amount_cents']);
+        if ($debited <= 0) {
+            return false;
+        }
+        $refundRef = 'booking_refund_' . $bookingId;
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction WHERE kind = 'booking_refund' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['ref' => $refundRef]);
+        if ($chk->fetchColumn()) {
+            return true;
+        }
+        $this->wallet->add(
+            $userId,
+            'booking_refund',
+            $debited,
+            'myr',
+            $refundRef,
+            'Booking #' . $bookingId . ' refund (wallet)'
+        );
+        return true;
+    }
+
     // ── Wallet ────────────────────────────────────────────────────────────
     // The wallet is a ledger (WalletModel). Top-up = a real PaymentIntent on the
     // saved card; withdraw = a real Refund of prior top-ups. Both produce real
@@ -453,6 +683,13 @@ final class StripeService
             }
 
             $piId = (string) $payment['stripe_payment_intent_id'];
+            if (str_starts_with($piId, 'wallet_booking_')) {
+                if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
+                    $refundedAny = true;
+                }
+                continue;
+            }
+
             $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
             $charge = $pi->latest_charge ?? null;
             if (!$charge || !isset($charge->id)) {
@@ -473,6 +710,10 @@ final class StripeService
                     'stripe_mode' => 'test',
                 ],
             ]);
+            $refundedAny = true;
+        }
+
+        if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
             $refundedAny = true;
         }
 
@@ -566,7 +807,22 @@ final class StripeService
             ? (int) $intent->metadata->fixit_booking_id
             : null;
         if ($userId > 0) {
-            $this->payments->upsertFromPaymentIntent($userId, $intent, $bookingId);
+            $bookingTotal = (int) ($intent->metadata->fixit_booking_total_cents ?? 0);
+            $walletCents = (int) ($intent->metadata->fixit_wallet_cents ?? 0);
+            if ($bookingId !== null && $bookingTotal > 0) {
+                if ($walletCents > 0) {
+                    $this->debitWalletForBooking($userId, $bookingId, $walletCents);
+                }
+                $this->payments->recordSucceededBookingPayment(
+                    $userId,
+                    $bookingId,
+                    (string) $intent->id,
+                    $bookingTotal,
+                    (string) ($intent->currency ?? 'myr')
+                );
+            } else {
+                $this->payments->upsertFromPaymentIntent($userId, $intent, $bookingId);
+            }
             if (($intent->metadata->fixit_purpose ?? '') === 'wallet_topup') {
                 $this->creditWalletTopUpIfNeeded($userId, (string) $intent->id, (int) $intent->amount);
             }
