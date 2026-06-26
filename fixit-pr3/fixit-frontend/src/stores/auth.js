@@ -49,8 +49,14 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     setUser(user) {
+      const prevAvatar = this.user?.avatar_url
+      const prevId = this.user?.id
       this.user = user
       api.persistSession(this.token, user)
+      if (user?.id && user.avatar_url !== prevAvatar) {
+        useBookingsStore().syncUserAvatar(prevId ?? user.id, user.avatar_url ?? null)
+        useProvidersStore().resetCache()
+      }
     },
     logout() {
       api.logout()

@@ -39,6 +39,23 @@ export const useBookingsStore = defineStore('bookings', {
       await api.deleteBooking(bookingId)
       this.bookings = this.bookings.filter(b => b.id !== Number(bookingId))
     },
+    async reload() {
+      this.loaded = false
+      this.bookings = []
+      await this.load()
+    },
+    /** Keep nested customer/provider avatars in sync after profile photo upload. */
+    syncUserAvatar(userId, avatarUrl) {
+      const id = Number(userId)
+      for (const b of this.bookings) {
+        if (b.customer?.id === id) {
+          b.customer = { ...b.customer, avatar_url: avatarUrl ?? null }
+        }
+        if (b.provider?.user_id === id) {
+          b.provider = { ...b.provider, avatar_url: avatarUrl ?? null }
+        }
+      }
+    },
     resetCache() {
       this.loaded = false
       this.bookings = []
