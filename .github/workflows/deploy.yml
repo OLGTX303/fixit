@@ -65,6 +65,10 @@ jobs:
         if: steps.sign.outputs.ready == 'true'
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK 36 (required by androidx.browser 1.9)
+        if: steps.sign.outputs.ready == 'true'
+        run: sdkmanager "platforms;android-36"
+
       - name: Resolve version
         if: steps.sign.outputs.ready == 'true'
         id: ver
