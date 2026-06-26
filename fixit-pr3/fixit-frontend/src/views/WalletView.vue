@@ -370,8 +370,8 @@ function fmtDate(d) {
 
     <!-- ── HALF-SCREEN BOTTOM SHEET ── -->
     <Teleport to="body">
-      <div v-if="showSheet" class="lg-overlay-center" @click.self="closeSheet">
-        <div class="lg-sheet liquid-glass-high wv-sheet" @click.stop>
+      <div v-if="showSheet" class="wv-overlay" @click.self="closeSheet">
+        <div class="lg-sheet liquid-glass-high acv-glass wv-sheet wv-sheet-enter" @click.stop>
           <!-- Drag handle -->
           <div class="wv-sheet-handle"></div>
 
@@ -588,23 +588,51 @@ function fmtDate(d) {
 .wv-tx-amount { font-size: 14px; font-weight: 800; color: #ef4444; flex-shrink: 0; }
 .wv-tx-amount.positive { color: #22c55e; }
 
-/* ── Bottom sheet (glass via lg-sheet + liquid-glass-high) ─────────────── */
+/* ── Bottom sheet (light overlay, no page blur) ─────────────────────── */
+.wv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fx-z-modal-backdrop);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: rgba(255, 252, 248, 0.55);
+}
+:global(body.fx-desktop) .wv-overlay {
+  align-items: center;
+  padding-bottom: 16px;
+}
+.wv-sheet-enter {
+  animation: wv-sheet-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes wv-sheet-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .wv-sheet {
   max-height: 62vh;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  border: 0.5px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    var(--lg-edge),
+    0 12px 40px rgba(255, 102, 53, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.06);
 }
 
 .wv-sheet-handle {
   width: 40px; height: 4px; border-radius: 2px;
-  background: rgba(0,0,0,0.18); margin: 12px auto 0;
+  background: rgba(255, 102, 53, 0.28); margin: 12px auto 0;
   flex-shrink: 0;
 }
 
 .wv-sheet-header {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 16px 10px; flex-shrink: 0;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.55);
 }
 .wv-sheet-back, .wv-sheet-close {
   background: none; border: none; cursor: pointer; padding: 4px;
@@ -627,8 +655,8 @@ function fmtDate(d) {
 }
 .wv-amt-opt {
   padding: 16px 0; border-radius: 14px;
-  border: 2px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.60);
+  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.82);
   cursor: pointer; font-family: inherit;
   transition: border-color 0.18s, background 0.18s, transform 0.12s;
 }
@@ -644,10 +672,15 @@ function fmtDate(d) {
 .wv-stripe-badge {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 12px; border-radius: 8px; margin-bottom: 14px;
-  background: rgba(99,102,241,0.08); color: #4f46e5;
+  background: rgba(255, 102, 53, 0.08); color: #FF6635;
   font-size: 12px; font-weight: 600;
 }
-.wv-card-mount { min-height: 140px; margin-bottom: 4px; }
+.wv-card-mount {
+  min-height: 140px; margin-bottom: 4px;
+  padding: 10px 12px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 0.5px solid rgba(255, 255, 255, 0.65);
+}
 
 /* Saved card row */
 .wv-saved-card {

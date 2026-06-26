@@ -47,7 +47,10 @@ async function runSilentOta(latest) {
   otaInflight = (async () => {
     try {
       localStorage.setItem(OTA_ACTIVE_KEY, key)
-      await OtaUpdater.downloadAndInstall({ url: latest.apk_url })
+      await OtaUpdater.downloadAndInstall({
+        url: latest.apk_url,
+        versionCode: String(latest.version_code || latest.version),
+      })
       return { status: 'installing', version: latest.version }
     } catch (err) {
       try { localStorage.removeItem(OTA_ACTIVE_KEY) } catch { /* ignore */ }

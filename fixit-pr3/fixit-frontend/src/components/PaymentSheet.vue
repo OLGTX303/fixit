@@ -402,9 +402,7 @@ function close() {
   justify-content: center;
   padding: 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
-  background: rgba(255, 252, 248, 0.72);
-  backdrop-filter: blur(14px) saturate(1.35);
-  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  background: rgba(255, 252, 248, 0.55);
 }
 :global(body.fx-desktop) .pv-overlay {
   align-items: center;
