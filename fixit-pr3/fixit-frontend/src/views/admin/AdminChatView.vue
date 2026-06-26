@@ -1,66 +1,22 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
-import * as api from '../../services/api'
-import AppIcon from '../../components/AppIcon.vue'
+import { isDesktop } from '../../composables/useViewport.js'
+import ChatView from '../provider/ChatView.vue'
 
+const router = useRouter()
 const bookingsStore = useBookingsStore()
+
 const selectedId = ref(null)
-const messages = ref([])
-const loading = ref(false)
-const error = ref('')
-const listEl = ref(null)
-const draft = ref('')
-const sending = ref(false)
+const brokenAvatars = ref({})
 
-onMounted(async () => {
-  await bookingsStore.load()
-  if (bookingsStore.bookings.length) selectId(bookingsStore.bookings[0].id)
-})
+onMounted(() => bookingsStore.reload())
 
-const selected = computed(() => bookingsStore.byId(selectedId.value))
-
-function senderName(m) {
-  const b = selected.value
-  if (!b) return 'User'
-  return m.sender_id === b.customer_id
-    ? (b.customer?.name || 'Customer')
-    : (b.provider?.name || 'Provider')
-}
-
-function senderInitials(m) {
-  return senderName(m).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
-
-function isCustomer(m) {
-  return m.sender_id === selected.value?.customer_id
-}
-
-async function selectId(id) {
-  selectedId.value = id
-  loading.value = true
-  error.value = ''
-  messages.value = []
-  try {
-    messages.value = await api.getMessagesForJob(id)
-    nextTick(() => { if (listEl.value) listEl.value.scrollTop = listEl.value.scrollHeight })
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-function bodyOf(m) {
-  if (m.is_encrypted) return null
-  return m.body || '[empty]'
-}
-
-function timeOf(iso) {
-  return new Date(iso).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
-}
+const conversations = computed(() => bookingsStore.bookings)
 
 const STATUS = {
+  inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
   requested:   { c: 'var(--fx-warn)',    bg: 'var(--fx-warn-soft)',    label: 'Requested' },
   accepted:    { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Accepted' },
   in_progress: { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'In Progress' },
@@ -68,414 +24,170 @@ const STATUS = {
   reviewed:    { c: 'var(--fx-muted)',   bg: 'rgba(255,255,255,0.18)', label: 'Reviewed' },
 }
 
-function bookingInitials(b) {
-  return (b.customer?.name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+function initials(name) {
+  return (name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-async function sendCs() {
-  if (!draft.value.trim() || !selectedId.value || sending.value) return
-  sending.value = true
-  try {
-    const msg = await api.sendMessage(selectedId.value, { body: draft.value.trim() })
-    messages.value.push(msg)
-    draft.value = ''
-    nextTick(() => { if (listEl.value) listEl.value.scrollTop = listEl.value.scrollHeight })
-  } finally {
-    sending.value = false
-  }
+function showAvatar(b) {
+  return b.customer?.avatar_url && !brokenAvatars.value[b.id]
+}
+
+function onAvatarError(bookingId) {
+  brokenAvatars.value[bookingId] = true
+}
+
+function select(b) {
+  if (isDesktop.value) { selectedId.value = b.id }
+  else { router.push({ name: 'admin-chat', params: { id: b.id } }) }
 }
 </script>
 
 <template>
-  <div class="admin-chat-layout">
-    <!-- Left: conversation list -->
-    <div class="admin-sidebar">
-      <div class="sidebar-head">
-        <h1 class="fw-bold" style="font-size:18px;letter-spacing:-0.01em;margin:0">Chats</h1>
-        <div style="font-size:12px;color:var(--fx-muted);margin-top:2px">{{ bookingsStore.bookings.length }} conversations</div>
+  <!-- ── DESKTOP: split panel (synced with customer / provider) ── -->
+  <div v-if="isDesktop" class="msg-split">
+
+    <div class="msg-panel-left">
+      <div class="msg-panel-header">
+        <span class="msg-panel-title">CS Chats</span>
+        <span class="msg-panel-sub">{{ conversations.length }} conversation{{ conversations.length !== 1 ? 's' : '' }}</span>
       </div>
 
-      <div class="sidebar-list">
+      <div class="msg-conv-list">
         <button
-          v-for="b in bookingsStore.bookings"
-          :key="b.id"
-          class="conv-item"
-          :class="{ active: b.id === selectedId }"
-          @click="selectId(b.id)"
+          v-for="b in conversations" :key="b.id"
+          class="msg-conv-row"
+          :class="{ active: selectedId === b.id }"
+          @click="select(b)"
         >
-          <div class="fx-avatar" style="width:40px;height:40px;font-size:13px;font-weight:800;flex-shrink:0">
-            {{ bookingInitials(b) }}
+          <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+               class="msg-conv-avatar msg-conv-avatar-img" @error="onAvatarError(b.id)" />
+          <div v-else class="msg-conv-avatar">{{ initials(b.customer?.name) }}</div>
+          <div class="msg-conv-body">
+            <div class="msg-conv-name">{{ b.customer?.name || 'Customer' }} · {{ b.provider?.name || 'Provider' }}</div>
+            <div class="msg-conv-sub">{{ b.category?.name || 'Service' }} · Job #{{ b.id }}</div>
           </div>
-          <div class="flex-grow-1" style="min-width:0">
-            <div class="fw-semibold" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              {{ b.customer?.name?.split(' ')[0] }} · {{ b.provider?.name?.split(' ')[0] }}
-            </div>
-            <div style="font-size:11px;color:var(--fx-muted);margin-top:2px">
-              Job #{{ b.id }} · {{ b.category?.name || 'Service' }}
-            </div>
-          </div>
-          <span class="fx-badge"
-                :style="{ color: STATUS[b.status]?.c, background: STATUS[b.status]?.bg, fontSize: '10px', padding: '2px 8px' }">
+          <span class="fx-badge msg-conv-badge"
+                :style="{ color: STATUS[b.status]?.c, background: STATUS[b.status]?.bg }">
             {{ STATUS[b.status]?.label || b.status }}
           </span>
         </button>
 
-        <div v-if="!bookingsStore.bookings.length" style="padding:32px 16px;text-align:center;color:var(--fx-muted);font-size:13px">
-          No bookings to monitor
+        <div v-if="!conversations.length" class="msg-empty-list">
+          <span class="material-symbols-outlined" style="font-size:40px;color:var(--fx-muted-soft)">chat_bubble</span>
+          <p>No conversations to monitor</p>
         </div>
       </div>
     </div>
 
-    <!-- Right: message thread -->
-    <div class="admin-main">
-      <template v-if="selected">
-        <!-- Header -->
-        <div class="msg-header">
-          <div class="fx-avatar" style="width:40px;height:40px;font-size:14px;font-weight:800;flex-shrink:0">
-            {{ bookingInitials(selected) }}
-          </div>
-          <div class="flex-grow-1">
-            <div class="fw-bold" style="font-size:15px">
-              {{ selected.customer?.name }} · {{ selected.provider?.name }}
-            </div>
-            <div style="font-size:12px;color:var(--fx-muted)">
-              Job #{{ selected.id }} · {{ selected.category?.name || 'Service' }}
-            </div>
-          </div>
-          <div class="fx-badge" style="background:rgba(255,102,53,0.09);color:var(--fx-accent);font-size:11px;padding:4px 10px;gap:4px">
-            <span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">support_agent</span>
-            CS Mode
-          </div>
-        </div>
+    <div class="msg-panel-right">
+      <ChatView v-if="selectedId" :key="selectedId" :booking-id="selectedId" :embedded="true" />
+      <div v-else class="msg-chat-empty">
+        <span class="material-symbols-outlined" style="font-size:56px;color:var(--fx-muted-soft)">forum</span>
+        <p>Select a conversation to view messages</p>
+      </div>
+    </div>
 
-        <!-- CS notice -->
-        <div class="e2e-bar">
-          <span class="material-symbols-outlined" style="font-size:14px">support_agent</span>
-          Customer Service mode �?messages you send appear as support in this conversation
-        </div>
+  </div>
 
-        <!-- Messages -->
-        <div v-if="loading" class="msg-empty">
-          <span style="color:var(--fx-muted);font-size:13px">Loading…</span>
+  <!-- ── MOBILE: card list (synced with customer / provider) ── -->
+  <div v-else class="fx-page">
+    <div class="mb-4">
+      <h1 class="fw-bold mb-1" style="font-size:24px;letter-spacing:-0.02em">CS Chats</h1>
+      <p style="font-size:14px;color:var(--fx-muted);margin:0">Monitor customer ↔ provider conversations</p>
+    </div>
+    <div class="d-flex flex-column gap-2">
+      <button v-for="b in conversations" :key="b.id"
+              class="conv-row acv-glass lg-surface d-flex align-items-center gap-3"
+              @click="select(b)">
+        <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+             class="msg-conv-avatar msg-conv-avatar-img" style="width:48px;height:48px"
+             @error="onAvatarError(b.id)" />
+        <div v-else class="fx-avatar" style="width:48px;height:48px;font-size:16px;font-weight:800;flex-shrink:0">
+          {{ initials(b.customer?.name) }}
         </div>
-        <div v-else-if="error" style="padding:16px 20px">
-          <div class="alert alert-danger py-2" style="font-size:13px">{{ error }}</div>
-        </div>
-        <div v-else ref="listEl" class="msg-list">
-          <div v-for="m in messages" :key="m.id" class="msg-row"
-               :class="isCustomer(m) ? 'from-customer' : 'from-provider'">
-            <div v-if="isCustomer(m)" class="fx-avatar msg-avatar">
-              {{ senderInitials(m) }}
-            </div>
-            <div class="msg-col">
-              <div class="msg-name">{{ senderName(m) }}</div>
-              <div class="msg-bubble" :class="isCustomer(m) ? 'bubble-customer' : 'bubble-provider'">
-                <template v-if="bodyOf(m)">{{ bodyOf(m) }}</template>
-                <span v-else class="encrypted-label">🔒 Encrypted message</span>
-              </div>
-              <div class="msg-meta">
-                {{ timeOf(m.sent_at) }}
-                <span v-if="m.harm_status && m.harm_status !== 'clear'"
-                      style="color:var(--fx-warn);margin-left:6px">
-                  · {{ m.harm_status }}
-                </span>
-              </div>
-            </div>
-            <div v-if="!isCustomer(m)" class="fx-avatar msg-avatar provider-avatar">
-              {{ senderInitials(m) }}
-            </div>
+        <div class="flex-grow-1" style="min-width:0;text-align:left">
+          <div class="fw-semibold" style="font-size:15px;margin-bottom:3px">
+            {{ b.customer?.name || 'Customer' }} · {{ b.provider?.name || 'Provider' }}
           </div>
-          <div v-if="!messages.length" class="msg-empty">
-            <span class="material-symbols-outlined" style="font-size:32px;color:var(--fx-muted-soft);display:block;margin-bottom:8px">chat_bubble</span>
-            No messages in this conversation yet
-          </div>
+          <div style="font-size:12px;color:var(--fx-muted)">{{ b.category?.name || 'Service' }} · Job #{{ b.id }}</div>
         </div>
-
-        <!-- CS compose bar -->
-        <div class="cs-compose">
-          <input v-model="draft" class="cs-input" placeholder="Type a customer service message…"
-                 @keydown.enter.prevent="sendCs" />
-          <button class="cs-send" :disabled="!draft.trim() || sending" @click="sendCs">
-            <span class="material-symbols-outlined" style="font-size:20px">send</span>
-          </button>
+        <div class="d-flex flex-column align-items-end gap-2" style="flex-shrink:0">
+          <span class="fx-badge" :style="{ color: STATUS[b.status]?.c, background: STATUS[b.status]?.bg }">
+            {{ STATUS[b.status]?.label || b.status }}
+          </span>
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--fx-muted-soft)">chevron_right</span>
         </div>
-      </template>
-
-      <div v-else class="msg-empty">
-        <span class="material-symbols-outlined" style="font-size:48px;color:var(--fx-muted-soft);display:block;margin-bottom:10px">forum</span>
-        <div style="font-size:14px;color:var(--fx-muted)">Select a conversation to view messages</div>
+      </button>
+      <div v-if="!conversations.length" class="acv-glass lg-surface text-center py-5">
+        <span class="material-symbols-outlined" style="font-size:44px;color:var(--fx-muted-soft);display:block;margin-bottom:12px">chat</span>
+        <div class="fw-semibold" style="font-size:15px;margin-bottom:4px">No conversations yet</div>
+        <div style="font-size:13px;color:var(--fx-muted)">Bookings will appear here when customers message providers</div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.admin-chat-layout {
-  display: flex;
-  height: calc(100vh - 80px);
-  overflow: hidden;
-  max-width: 100%;
-}
+.msg-split { display: flex; height: calc(100vh - 0px); overflow: hidden; }
 
-/* ── Sidebar ── */
-.admin-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  background: rgba(255,255,255,0.30);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-right: 1px solid rgba(255,255,255,0.40);
-  position: relative;
+.msg-panel-left {
+  width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 5%, rgba(255,255,255,0.32) 0%, transparent 65%),
+    rgba(255,255,255,0.08);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border-right: 0.5px solid rgba(255,255,255,0.50);
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.30);
 }
-.admin-sidebar::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 100%);
-  pointer-events: none;
-}
+.msg-panel-header { padding: 20px 20px 14px; border-bottom: 0.5px solid rgba(255,255,255,0.40); flex-shrink: 0; }
+.msg-panel-title  { font-size: 20px; font-weight: 800; color: var(--fx-text); display: block; }
+.msg-panel-sub    { font-size: 12px; color: var(--fx-muted); margin-top: 2px; display: block; }
 
-.sidebar-head {
-  padding: 20px 16px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.35);
-  background: rgba(255,255,255,0.20);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  position: relative;
-  z-index: 1;
-}
+.msg-conv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
 
-.sidebar-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  position: relative;
-  z-index: 1;
+.msg-conv-row {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border: none; background: transparent; cursor: pointer;
+  text-align: left; transition: background 0.12s; position: relative;
 }
+.msg-conv-row::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--fx-accent); opacity: 0; border-radius: 0 3px 3px 0; transition: opacity 0.15s;
+}
+.msg-conv-row:hover  { background: rgba(255,255,255,0.18); }
+.msg-conv-row.active { background: rgba(255,102,53,0.08); }
+.msg-conv-row.active::before { opacity: 1; }
 
-.conv-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  color: var(--fx-text);
-  font-family: inherit;
-  transition: all 0.18s ease;
-}
-.conv-item:hover {
-  background: rgba(255,255,255,0.38);
-  border-color: rgba(255,255,255,0.50);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55);
-}
-.conv-item.active {
-  background: rgba(255,102,53,0.08);
-  border-color: rgba(255,102,53,0.20);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.40);
-}
-
-/* ── Main panel ── */
-.admin-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: rgba(255,255,255,0.12);
-}
-
-.msg-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  background: rgba(255,255,255,0.40);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border-bottom: 1px solid rgba(255,255,255,0.40);
-  flex-shrink: 0;
-  position: relative;
-}
-.msg-header::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(to right, rgba(255,255,255,0.80), rgba(255,255,255,0.20));
-  pointer-events: none;
-}
-
-.e2e-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 20px;
-  font-size: 12px;
-  color: var(--fx-muted);
-  background: rgba(255,255,255,0.18);
-  border-bottom: 1px solid rgba(255,255,255,0.28);
-  flex-shrink: 0;
-}
-
-.msg-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.msg-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-.from-customer { justify-content: flex-start; }
-.from-provider { justify-content: flex-end; }
-
-.msg-avatar {
-  width: 28px;
-  height: 28px;
-  font-size: 10px;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-.provider-avatar {
-  background: linear-gradient(135deg, rgba(255,102,53,0.22), rgba(255,181,159,0.18));
-}
-
-.msg-col {
-  max-width: 64%;
-  display: flex;
-  flex-direction: column;
-}
-.from-customer .msg-col { align-items: flex-start; }
-.from-provider .msg-col { align-items: flex-end; }
-
-.msg-name {
-  font-size: 11px;
-  color: var(--fx-muted);
-  margin-bottom: 3px;
-}
-
-.msg-bubble {
-  padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 13px;
-  line-height: 1.55;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
-  color: var(--fx-text);
-}
-.bubble-customer {
-  background: rgba(255,255,255,0.50);
-  border: 1px solid rgba(255,255,255,0.60);
-  border-bottom-left-radius: 4px;
-}
-.bubble-provider {
-  background: linear-gradient(160deg, rgba(255,125,84,0.16), rgba(255,102,53,0.10));
-  border: 1px solid rgba(255,102,53,0.18);
-  border-bottom-right-radius: 4px;
-}
-.encrypted-label {
-  color: var(--fx-muted);
-  font-style: italic;
-}
-
-.msg-meta {
-  font-size: 10px;
-  color: var(--fx-muted-soft);
-  margin-top: 3px;
-}
-
-.msg-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--fx-muted);
-  font-size: 13px;
-  padding: 40px;
-}
-
-/* CS compose bar */
-.cs-compose {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(255,255,255,0.40);
-  backdrop-filter: blur(30px);
-  border-top: 1px solid rgba(255,255,255,0.40);
-  flex-shrink: 0;
-}
-.cs-input {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 22px;
-  border: 1.5px solid rgba(255,255,255,0.60);
-  background: rgba(255,255,255,0.55);
-  font-size: 13px;
-  outline: none;
-  color: var(--fx-text);
-}
-.cs-input:focus { border-color: var(--fx-accent); }
-.cs-send {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--fx-accent);
-  color: #fff;
+.msg-conv-avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(160deg, #FF8056, #FF6635); color: #fff;
+  font-size: 15px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255,102,53,0.22);
 }
-.cs-send:disabled { opacity: 0.45; cursor: default; }
+.msg-conv-avatar-img {
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.65);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  background: var(--fx-bg);
+}
+.msg-conv-body { flex: 1; min-width: 0; }
+.msg-conv-name { font-size: 14px; font-weight: 600; color: var(--fx-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-conv-sub  { font-size: 12px; color: var(--fx-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-conv-badge { font-size: 10px; flex-shrink: 0; }
 
-/* Mobile: stacked layout */
-@media (max-width: 680px) {
-  .admin-chat-layout {
-    flex-direction: column;
-    height: auto;
-  }
-  .admin-sidebar {
-    width: 100%;
-    max-height: 220px;
-    border-right: none;
-    border-bottom: 1px solid rgba(255,255,255,0.40);
-  }
-  .sidebar-list {
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 6px;
-    padding: 8px 12px;
-  }
-  .conv-item {
-    flex-direction: column;
-    align-items: center;
-    min-width: 100px;
-    padding: 8px;
-    gap: 4px;
-    text-align: center;
-  }
-  .admin-main {
-    height: calc(100vh - 300px);
-    min-height: 360px;
-  }
+.msg-empty-list { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 10px; text-align: center; }
+.msg-empty-list p { font-size: 13px; color: var(--fx-muted); margin: 0; }
+
+.msg-panel-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msg-chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--fx-muted); font-size: 14px; }
+
+.conv-row {
+  width: 100%; border: none; cursor: pointer;
+  padding: 14px 16px; text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.conv-row:hover { transform: translateY(-1px); }
+.conv-row:active { transform: scale(0.98); }
 </style>

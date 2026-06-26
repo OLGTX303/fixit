@@ -13,9 +13,10 @@ const auth = useAuthStore()
 const providersStore = useProvidersStore()
 
 const selectedId = ref(null)
+const brokenAvatars = ref({})
 
 onMounted(async () => {
-  await Promise.all([bookingsStore.load(), providersStore.load()])
+  await Promise.all([bookingsStore.reload(), providersStore.load()])
 })
 
 const profile = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
@@ -32,6 +33,14 @@ const STATUS = {
 
 function initials(name) {
   return (name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function showAvatar(b) {
+  return b.customer?.avatar_url && !brokenAvatars.value[b.id]
+}
+
+function onAvatarError(bookingId) {
+  brokenAvatars.value[bookingId] = true
 }
 
 function select(b) {
@@ -54,7 +63,9 @@ function select(b) {
         <button v-for="b in myJobs" :key="b.id"
                 class="msg-conv-row" :class="{ active: selectedId === b.id }"
                 @click="select(b)">
-          <div class="msg-conv-avatar">{{ initials(b.customer?.name) }}</div>
+          <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+               class="msg-conv-avatar msg-conv-avatar-img" @error="onAvatarError(b.id)" />
+          <div v-else class="msg-conv-avatar">{{ initials(b.customer?.name) }}</div>
           <div class="msg-conv-body">
             <div class="msg-conv-name">{{ b.customer?.name || 'Customer' }}</div>
             <div class="msg-conv-sub">{{ b.category?.name || 'Service' }} · Job #{{ b.id }}</div>
@@ -92,7 +103,10 @@ function select(b) {
     <div class="d-flex flex-column gap-2">
       <button v-for="b in myJobs" :key="b.id"
               class="conv-row fx-card d-flex align-items-center gap-3" @click="select(b)">
-        <div class="fx-avatar" style="width:48px;height:48px;font-size:16px;font-weight:800;flex-shrink:0">
+        <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+             class="msg-conv-avatar msg-conv-avatar-img" style="width:48px;height:48px"
+             @error="onAvatarError(b.id)" />
+        <div v-else class="fx-avatar" style="width:48px;height:48px;font-size:16px;font-weight:800;flex-shrink:0">
           {{ initials(b.customer?.name) }}
         </div>
         <div class="flex-grow-1" style="min-width:0;text-align:left">
@@ -154,6 +168,12 @@ function select(b) {
   font-size: 15px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(255,102,53,0.22);
+}
+.msg-conv-avatar-img {
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.65);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  background: var(--fx-bg);
 }
 .msg-conv-body { flex: 1; min-width: 0; }
 .msg-conv-name { font-size: 14px; font-weight: 600; color: var(--fx-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
