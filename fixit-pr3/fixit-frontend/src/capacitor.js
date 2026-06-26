@@ -1,10 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { OtaUpdater } from './plugins/otaUpdater'
 
 const OTA_URL = `${import.meta.env.VITE_API_URL || 'https://fixit.olgtx.com/api'}/app/latest`
-const OTA_DISMISS_KEY = 'fixit_ota_dismiss'
+const OTA_ACTIVE_KEY = 'fixit_ota_active'
 
 function isNewer(remote, current) {
   const a = String(remote).split('.').map(n => parseInt(n, 10) || 0)
@@ -17,20 +17,6 @@ function isNewer(remote, current) {
 
 function releaseKey(latest) {
   return `${latest.version}:${latest.version_code ?? ''}`
-}
-
-function isDismissed(latest) {
-  try {
-    return localStorage.getItem(OTA_DISMISS_KEY) === releaseKey(latest)
-  } catch {
-    return false
-  }
-}
-
-function dismissRelease(latest) {
-  try {
-    localStorage.setItem(OTA_DISMISS_KEY, releaseKey(latest))
-  } catch { /* private mode */ }
 }
 
 function hasUpdate(latest, appInfo) {
@@ -46,16 +32,44 @@ function hasUpdate(latest, appInfo) {
   return false
 }
 
-async function openApkUrl(url) {
-  await Browser.open({ url })
+let otaInflight = null
+
+async function runSilentOta(latest) {
+  const key = releaseKey(latest)
+  try {
+    if (localStorage.getItem(OTA_ACTIVE_KEY) === key) {
+      return { status: 'installing', version: latest.version }
+    }
+  } catch { /* ignore */ }
+
+  if (otaInflight) return otaInflight
+
+  otaInflight = (async () => {
+    try {
+      localStorage.setItem(OTA_ACTIVE_KEY, key)
+      await OtaUpdater.downloadAndInstall({ url: latest.apk_url })
+      return { status: 'installing', version: latest.version }
+    } catch (err) {
+      try { localStorage.removeItem(OTA_ACTIVE_KEY) } catch { /* ignore */ }
+      console.warn('[ota] silent update failed', err)
+      return { status: 'error', message: err?.message || 'update failed' }
+    } finally {
+      otaInflight = null
+    }
+  })()
+
+  return otaInflight
 }
 
 /**
- * OTA: compare installed build/version with /api/app/latest (GitHub release).
- * @param {{ force?: boolean }} opts — force=true ignores per-version dismiss
+ * Silent OTA: background APK download + in-app install prompt (no browser).
  */
 export async function checkForUpdate({ force = false } = {}) {
   if (!Capacitor.isNativePlatform()) return { status: 'skipped' }
+
+  if (force) {
+    try { localStorage.removeItem(OTA_ACTIVE_KEY) } catch { /* ignore */ }
+  }
 
   try {
     const [appInfo, res] = await Promise.all([
@@ -73,24 +87,18 @@ export async function checkForUpdate({ force = false } = {}) {
     }
 
     if (!hasUpdate(latest, appInfo)) {
+      try { localStorage.removeItem(OTA_ACTIVE_KEY) } catch { /* ignore */ }
       return { status: 'current', version: appInfo.version, build: appInfo.build }
     }
 
-    if (!force && isDismissed(latest)) {
-      return { status: 'dismissed' }
+    if (!force) {
+      const active = (() => { try { return localStorage.getItem(OTA_ACTIVE_KEY) } catch { return null } })()
+      if (active === releaseKey(latest)) {
+        return runSilentOta(latest)
+      }
     }
 
-    const buildHint = latest.version_code ? ` (build ${latest.version_code})` : ''
-    const notes = latest.notes ? `\n\n${String(latest.notes).slice(0, 400)}` : ''
-    const msg = `A new version (${latest.version}${buildHint}) is available.${notes}\n\nDownload and install now?`.trim()
-
-    if (window.confirm(msg)) {
-      await openApkUrl(latest.apk_url)
-      return { status: 'opened', version: latest.version }
-    }
-
-    dismissRelease(latest)
-    return { status: 'declined' }
+    return runSilentOta(latest)
   } catch (err) {
     console.warn('[ota] check failed', err)
     return { status: 'error', message: err?.message || 'check failed' }
