@@ -19,22 +19,26 @@ import java.net.URL;
 @CapacitorPlugin(name = "OtaUpdater")
 public class OtaUpdaterPlugin extends Plugin {
 
-    private static final String APK_NAME = "fixit-update.apk";
+    private static final String APK_PREFIX = "fixit-update-";
 
     @PluginMethod
     public void downloadAndInstall(PluginCall call) {
         String url = call.getString("url");
+        String versionCode = call.getString("versionCode");
         if (url == null || url.isEmpty()) {
             call.reject("url is required");
+            return;
+        }
+        if (versionCode == null || versionCode.isEmpty()) {
+            call.reject("versionCode is required");
             return;
         }
 
         new Thread(() -> {
             try {
-                File apk = new File(getContext().getCacheDir(), APK_NAME);
-                if (!isValidApk(apk)) {
-                    downloadApk(url, apk);
-                }
+                purgeCachedUpdates();
+                File apk = new File(getContext().getCacheDir(), APK_PREFIX + versionCode + ".apk");
+                downloadApk(url, apk);
                 getActivity().runOnUiThread(() -> {
                     try {
                         promptInstall(apk);
@@ -51,6 +55,21 @@ public class OtaUpdaterPlugin extends Plugin {
 
     private boolean isValidApk(File apk) {
         return apk.exists() && apk.length() > 1024 * 100;
+    }
+
+    private void purgeCachedUpdates() {
+        File cache = getContext().getCacheDir();
+        File[] files = cache.listFiles();
+        if (files == null) {
+            return;
+        }
+        for (File f : files) {
+            String name = f.getName();
+            if (name.equals("fixit-update.apk")
+                    || (name.startsWith(APK_PREFIX) && name.endsWith(".apk"))) {
+                f.delete();
+            }
+        }
     }
 
     private void downloadApk(String urlString, File out) throws Exception {
