@@ -967,31 +967,39 @@ body.fx-desktop {
 
   /* ── Account (profile page only — not admin coupons) ── */
   .acv-root:has(.acv-hero) {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    align-items: start;
+    padding-bottom: 32px;
   }
-  .acv-hero {
-    grid-column: 1 / -1;
-    margin: 0 0 4px;
+  .acv-root:has(.acv-hero) .acv-hero {
+    margin: 0;
     border-radius: 24px;
-    padding-top: 44px;
+    padding: 28px 28px 20px;
   }
-  .adm-grid {
-    grid-column: 1 / -1;
+  .acv-root:has(.acv-hero) .acv-hero-actions { top: 20px; right: 20px; }
+  .acv-root:has(.acv-hero) .acv-stats-row {
+    border-radius: 16px;
+    margin-top: 4px;
+  }
+  .acv-root:has(.acv-hero) .adm-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 12px;
     padding: 0;
   }
-  .acv-root:has(.acv-hero) .acv-card { margin: 0; }
-  .acv-root:has(.acv-hero) .acv-quick-grid { grid-column: 1; align-self: stretch; }
-  .acv-root:has(.acv-hero) .acv-card:not(.acv-quick-grid) { grid-column: 2; align-self: stretch; }
+  .acv-root:has(.acv-hero) .acv-card { margin: 0; width: 100%; }
   .acv-root:has(.acv-hero) .acv-glass {
     border-radius: 18px;
-    padding: 18px 20px;
+    padding: 18px 22px;
   }
+  .acv-root:has(.acv-hero) .acv-quick-grid { gap: 12px; }
+  .acv-root:has(.acv-hero) .acv-quick-icon { width: 56px; height: 56px; }
+  .acv-root:has(.acv-hero) .acv-orders-grid { gap: 10px; }
+  .acv-root:has(.acv-hero) .acv-profile-row { margin-bottom: 16px; }
+  .acv-root:has(.acv-hero) .acv-username { font-size: 24px; }
+  .acv-root:has(.acv-hero) .acv-avatar-img,
+  .acv-root:has(.acv-hero) .acv-avatar-fallback { width: 80px; height: 80px; }
 
   /* ── Home ── */
   .hv-root {
