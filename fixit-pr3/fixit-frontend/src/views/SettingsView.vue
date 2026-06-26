@@ -33,6 +33,8 @@ async function checkUpdate() {
     const result = await checkForUpdate({ force: true })
     if (result.status === 'current') {
       window.alert('You are on the latest version.')
+    } else if (result.status === 'installing') {
+      window.alert('Update ready — confirm the install when Android prompts you.')
     } else if (result.status === 'none') {
       window.alert('No release is available yet.')
     } else if (result.status === 'error') {
