@@ -83,7 +83,7 @@ async function go(item) {
   }
   router.push({ name: item.to })
 }
-const CHAT_CHILD_ROUTES = { messages: ['chat'], 'pro-chats': ['pro-chat'] }
+const CHAT_CHILD_ROUTES = { messages: ['chat'], 'pro-chats': ['pro-chat'], 'admin-chats': ['admin-chat'] }
 function isActive(item) {
   if (route.name === item.to) return true
   const children = CHAT_CHILD_ROUTES[item.to]

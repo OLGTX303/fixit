@@ -50,6 +50,7 @@ const routes = [
   { path: '/admin/harm-reviews', name: 'admin-harm', component: () => import('../views/admin/HarmReviewView.vue'), meta: { role: 'admin' } },
   { path: '/admin/coupons', name: 'admin-coupons', component: () => import('../views/admin/AdminCouponsView.vue'), meta: { role: 'admin' } },
   { path: '/admin/chats', name: 'admin-chats', component: () => import('../views/admin/AdminChatView.vue'), meta: { role: 'admin' } },
+  { path: '/admin/chat/:id', name: 'admin-chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'admin' } },
 ]
 
 const router = createRouter({
