@@ -154,7 +154,7 @@ const CUSTOMER_QUICK = [
       <!-- Feature cards 2×2 -->
       <div class="adm-grid">
         <!-- Users -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-users' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-users' })">
           <div class="adm-card-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">manage_accounts</span>
           </div>
@@ -168,7 +168,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Providers -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-verify' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-verify' })">
           <div class="adm-card-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">verified_user</span>
           </div>
@@ -182,7 +182,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Bookings -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-bookings' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-bookings' })">
           <div class="adm-card-icon" style="background:rgba(16,185,129,0.12);color:#10b981">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">calendar_month</span>
           </div>
@@ -194,7 +194,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- CS Chat -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-chats' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-chats' })">
           <div class="adm-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">support_agent</span>
           </div>
@@ -206,7 +206,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Safety / Harm reviews -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-harm' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-harm' })">
           <div class="adm-card-icon" style="background:rgba(239,68,68,0.12);color:#ef4444">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">shield</span>
           </div>
@@ -221,7 +221,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Reviews moderation -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-bookings' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-bookings' })">
           <div class="adm-card-icon" style="background:rgba(236,72,153,0.12);color:#ec4899">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">rate_review</span>
           </div>
@@ -233,7 +233,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- System coupons -->
-        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-coupons' })">
+        <button class="adm-card acv-glass lg-surface lg-interactive" @click="router.push({ name: 'admin-coupons' })">
           <div class="adm-card-icon" style="background:rgba(255,102,53,0.12);color:#FF6635">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">redeem</span>
           </div>
@@ -253,9 +253,9 @@ const CUSTOMER_QUICK = [
     <template v-else>
 
       <!-- Quick actions -->
-      <div class="acv-card fx-card acv-quick-grid">
+      <div class="acv-card acv-glass lg-surface acv-quick-grid">
         <button v-for="q in CUSTOMER_QUICK" :key="q.label"
-                class="acv-quick-item"
+                class="acv-quick-item lg-interactive"
                 @click="q.to && router.push({ name: q.to })">
           <div class="acv-quick-icon lg-icon-tile">
             <span class="material-symbols-outlined" style="font-size:22px;font-variation-settings:'FILL' 1">{{ q.icon }}</span>
@@ -265,7 +265,7 @@ const CUSTOMER_QUICK = [
       </div>
 
       <!-- My Bookings -->
-      <div class="acv-card fx-card">
+      <div class="acv-card acv-glass lg-surface">
         <div class="acv-card-header">
           <span class="acv-card-title">My Bookings</span>
           <button class="acv-see-all" @click="router.push({ name: 'job-tracker' })">
@@ -273,26 +273,30 @@ const CUSTOMER_QUICK = [
           </button>
         </div>
         <div class="acv-orders-grid">
-          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
-            <span class="material-symbols-outlined acv-order-icon">list_alt</span>
+          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+            <div class="acv-order-tile lg-icon-tile">
+              <span class="material-symbols-outlined acv-order-icon">list_alt</span>
+            </div>
             <span class="acv-order-lbl">All</span>
           </button>
-          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
-            <div style="position:relative;display:inline-block">
+          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+            <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">schedule</span>
               <span v-if="upcoming.length" class="acv-order-badge">{{ upcoming.length }}</span>
             </div>
             <span class="acv-order-lbl">Upcoming</span>
           </button>
-          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
-            <div style="position:relative;display:inline-block">
+          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+            <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">rate_review</span>
               <span v-if="toReview.length" class="acv-order-badge">{{ toReview.length }}</span>
             </div>
             <span class="acv-order-lbl">To Review</span>
           </button>
-          <button class="acv-order-btn" @click="router.push({ name: 'job-tracker' })">
-            <span class="material-symbols-outlined acv-order-icon">cancel</span>
+          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+            <div class="acv-order-tile lg-icon-tile">
+              <span class="material-symbols-outlined acv-order-icon">cancel</span>
+            </div>
             <span class="acv-order-lbl">Cancelled</span>
           </button>
         </div>
@@ -305,7 +309,7 @@ const CUSTOMER_QUICK = [
 </template>
 
 <style scoped>
-.acv-root { min-height: 100vh; }
+.acv-root { min-height: 100vh; padding-bottom: 8px; }
 
 /* ── Hero ── */
 .acv-hero {
@@ -370,8 +374,8 @@ const CUSTOMER_QUICK = [
 }
 .adm-card {
   display: flex; align-items: center; gap: 14px;
-  border-radius: 20px; padding: 14px 16px;
   cursor: pointer; text-align: left; width: 100%;
+  border: none;
 }
 .adm-card-icon {
   width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
@@ -382,34 +386,61 @@ const CUSTOMER_QUICK = [
 .adm-card-sub   { font-size: 12px; color: var(--fx-muted); margin-top: 2px; }
 .adm-chevron    { font-size: 20px; color: var(--fx-muted); flex-shrink: 0; }
 
-/* ── Customer cards ── */
+/* ── Customer glass panels ── */
 .acv-card { margin: 0 12px 12px; }
-.acv-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.acv-card-title   { font-size: 15px; font-weight: 800; color: var(--fx-text); }
+.acv-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.acv-card-title   { font-size: 15px; font-weight: 800; color: var(--fx-text); letter-spacing: -0.02em; }
 .acv-see-all      {
   display: flex; align-items: center; gap: 2px;
   font-size: 12px; color: var(--fx-muted); background: none; border: none; cursor: pointer; padding: 0;
+  transition: color 0.18s ease;
 }
-.acv-quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
-.acv-quick-item { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 4px 0; }
+.acv-see-all:hover { color: var(--fx-accent); }
+
+.acv-quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.acv-quick-item {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer; padding: 8px 4px;
+  border-radius: 12px;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.acv-quick-item:hover { transform: translateY(-1px); }
+.acv-quick-item:active { transform: scale(0.97); }
 .acv-quick-icon {
   width: 48px; height: 48px;
   color: #FF6635;
   display: flex; align-items: center; justify-content: center;
 }
-.acv-quick-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); }
-.acv-orders-grid { display: grid; grid-template-columns: repeat(4,1fr); }
+
+.acv-quick-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); text-align: center; }
+
+.acv-orders-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .acv-order-btn  {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  background: none; border: none; cursor: pointer; padding: 4px 0;
+  background: none; border: none; cursor: pointer; padding: 6px 4px;
+  border-radius: 12px;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.acv-order-icon { font-size: 26px; color: var(--fx-text); }
-.acv-order-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); }
+.acv-order-btn:hover { transform: translateY(-1px); }
+.acv-order-btn:active { transform: scale(0.97); }
+.acv-order-tile {
+  position: relative;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fx-text);
+}
+.acv-order-icon { font-size: 24px; }
+.acv-order-lbl  { font-size: 11px; font-weight: 600; color: var(--fx-text); text-align: center; }
 .acv-order-badge {
-  position: absolute; top: -4px; right: -6px;
+  position: absolute; top: -3px; right: -4px;
   min-width: 16px; height: 16px; border-radius: 10px; padding: 0 4px;
   background: #FF6635; color: #fff; font-size: 9px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  border: 2px solid var(--fx-card);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 6px rgba(255,102,53,0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acv-quick-item, .acv-order-btn, .acv-see-all { transition: none; }
+  .acv-quick-item:hover, .acv-order-btn:hover { transform: none; }
 }
 </style>
