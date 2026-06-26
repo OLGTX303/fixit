@@ -109,7 +109,10 @@ watch(tab, (t) => { if (t === 'categories') loadCategories() })
               {{ u.name }}
               <span v-if="u.is_blocked" style="font-size:10px;color:#ef4444">🚫 Blocked</span>
             </div>
-            <div style="font-size:11px;color:var(--fx-muted);text-transform:capitalize">{{ u.role }} · {{ u.email }}</div>
+            <div style="font-size:11px;color:var(--fx-muted);text-transform:capitalize">
+              {{ u.role }} · {{ u.email }}
+              <span v-if="u.location_label"> · {{ u.location_label }}</span>
+            </div>
           </div>
           <span class="fx-badge" :style="{ color: STATUS_STYLE[statusOf(u)].c, background: STATUS_STYLE[statusOf(u)].bg }">
             {{ statusOf(u) }}

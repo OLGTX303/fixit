@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProvidersStore } from '../../stores/providers'
 import { useBookingsStore } from '../../stores/bookings'
 import { useModalGuard } from '../../composables/useModalGuard'
+import { useAuthStore } from '../../stores/auth'
+import { DEFAULT_ADDRESSES } from '../../services/geolocation'
 
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
@@ -16,7 +18,14 @@ const bookingsStore = useBookingsStore()
 const provider = ref(null)
 
 // Booking form state (all v-model bound) �?workflow #1 (Customer Booking).
-const form = ref({ date: '', time: '', address: '14 Maple Street, Apt 3', notes: '' })
+const auth = useAuthStore()
+
+function defaultAddress() {
+  const region = auth.user?.region
+  return DEFAULT_ADDRESSES[region] || DEFAULT_ADDRESSES.johor_bahru
+}
+
+const form = ref({ date: '', time: '', address: defaultAddress(), notes: '' })
 const times = ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
 const submitting = ref(false)
 const couponCode = ref('')

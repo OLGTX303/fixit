@@ -8,6 +8,7 @@ use FixIt\Models\EmailOtpModel;
 use FixIt\Models\UserModel;
 use FixIt\Services\MailService;
 use FixIt\Services\R2Service;
+use FixIt\Support\MalaysiaRegions;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -49,6 +50,32 @@ final class UserController
                 ? null
                 : Validator::cleanText((string) $data['phone'], 32);
             $fields['phone'] = $phone;
+        }
+
+        if (isset($data['latitude'], $data['longitude'])) {
+            $lat = (float) $data['latitude'];
+            $lng = (float) $data['longitude'];
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                return ResponseHelper::error($response, 'Invalid coordinates', 422);
+            }
+            $region = isset($data['region']) && MalaysiaRegions::isValid((string) $data['region'])
+                ? (string) $data['region']
+                : MalaysiaRegions::detect($lat, $lng);
+            $fields['latitude'] = $lat;
+            $fields['longitude'] = $lng;
+            $fields['region'] = $region;
+            if (isset($data['location_label'])) {
+                $fields['location_label'] = Validator::cleanText((string) $data['location_label'], 120);
+            } else {
+                $fields['location_label'] = MalaysiaRegions::label($region);
+            }
+        } elseif (isset($data['region']) && MalaysiaRegions::isValid((string) $data['region'])) {
+            $region = (string) $data['region'];
+            $fields['region'] = $region;
+            $fields['location_label'] = MalaysiaRegions::label($region);
+            $centre = MalaysiaRegions::all()[$region]['center'];
+            $fields['latitude'] = $centre[0];
+            $fields['longitude'] = $centre[1];
         }
 
         if (!$fields) {

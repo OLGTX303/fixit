@@ -19,6 +19,7 @@ final class ProviderController
         if (!empty($params['category'])) $filters['category'] = (int) $params['category'];
         if (!empty($params['q']))        $filters['q'] = trim((string) $params['q']);
         if (!empty($params['priority'])) $filters['priority'] = 1;
+        if (!empty($params['region']))   $filters['region'] = (string) $params['region'];
         if (isset($params['offset']))    $filters['offset'] = (int) $params['offset'];
         if (isset($params['lat'], $params['lng'])) {
             $filters['lat'] = (float) $params['lat'];

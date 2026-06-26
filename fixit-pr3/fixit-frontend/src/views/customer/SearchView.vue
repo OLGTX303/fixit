@@ -5,7 +5,10 @@ import * as api from '../../services/api'
 import { useInfiniteList } from '../../composables/useInfiniteList'
 import { useAuthStore } from '../../stores/auth'
 import { useFavoritesStore } from '../../stores/favorites'
-import { getUserLocation, distanceKmFrom, isNativeApp } from '../../services/geolocation'
+import {
+  resolveUserLocation, distanceKmFrom, isNativeApp,
+  PRIMARY_REGIONS, regionCenter, regionLabel, WEST_MALAYSIA_REGIONS,
+} from '../../services/geolocation'
 import RatingStars from '../../components/RatingStars.vue'
 
 const route  = useRoute()
@@ -19,8 +22,9 @@ const category = ref(route.query.category ? Number(route.query.category) : null)
 const sortMode = ref('distance')   // 'distance' | 'rating' | 'price'
 const priorityOnly = ref(false)
 
-const userCenter    = ref([3.1390, 101.6869])
-const locationLabel = ref('Kuala Lumpur')
+const userCenter    = ref([1.4927, 103.7414])
+const locationLabel = ref('Johor Bahru')
+const regionFilter  = ref(null)
 const locating      = ref(false)
 
 watch(() => route.query.q,        v => { q.value        = v ? String(v)  : '' })
@@ -37,6 +41,7 @@ const { items: results, loading, done, sentinel, reset } = useInfiniteList(async
     category: category.value || undefined,
     sort: sortMode.value,
     priority: priorityOnly.value || undefined,
+    region: regionFilter.value || undefined,
     lat: distance ? userCenter.value[0] : undefined,
     lng: distance ? userCenter.value[1] : undefined,
     limit: size,
@@ -46,7 +51,16 @@ const { items: results, loading, done, sentinel, reset } = useInfiniteList(async
 
 let qTimer = null
 watch(q, () => { clearTimeout(qTimer); qTimer = setTimeout(reset, 350) })
-watch([category, sortMode, priorityOnly], reset)
+watch([category, sortMode, priorityOnly, regionFilter], reset)
+
+function setRegion(id) {
+  regionFilter.value = regionFilter.value === id ? null : id
+  if (id && WEST_MALAYSIA_REGIONS[id]) {
+    userCenter.value = regionCenter(id)
+    locationLabel.value = regionLabel(id)
+    if (sortMode.value !== 'distance') sortMode.value = 'distance'
+  }
+}
 
 async function toggleFavorite(e, providerId) {
   e.stopPropagation()
@@ -59,8 +73,18 @@ onMounted(async () => {
   if (auth.role === 'customer') favorites.load().catch(() => {})
   locating.value = true
   try {
-    userCenter.value    = await getUserLocation()
-    locationLabel.value = isNativeApp() ? 'Your location' : 'Near you'
+    const loc = await resolveUserLocation(auth.user)
+    userCenter.value    = loc.coords
+    locationLabel.value = loc.source === 'device' && isNativeApp() ? 'Your location' : loc.label
+    regionFilter.value  = loc.region
+    if (loc.source === 'device' && auth.isAuthenticated) {
+      api.updateProfile({
+        latitude: loc.coords[0],
+        longitude: loc.coords[1],
+        region: loc.region,
+        location_label: loc.label,
+      }).then(({ user }) => auth.setUser(user)).catch(() => {})
+    }
     if (sortMode.value === 'distance' && !isDiscovery.value) reset()
   } finally { locating.value = false }
 })
@@ -191,7 +215,12 @@ function initials(name) {
         <button class="sv-filter-chip location">
           <span class="material-symbols-outlined" style="font-size:14px">location_on</span>
           {{ locating ? '…' : locationLabel }}
-          <span class="material-symbols-outlined" style="font-size:13px">expand_more</span>
+        </button>
+        <button v-for="r in PRIMARY_REGIONS" :key="r.id"
+                class="sv-filter-chip region"
+                :class="{ active: regionFilter === r.id }"
+                @click="setRegion(r.id)">
+          {{ r.label }}
         </button>
         <button class="sv-filter-chip" :class="{ active: !!category }" @click="category = null">
           {{ activeCategoryName || 'All Categories' }}
@@ -396,6 +425,12 @@ function initials(name) {
   color: #92680a;
 }
 .sv-filter-chip.location { color: var(--fx-muted); }
+.sv-filter-chip.region.active {
+  background: rgba(255,102,53,0.12);
+  border-color: rgba(255,102,53,0.35);
+  color: var(--fx-accent);
+  font-weight: 700;
+}
 
 .sv-result-count {
   padding: 2px 16px 10px;

@@ -471,7 +471,7 @@ function fmtDate(d) {
             </div>
             <div class="ppv-field">
               <label class="ppv-field-label">Location / Service Area</label>
-              <input class="ppv-field-input" v-model="editLocation" placeholder="e.g. Kuala Lumpur" />
+              <input class="ppv-field-input" v-model="editLocation" placeholder="e.g. Skudai, Johor Bahru" />
             </div>
             <div class="ppv-field">
               <label class="ppv-field-label">Hourly Rate (RM)</label>

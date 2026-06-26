@@ -128,6 +128,7 @@ export function searchProviders(opts = {}) {
   if (opts.category) p.set('category', opts.category)
   if (opts.sort) p.set('sort', opts.sort)
   if (opts.priority) p.set('priority', '1')
+  if (opts.region) p.set('region', opts.region)
   if (opts.lat != null && opts.lng != null) { p.set('lat', opts.lat); p.set('lng', opts.lng) }
   p.set('limit', opts.limit ?? 20)
   p.set('offset', opts.offset ?? 0)

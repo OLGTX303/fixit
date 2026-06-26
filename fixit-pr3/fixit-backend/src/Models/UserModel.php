@@ -11,7 +11,11 @@ final class UserModel
 {
     public function findByEmail(string $email): ?array
     {
-        $stmt = Connection::get()->prepare('SELECT id, name, email, password_hash, role, phone, avatar_url, COALESCE(is_blocked,0) AS is_blocked FROM User WHERE email = :email LIMIT 1');
+        $stmt = Connection::get()->prepare(
+            'SELECT id, name, email, password_hash, role, phone, location_label, region, latitude, longitude,
+                    avatar_url, COALESCE(is_blocked,0) AS is_blocked
+             FROM User WHERE email = :email LIMIT 1'
+        );
         $stmt->execute(['email' => $email]);
         $row = $stmt->fetch();
         return $row ?: null;
@@ -37,7 +41,8 @@ final class UserModel
     public function findById(int $id): ?array
     {
         $stmt = Connection::get()->prepare(
-            'SELECT id, name, email, role, phone, avatar_url, COALESCE(is_blocked, 0) AS is_blocked,
+            'SELECT id, name, email, role, phone, location_label, region, latitude, longitude,
+                    avatar_url, COALESCE(is_blocked, 0) AS is_blocked,
                     stripe_test_customer_id,
                     stripe_test_default_payment_method_id,
                     stripe_test_payment_method_last4,
@@ -140,7 +145,8 @@ final class UserModel
         };
         $limit = max(1, $limit); $offset = max(0, $offset);
         $stmt = Connection::get()->prepare(
-            "SELECT u.id, u.name, u.email, u.role, u.phone, u.avatar_url, u.is_blocked,
+            "SELECT u.id, u.name, u.email, u.role, u.phone, u.location_label, u.region,
+                    u.latitude, u.longitude, u.avatar_url, u.is_blocked,
                     pp.is_verified AS provider_verified
              FROM User u
              LEFT JOIN ProviderProfile pp ON pp.user_id = u.id
@@ -191,7 +197,7 @@ final class UserModel
      */
     public function updateProfile(int $userId, array $fields): ?array
     {
-        $allowed = ['name', 'email', 'phone', 'avatar_url'];
+        $allowed = ['name', 'email', 'phone', 'avatar_url', 'location_label', 'region', 'latitude', 'longitude'];
         $set = [];
         $params = ['id' => $userId];
         foreach ($allowed as $col) {

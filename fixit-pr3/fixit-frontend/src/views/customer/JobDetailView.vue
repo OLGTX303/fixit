@@ -242,7 +242,7 @@ function stepActive(key) { return booking.value?.status === key }
             <span class="jd-route-dot green"></span>
             <div class="jd-route-info">
               <span class="jd-route-lbl">Pickup</span>
-              <span class="jd-route-addr">{{ booking.notes || 'Customer address, KL' }}</span>
+              <span class="jd-route-addr">{{ booking.address || booking.notes || 'Service address, Johor' }}</span>
             </div>
           </div>
           <div class="jd-route-line"></div>
