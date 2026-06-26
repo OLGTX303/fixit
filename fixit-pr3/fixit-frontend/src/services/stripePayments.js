@@ -20,7 +20,7 @@ export async function getStripe() {
 }
 
 /** Mount Payment Element for saving a test card (SetupIntent). */
-export async function mountSaveCardElement(containerEl) {
+export async function mountSaveCardElement(containerEl, { returnUrl } = {}) {
   await api.ensureStripeCustomer()
   const { client_secret: clientSecret } = await api.createStripeSetupIntent()
   const { stripe } = await getStripe()
@@ -47,7 +47,7 @@ export async function mountSaveCardElement(containerEl) {
         clientSecret,
         redirect: 'if_required',
         confirmParams: {
-          return_url: `${window.location.origin}/payment?setup=complete`,
+          return_url: returnUrl || `${window.location.origin}/payment?setup=complete`,
         },
       })
       if (error) throw new Error(error.message)
