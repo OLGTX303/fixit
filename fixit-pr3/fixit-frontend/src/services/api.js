@@ -261,6 +261,7 @@ export const saveStripePaymentMethod = (paymentMethodId) =>
   post('/payments/stripe/save-payment-method', { payment_method_id: paymentMethodId })
 export const payWithStripeSavedMethod = (payload) =>
   post('/payments/stripe/pay-with-saved-method', payload)
+export const payBooking = (payload) => post('/payments/booking/pay', payload)
 export const removeStripeSavedPaymentMethod = () => del('/payments/stripe/saved-payment-method')
 
 // ── Wallet (real ledger; top-up charges card, withdraw refunds) ──────────────

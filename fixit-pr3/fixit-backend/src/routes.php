@@ -92,6 +92,8 @@ return function (App $app): void {
             $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent']);
             $secure->post('/payments/stripe/save-payment-method', [$stripe, 'savePaymentMethod']);
             $secure->post('/payments/stripe/pay-with-saved-method', [$stripe, 'payWithSavedMethod']);
+            $secure->post('/payments/booking/pay', [$stripe, 'payBooking'])
+                ->add(new RoleGuard(['customer']));
             $secure->delete('/payments/stripe/saved-payment-method', [$stripe, 'removeSavedPaymentMethod']);
             $secure->get('/crypto/status', [$crypto, 'status']);
             $secure->get('/crypto/pin/salt', [$crypto, 'getPinSalt']);
