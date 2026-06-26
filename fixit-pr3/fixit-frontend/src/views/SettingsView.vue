@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
 import { checkForUpdate } from '../capacitor'
+import { clearAppCache } from '../services/api'
 
 const router    = useRouter()
 const auth      = useAuthStore()
@@ -23,8 +24,9 @@ onMounted(async () => {
 function logout() { auth.logout(); router.push({ name: 'login' }) }
 
 function clearCache() {
-  localStorage.clear()
-  router.push({ name: 'login' })
+  clearAppCache()
+  window.alert('Cache cleared. You are still signed in.')
+  window.location.reload()
 }
 
 async function checkUpdate() {
