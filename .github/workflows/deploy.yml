@@ -132,6 +132,9 @@ jobs:
           body: |
             Auto-built from `${{ github.sha }}` on `${{ github.ref_name }}`.
 
+            <!-- version_code:${{ github.run_number }} -->
+            version_code: ${{ github.run_number }}
+
             Deployed to https://fixit.olgtx.com together with this APK.
             Installed apps check `/api/app/latest` for OTA updates.
           files: fixit-${{ steps.ver.outputs.name }}.apk

@@ -1,8 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 
 const OTA_URL = `${import.meta.env.VITE_API_URL || 'https://fixit.olgtx.com/api'}/app/latest`
+const OTA_DISMISS_KEY = 'fixit_ota_dismiss'
 
 function isNewer(remote, current) {
   const a = String(remote).split('.').map(n => parseInt(n, 10) || 0)
@@ -13,31 +15,93 @@ function isNewer(remote, current) {
   return false
 }
 
-// OTA: compare the installed version with the latest GitHub release; if newer,
-// offer to download the signed APK (the user taps the download to install).
-async function checkForUpdate() {
+function releaseKey(latest) {
+  return `${latest.version}:${latest.version_code ?? ''}`
+}
+
+function isDismissed(latest) {
   try {
-    const [{ version }, latest] = await Promise.all([
+    return localStorage.getItem(OTA_DISMISS_KEY) === releaseKey(latest)
+  } catch {
+    return false
+  }
+}
+
+function dismissRelease(latest) {
+  try {
+    localStorage.setItem(OTA_DISMISS_KEY, releaseKey(latest))
+  } catch { /* private mode */ }
+}
+
+function hasUpdate(latest, appInfo) {
+  if (!latest?.apk_url) return false
+  const remoteCode = parseInt(latest.version_code, 10)
+  const currentCode = parseInt(appInfo.build, 10) || 0
+  if (Number.isFinite(remoteCode) && remoteCode > 0 && currentCode > 0) {
+    return remoteCode > currentCode
+  }
+  if (latest.version && appInfo.version) {
+    return isNewer(latest.version, appInfo.version)
+  }
+  return false
+}
+
+async function openApkUrl(url) {
+  await Browser.open({ url })
+}
+
+/**
+ * OTA: compare installed build/version with /api/app/latest (GitHub release).
+ * @param {{ force?: boolean }} opts — force=true ignores per-version dismiss
+ */
+export async function checkForUpdate({ force = false } = {}) {
+  if (!Capacitor.isNativePlatform()) return { status: 'skipped' }
+
+  try {
+    const [appInfo, res] = await Promise.all([
       App.getInfo(),
-      fetch(OTA_URL).then(r => r.json()),
+      fetch(OTA_URL),
     ])
-    if (!latest?.version || !latest?.apk_url) return
-    if (isNewer(latest.version, version)) {
-      const msg = `A new version (${latest.version}) is available.\n\n${latest.notes || ''}\n\nDownload and install now?`.trim()
-      if (window.confirm(msg)) window.open(latest.apk_url, '_blank')
+    if (!res.ok) {
+      console.warn('[ota] API returned', res.status)
+      return { status: 'error', message: `API ${res.status}` }
     }
-  } catch { /* offline / no release yet — ignore */ }
+
+    const latest = await res.json()
+    if (!latest?.version || !latest?.apk_url) {
+      return { status: 'none' }
+    }
+
+    if (!hasUpdate(latest, appInfo)) {
+      return { status: 'current', version: appInfo.version, build: appInfo.build }
+    }
+
+    if (!force && isDismissed(latest)) {
+      return { status: 'dismissed' }
+    }
+
+    const buildHint = latest.version_code ? ` (build ${latest.version_code})` : ''
+    const notes = latest.notes ? `\n\n${String(latest.notes).slice(0, 400)}` : ''
+    const msg = `A new version (${latest.version}${buildHint}) is available.${notes}\n\nDownload and install now?`.trim()
+
+    if (window.confirm(msg)) {
+      await openApkUrl(latest.apk_url)
+      return { status: 'opened', version: latest.version }
+    }
+
+    dismissRelease(latest)
+    return { status: 'declined' }
+  } catch (err) {
+    console.warn('[ota] check failed', err)
+    return { status: 'error', message: err?.message || 'check failed' }
+  }
 }
 
 export async function initCapacitor() {
   if (!Capacitor.isNativePlatform()) return
 
   try {
-    // Plain white status bar with dark icons (no orange bar). Keep the WebView
-    // below the status bar where the OS honours it; on Android 15+ edge-to-edge
-    // the CSS safe-area padding handles the inset.
     await StatusBar.setOverlaysWebView({ overlay: false })
-    // Style.Light = dark icons on a light background (Capacitor's naming).
     await StatusBar.setStyle({ style: Style.Light })
     await StatusBar.setBackgroundColor({ color: '#FFFFFF' })
   } catch {
@@ -52,6 +116,6 @@ export async function initCapacitor() {
     }
   })
 
-  checkForUpdate()                                  // OTA check on launch
-  App.addListener('resume', checkForUpdate)         // and when reopened
+  checkForUpdate()
+  App.addListener('resume', () => checkForUpdate())
 }
