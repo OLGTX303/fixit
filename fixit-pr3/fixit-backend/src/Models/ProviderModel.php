@@ -78,6 +78,18 @@ final class ProviderModel
             $sql .= ' AND p.is_priority = 1';
         }
 
+        if (!empty($filters['region'])) {
+            $bounds = \FixIt\Support\MalaysiaRegions::bounds((string) $filters['region']);
+            if ($bounds) {
+                $sql .= ' AND p.latitude BETWEEN :rlat_min AND :rlat_max
+                          AND p.longitude BETWEEN :rlng_min AND :rlng_max';
+                $params['rlat_min'] = $bounds['minLat'];
+                $params['rlat_max'] = $bounds['maxLat'];
+                $params['rlng_min'] = $bounds['minLng'];
+                $params['rlng_max'] = $bounds['maxLng'];
+            }
+        }
+
         if (!empty($filters['q'])) {
             // distinct placeholders — native PDO prepares can't reuse one name
             $sql .= ' AND (u.name LIKE :qa OR p.location LIKE :qb OR EXISTS (
@@ -231,6 +243,10 @@ final class ProviderModel
             'review_count' => $reviewCount,
             'cover_url'    => $row['cover_url'] ?? null,
             'avatar_url'   => $row['avatar_url'] ?? null,
+            'region'       => \FixIt\Support\MalaysiaRegions::regionForProvider(
+                (float) $row['latitude'],
+                (float) $row['longitude']
+            ),
         ];
     }
 
