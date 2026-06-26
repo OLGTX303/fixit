@@ -19,13 +19,13 @@ const showCaptcha     = ref(false)
 useModalGuard(showCaptcha)
 const landing = { customer: 'home', provider: 'pro-profile', admin: 'admin-verify' }
 
-// Email OTP — verify the email belongs to the registrant before creating the account.
+// Email OTP �?verify the email belongs to the registrant before creating the account.
 const emailOtp   = ref('')
 const otpSent    = ref(false)
 const sendingOtp = ref(false)
 const otpMsg     = ref('')
 
-// Step 1: clicking "Send code" opens the slider captcha — verifying a human
+// Step 1: clicking "Send code" opens the slider captcha �?verifying a human
 // BEFORE we send any email, so bots can't abuse the OTP endpoint.
 function sendCode() {
   if (!form.value.email.trim()) { otpMsg.value = 'Enter your email address first'; return }
@@ -36,7 +36,7 @@ function sendCode() {
 }
 function closeCaptcha() { showCaptcha.value = false }
 
-// Captcha solved → send the OTP, passing the one-time pass token.
+// Captcha solved �?send the OTP, passing the one-time pass token.
 async function onCaptchaVerified(proof) {
   captchaProof.value = proof
   showCaptcha.value = false
@@ -58,7 +58,7 @@ async function onCaptchaVerified(proof) {
   }
 }
 
-// Step 2: final submit just registers — the OTP already proves human + email.
+// Step 2: final submit just registers �?the OTP already proves human + email.
 async function submit() {
   if (!acceptedTerms.value || !acceptedPrivacy.value || !emailOtp.value) return
   try {
@@ -91,7 +91,7 @@ async function submit() {
         <p style="font-size:13px;color:var(--fx-muted);margin:0">Join the community of expert fixers and local owners.</p>
       </div>
 
-      <!-- Role selector — glass pill toggle -->
+      <!-- Role selector �?glass pill toggle -->
       <div class="lg-role-toggle glass-input" style="display:flex;gap:6px;padding:5px;border-radius:999px;margin-bottom:20px">
         <button v-for="r in ['customer','provider']" :key="r"
                 :class="['lg-role-btn', form.role === r ? 'lg-role-btn--active' : '']"
@@ -140,7 +140,7 @@ async function submit() {
           <div class="fx-label-caps" style="margin-bottom:6px">Password</div>
           <div class="lg-input-wrap glass-input">
             <span class="material-symbols-outlined" style="font-size:20px;color:var(--fx-muted)">lock</span>
-            <input v-model="form.password" placeholder="••••••••" required type="password"
+            <input v-model="form.password" placeholder="•••••••" required type="password"
                    minlength="8" autocomplete="new-password" />
           </div>
         </div>
@@ -179,10 +179,10 @@ async function submit() {
     </main>
   </div>
 
-  <!-- CAPTCHA Modal — liquid-glass-high overlay -->
+  <!-- CAPTCHA Modal �?liquid-glass-high overlay -->
   <Teleport to="body">
-    <div v-if="showCaptcha" class="lg-captcha-backdrop" @click.self="closeCaptcha">
-      <div class="lg-captcha-modal liquid-glass-high" style="border-radius:28px">
+    <div v-if="showCaptcha" class="lg-overlay-center" @click.self="closeCaptcha">
+      <div class="lg-modal liquid-glass-high lg-reg-captcha">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
           <div>
             <div style="font-size:18px;font-weight:600;letter-spacing:-0.01em">Security Check</div>
@@ -194,8 +194,7 @@ async function submit() {
         </div>
         <SliderPuzzleCaptcha ref="captchaRef" @verified="onCaptchaVerified" />
         <div v-if="auth.loading" style="text-align:center;margin-top:10px;font-size:13px;color:var(--fx-muted)">
-          Creating your account…
-        </div>
+          Creating your account…</div>
       </div>
     </div>
   </Teleport>
@@ -262,17 +261,10 @@ async function submit() {
   font-family: inherit; white-space: nowrap;
 }
 .lg-otp-send:disabled { opacity: 0.5; cursor: not-allowed; }
-.lg-captcha-backdrop {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(17,24,39,0.30);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.lg-captcha-modal {
-  width: 100%; max-width: 380px;
+.lg-reg-captcha {
+  max-width: 380px;
   padding: 24px;
+  border-radius: 28px;
 }
 .lg-close-btn {
   width: 34px; height: 34px; border-radius: 50%;

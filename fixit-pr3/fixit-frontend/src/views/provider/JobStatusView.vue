@@ -12,7 +12,7 @@ const booking = computed(() => bookingsStore.byId(route.params.id))
 
 onMounted(() => bookingsStore.load())
 
-// Provider-side status controls — drives the same Job.status the customer sees.
+// Provider-side status controls �?drives the same Job.status the customer sees.
 const stages = [
   { key: 'accepted', label: 'On My Way', icon: '🚗' },
   { key: 'in_progress', label: 'Working', icon: '🔧' },
@@ -41,7 +41,7 @@ function complete() {
     <!-- Customer card -->
     <div class="fx-card d-flex align-items-center gap-3 mb-3">
       <div class="fx-avatar" style="width:46px;height:46px;background:var(--fx-blue-soft);color:var(--fx-blue)">
-        {{ (booking.customer?.name || '?').split(' ').map(w => w[0]).join('') }}
+        {{ (booking.customer?.name || '—').split(' ').map(w => w[0]).join('') }}
       </div>
       <div class="flex-grow-1">
         <div class="fw-semibold">{{ booking.customer?.name }}</div>

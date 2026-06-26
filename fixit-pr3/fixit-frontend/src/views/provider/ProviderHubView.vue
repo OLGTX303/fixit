@@ -19,7 +19,7 @@ onMounted(async () => {
 })
 
 const user      = computed(() => auth.user || {})
-const initials  = computed(() => (user.value.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
+const initials  = computed(() => (user.value.name || '—').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
 const myProfile = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
 
 const kycVerified = computed(() => myProfile.value?.is_verified)
@@ -78,7 +78,7 @@ const QUICK = [
 </script>
 
 <template>
-  <div class="phv-root">
+  <div class="phv-root fx-view-root">
 
     <!-- ── Hero ── -->
     <div class="phv-hero">
@@ -176,14 +176,14 @@ const QUICK = [
       </div>
       <div v-if="recentDone.length" class="phv-job-list">
         <div v-for="b in recentDone" :key="b.id" class="phv-job-row">
-          <div class="phv-job-avatar">{{ (b.customer?.name||'?').split(' ').map(w=>w[0]).join('') }}</div>
+          <div class="phv-job-avatar">{{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}</div>
           <div class="phv-job-info">
             <div class="phv-job-name">{{ b.customer?.name || 'Customer' }}</div>
             <div class="phv-job-meta">{{ b.category?.name }} · {{ fmtDate(b.scheduled_at) }}</div>
           </div>
           <div class="phv-job-right">
             <div class="phv-job-amount">RM{{ b.total }}</div>
-            <div class="phv-job-chip">{{ b.status === 'reviewed' ? '★ Reviewed' : 'Done' }}</div>
+            <div class="phv-job-chip">{{ b.status === 'reviewed' ? '✓ Reviewed' : 'Done' }}</div>
           </div>
         </div>
       </div>
@@ -198,7 +198,7 @@ const QUICK = [
 </template>
 
 <style scoped>
-.phv-root { background: var(--fx-bg); min-height: 100vh; }
+.phv-root { min-height: 100vh; }
 
 /* ── Hero ── */
 .phv-hero {

@@ -25,7 +25,7 @@ function openProvider(p) {
 </script>
 
 <template>
-  <div class="fv-root">
+  <div class="fv-root fx-view-root">
     <header class="fv-header">
       <button class="fv-back" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
@@ -59,7 +59,7 @@ function openProvider(p) {
 </template>
 
 <style scoped>
-.fv-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 80px; }
+.fv-root { min-height: 100vh; padding-bottom: 80px; }
 .fv-header { display: flex; align-items: center; gap: 8px; padding: 16px; }
 .fv-back { background: none; border: none; cursor: pointer; color: var(--fx-text); padding: 4px; }
 .fv-title { font-size: 20px; font-weight: 800; margin: 0; color: var(--fx-text); }

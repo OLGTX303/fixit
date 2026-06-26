@@ -26,7 +26,7 @@ const livenessProgress = ref({ current: 0, total: 8 })
 const livenessResult = ref(null)
 const kycStatus = ref(null)
 
-// Own profile — fetched directly so it resolves even while unverified (the
+// Own profile �?fetched directly so it resolves even while unverified (the
 // public providers list is verified-only, which left this null and made the
 // "Recognise government ID" button silently no-op).
 const myProfile = ref(null)
@@ -246,7 +246,7 @@ function retry() {
     <!-- Step 1: Government ID -->
     <div v-if="step === 1">
       <p style="font-size:13px;color:var(--fx-muted)">
-        Photograph your passport, national ID, or driving licence. Use a physical card — photos of screens, printouts, or edited images are rejected.
+        Photograph your passport, national ID, or driving licence. Use a physical card �?photos of screens, printouts, or edited images are rejected.
       </p>
       <label class="fx-card d-block text-center mb-3" style="padding:24px;cursor:pointer;border:2px dashed var(--fx-border)">
         <input type="file" accept="image/*" capture="environment" class="d-none" @change="onIdSelected" />
@@ -257,7 +257,7 @@ function retry() {
 
       <div v-if="idResult" class="fx-card mb-3" style="font-size:12px">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="fw-semibold">{{ idResult.document_label }} — {{ idResult.confidence }}% confidence</span>
+          <span class="fw-semibold">{{ idResult.document_label }} · {{ idResult.confidence }}% confidence</span>
           <span class="fx-badge" :style="{
             color: idResult.valid ? 'var(--fx-success)' : 'var(--fx-error)',
             background: idResult.valid ? 'var(--fx-success-soft)' : 'var(--fx-error-soft)',

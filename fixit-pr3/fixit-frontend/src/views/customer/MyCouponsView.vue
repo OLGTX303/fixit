@@ -37,7 +37,7 @@ function copyCode(code) {
 </script>
 
 <template>
-  <div class="mc-root">
+  <div class="mc-root fx-view-root">
     <header class="mc-header">
       <button class="mc-back" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
@@ -72,7 +72,7 @@ function copyCode(code) {
 </template>
 
 <style scoped>
-.mc-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 80px; }
+.mc-root { min-height: 100vh; padding-bottom: 80px; }
 .mc-header { display: flex; align-items: center; gap: 8px; padding: 16px; }
 .mc-back { background: none; border: none; cursor: pointer; color: var(--fx-text); padding: 4px; }
 .mc-title { font-size: 20px; font-weight: 800; margin: 0; color: var(--fx-text); }

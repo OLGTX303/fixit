@@ -89,7 +89,7 @@ async function doCancel(b) {
 </script>
 
 <template>
-  <div class="jt-root">
+  <div class="jt-root fx-view-root">
     <header class="jt-header">
       <h1 class="jt-title">My Bookings</h1>
     </header>
@@ -174,8 +174,8 @@ async function doCancel(b) {
 
     <!-- Cancel confirm dialog -->
     <Teleport to="body">
-      <div v-if="confirmId" class="jt-modal-backdrop" @click.self="dismissCancel">
-        <div class="jt-modal">
+      <div v-if="confirmId" class="lg-overlay-center" @click.self="dismissCancel">
+        <div class="lg-modal liquid-glass-high jt-modal">
           <h3 class="jt-modal-title">Cancel booking?</h3>
           <p class="jt-modal-text">If you already paid, your card will be refunded automatically.</p>
           <div class="jt-modal-actions">
@@ -193,7 +193,7 @@ async function doCancel(b) {
 </template>
 
 <style scoped>
-.jt-root { min-height: 100vh; background: var(--fx-bg); }
+.jt-root { min-height: 100vh; }
 .jt-header { padding: 16px 16px 0; }
 .jt-title  { font-size: 20px; font-weight: 800; color: var(--fx-text); margin: 0 0 14px; }
 .jt-tabs {
@@ -266,14 +266,7 @@ async function doCancel(b) {
 .jt-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .jt-sentinel { height: 1px; }
 .jt-more { text-align: center; font-size: 13px; color: var(--fx-muted); padding: 8px; }
-.jt-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-  display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
-}
-.jt-modal {
-  background: #fff; border-radius: 18px; padding: 24px; max-width: 360px; width: 100%;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
-}
+.jt-modal { padding: 24px; max-width: 360px; }
 .jt-modal-title { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
 .jt-modal-text { margin: 0 0 20px; font-size: 14px; color: var(--fx-muted); line-height: 1.5; }
 .jt-modal-actions { display: flex; gap: 10px; }

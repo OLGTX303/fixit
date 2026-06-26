@@ -15,7 +15,7 @@ const prefs = ref({
 </script>
 
 <template>
-  <div class="psv-root">
+  <div class="psv-root fx-view-root">
     <div class="psv-header">
       <button class="psv-back" @click="router.back()">
         <span class="material-symbols-outlined">arrow_back_ios</span>
@@ -147,7 +147,7 @@ const prefs = ref({
 </template>
 
 <style scoped>
-.psv-root { background: var(--fx-bg); min-height: 100vh; padding-bottom: 40px; }
+.psv-root { min-height: 100vh; padding-bottom: 40px; }
 
 .psv-header {
   display: flex; align-items: center; justify-content: space-between;

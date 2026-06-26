@@ -130,7 +130,7 @@ function sparkline(vals, w = 90, h = 40) {
   }
 }
 
-// h=70 plot area inside an 80-tall viewBox — leaves a band below for month
+// h=70 plot area inside an 80-tall viewBox �?leaves a band below for month
 // labels so a flat (zero) baseline never sits on top of the text.
 const revTrend = computed(() => sparkline(monthly.value.map(m => m.total), 340, 70))
 const volTrend = computed(() => sparkline(monthlyByStatus.value.map(m => m.total), 340, 70))
@@ -184,7 +184,7 @@ const label = s => s.replace('_', ' ')
       </div>
       <div class="crm-badges">
         <span class="crm-live">● LIVE</span>
-        <span v-if="usingStripe" class="crm-stripe-badge">⚡ Stripe Sandbox</span>
+        <span v-if="usingStripe" class="crm-stripe-badge">✓ Stripe Sandbox</span>
       </div>
     </div>
 
@@ -205,7 +205,7 @@ const label = s => s.replace('_', ' ')
             Total Revenue
           </div>
           <div class="crm-hero-val">{{ fmtRM(kpi.revenue) }}</div>
-          <div class="crm-hero-hint">{{ usingStripe ? '⚡ Stripe Sandbox · MYR' : 'Completed bookings · RM' }}</div>
+          <div class="crm-hero-hint">{{ usingStripe ? '✓ Stripe Sandbox · MYR' : 'Completed bookings · RM' }}</div>
           <!-- mini trend line on revenue card -->
           <svg class="crm-hero-spark" viewBox="0 0 340 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -406,27 +406,6 @@ const label = s => s.replace('_', ' ')
 .crm-stripe-badge { font-size: 10px; font-weight: 700; color: #635bff; background: rgba(99,91,255,0.10); padding: 3px 10px; border-radius: 999px; }
 .crm-spin { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; }
 
-/* ── Liquid Glass Base ──────────────────────────────────────────────── */
-.glass-card {
-  background:
-    radial-gradient(ellipse 65% 50% at 12% 6%, rgba(255,255,255,0.28) 0%, transparent 65%),
-    rgba(255,255,255,0.13);
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
-  border-radius: 22px;
-  border: 0.5px solid rgba(255,255,255,0.60);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.92),
-    inset 0 -1px 0 rgba(255,255,255,0.12),
-    0 4px 20px rgba(0,0,0,0.06),
-    0 1px 0 rgba(255,255,255,0.45);
-  position: relative; overflow: hidden;
-}
-.glass-card::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(ellipse 45% 30% at 85% 88%, rgba(255,255,255,0.12) 0%, transparent 65%);
-}
-
 /* ── Top grid ─────────────────────────────────────────────────────── */
 .crm-top-grid {
   display: grid;
@@ -510,7 +489,7 @@ const label = s => s.replace('_', ' ')
 .crm-prev      { font-size: 12px; font-weight: 700; color: var(--fx-accent); white-space: nowrap; flex-shrink: 0; }
 
 /* Chips */
-/* Single scrollable row — 6 chips (incl. "In Progress") don't fit the panel
+/* Single scrollable row �?6 chips (incl. "In Progress") don't fit the panel
    width; wrapping orphaned the last chip ("Reviewed") on its own line. */
 .crm-chips { display: flex; flex-wrap: nowrap; gap: 4px; margin-bottom: 10px;
              overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }

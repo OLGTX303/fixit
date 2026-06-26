@@ -12,7 +12,7 @@ const bookingsStore = useBookingsStore()
 const wallet = useWalletStore()
 
 const user     = computed(() => auth.user || {})
-const initials = computed(() => (user.value.name || '?').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
+const initials = computed(() => (user.value.name || '—').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
 const isAdmin    = computed(() => auth.role === 'admin')
 const isProvider = computed(() => auth.role === 'provider')
 
@@ -68,7 +68,7 @@ async function onAvatarSelected(e) {
   } finally { uploading.value = false; if (fileInput.value) fileInput.value.value = '' }
 }
 
-// Customer quick actions (no Wallet — already in stats row)
+// Customer quick actions (no Wallet �?already in stats row)
 const CUSTOMER_QUICK = [
   { icon: 'star',          label: 'Favourites', to: 'favorites' },
   { icon: 'history',       label: 'History',    to: 'browsing-history' },
@@ -78,7 +78,7 @@ const CUSTOMER_QUICK = [
 </script>
 
 <template>
-  <div class="acv-root">
+  <div class="acv-root fx-view-root">
 
     <!-- ── Hero ── -->
     <div class="acv-hero" :class="isAdmin ? 'hero-admin' : 'hero-customer'">
@@ -154,7 +154,7 @@ const CUSTOMER_QUICK = [
       <!-- Feature cards 2×2 -->
       <div class="adm-grid">
         <!-- Users -->
-        <button class="adm-card" @click="router.push({ name: 'admin-users' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-users' })">
           <div class="adm-card-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">manage_accounts</span>
           </div>
@@ -168,7 +168,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Providers -->
-        <button class="adm-card" @click="router.push({ name: 'admin-verify' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-verify' })">
           <div class="adm-card-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">verified_user</span>
           </div>
@@ -182,7 +182,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Bookings -->
-        <button class="adm-card" @click="router.push({ name: 'admin-bookings' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-bookings' })">
           <div class="adm-card-icon" style="background:rgba(16,185,129,0.12);color:#10b981">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">calendar_month</span>
           </div>
@@ -194,7 +194,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- CS Chat -->
-        <button class="adm-card" @click="router.push({ name: 'admin-chats' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-chats' })">
           <div class="adm-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">support_agent</span>
           </div>
@@ -206,7 +206,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Safety / Harm reviews -->
-        <button class="adm-card" @click="router.push({ name: 'admin-harm' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-harm' })">
           <div class="adm-card-icon" style="background:rgba(239,68,68,0.12);color:#ef4444">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">shield</span>
           </div>
@@ -221,7 +221,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- Reviews moderation -->
-        <button class="adm-card" @click="router.push({ name: 'admin-bookings' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-bookings' })">
           <div class="adm-card-icon" style="background:rgba(236,72,153,0.12);color:#ec4899">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">rate_review</span>
           </div>
@@ -233,7 +233,7 @@ const CUSTOMER_QUICK = [
         </button>
 
         <!-- System coupons -->
-        <button class="adm-card" @click="router.push({ name: 'admin-coupons' })">
+        <button class="adm-card fx-card lg-interactive" @click="router.push({ name: 'admin-coupons' })">
           <div class="adm-card-icon" style="background:rgba(255,102,53,0.12);color:#FF6635">
             <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1">redeem</span>
           </div>
@@ -253,11 +253,11 @@ const CUSTOMER_QUICK = [
     <template v-else>
 
       <!-- Quick actions -->
-      <div class="acv-card acv-quick-grid">
+      <div class="acv-card fx-card acv-quick-grid">
         <button v-for="q in CUSTOMER_QUICK" :key="q.label"
                 class="acv-quick-item"
                 @click="q.to && router.push({ name: q.to })">
-          <div class="acv-quick-icon">
+          <div class="acv-quick-icon lg-icon-tile">
             <span class="material-symbols-outlined" style="font-size:22px;font-variation-settings:'FILL' 1">{{ q.icon }}</span>
           </div>
           <span class="acv-quick-lbl">{{ q.label }}</span>
@@ -265,7 +265,7 @@ const CUSTOMER_QUICK = [
       </div>
 
       <!-- My Bookings -->
-      <div class="acv-card">
+      <div class="acv-card fx-card">
         <div class="acv-card-header">
           <span class="acv-card-title">My Bookings</span>
           <button class="acv-see-all" @click="router.push({ name: 'job-tracker' })">
@@ -305,7 +305,7 @@ const CUSTOMER_QUICK = [
 </template>
 
 <style scoped>
-.acv-root { background: var(--fx-bg); min-height: 100vh; }
+.acv-root { min-height: 100vh; }
 
 /* ── Hero ── */
 .acv-hero {
@@ -370,19 +370,9 @@ const CUSTOMER_QUICK = [
 }
 .adm-card {
   display: flex; align-items: center; gap: 14px;
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.55);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.06);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
   border-radius: 20px; padding: 14px 16px;
   cursor: pointer; text-align: left; width: 100%;
-  transition: box-shadow 0.15s, transform 0.15s;
 }
-.adm-card:active { transform: scale(0.985); box-shadow: 0 0 0 2px rgba(124,58,237,0.18); }
 .adm-card-icon {
   width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -393,18 +383,7 @@ const CUSTOMER_QUICK = [
 .adm-chevron    { font-size: 20px; color: var(--fx-muted); flex-shrink: 0; }
 
 /* ── Customer cards ── */
-.acv-card {
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.55);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.06);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
-  border-radius: 22px;
-  padding: 16px; margin: 0 12px 12px;
-}
+.acv-card { margin: 0 12px 12px; }
 .acv-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .acv-card-title   { font-size: 15px; font-weight: 800; color: var(--fx-text); }
 .acv-see-all      {
@@ -414,14 +393,7 @@ const CUSTOMER_QUICK = [
 .acv-quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
 .acv-quick-item { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 4px 0; }
 .acv-quick-icon {
-  width: 48px; height: 48px; border-radius: 14px;
-  background:
-    linear-gradient(to bottom, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 100%),
-    rgba(255,102,53,0.08);
-  border: 0.5px solid rgba(255,255,255,0.60);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70), 0 2px 8px rgba(255,102,53,0.10);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  width: 48px; height: 48px;
   color: #FF6635;
   display: flex; align-items: center; justify-content: center;
 }

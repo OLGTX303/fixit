@@ -109,7 +109,7 @@ async function remove(c) {
 </script>
 
 <template>
-  <div class="acv-root">
+  <div class="acv-root fx-view-root">
     <header class="acv-header">
       <button class="acv-back" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
@@ -142,8 +142,8 @@ async function remove(c) {
     </div>
 
     <Teleport to="body">
-      <div v-if="showForm" class="acv-modal-bg" @click.self="showForm = false">
-        <div class="acv-modal">
+      <div v-if="showForm" class="lg-overlay-center" @click.self="showForm = false">
+        <div class="lg-modal liquid-glass-high">
           <div class="acv-modal-head">
             <span>{{ editing ? 'Edit Coupon' : 'New System Coupon' }}</span>
             <button class="acv-close" @click="showForm = false">
@@ -185,7 +185,7 @@ async function remove(c) {
 </template>
 
 <style scoped>
-.acv-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 80px; }
+.acv-root { min-height: 100vh; padding-bottom: 80px; }
 .acv-header { display: flex; align-items: center; gap: 8px; padding: 16px; }
 .acv-back { background: none; border: none; cursor: pointer; color: var(--fx-text); padding: 4px; }
 .acv-title { flex: 1; font-size: 20px; font-weight: 800; margin: 0; color: var(--fx-text); }
@@ -211,16 +211,7 @@ async function remove(c) {
 .acv-btn.primary { background: var(--fx-accent); color: #fff; border-color: transparent; }
 .acv-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); }
 .acv-sentinel { height: 1px; }
-.acv-modal-bg {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center;
-  padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom));
-}
-.acv-modal {
-  width: 100%; max-width: 480px; max-height: 85vh;
-  background: var(--fx-card); border-radius: 20px 20px 16px 16px;
-  display: flex; flex-direction: column; overflow: hidden;
-}
+
 .acv-modal-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; font-weight: 800; border-bottom: 1px solid rgba(0,0,0,0.06);

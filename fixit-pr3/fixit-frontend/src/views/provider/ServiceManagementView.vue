@@ -13,8 +13,8 @@ const providersStore = useProvidersStore()
 const myProfile  = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
 const storageKey = computed(() => `fixit_svc_${auth.user?.id}`)
 
-// ── Cover photo — uploaded to R2 and saved on the provider (persists, shows
-//    to customers). Same R2 path as avatars: uploadImage → URL → cover_url. ──
+// ── Cover photo �?uploaded to R2 and saved on the provider (persists, shows
+//    to customers). Same R2 path as avatars: uploadImage �?URL �?cover_url. ──
 const coverFileInput = ref(null)
 const uploadingCover = ref(false)
 const coverPreview   = ref(null)
@@ -45,7 +45,7 @@ async function onCoverSelected(e) {
   uploadingCover.value = true
   try {
     const dataUrl = await compressImage(file, 1200, 800, 0.8)
-    const { url } = await api.uploadImage(dataUrl)          // → R2
+    const { url } = await api.uploadImage(dataUrl)          // �?R2
     await api.updateProvider(myProfile.value.id, { cover_url: url })
     coverPreview.value = url
     await providersStore.load()                              // refresh cached profile
@@ -103,7 +103,7 @@ const svcImagePreview = ref(null)
 const uploadingImage  = ref(false)
 const svcImageInput   = ref(null)
 
-// Services are a real server catalog (ProviderService table) — full CRUD with
+// Services are a real server catalog (ProviderService table) �?full CRUD with
 // per-service price, photo (R2), description. No more localStorage.
 async function loadServices() {
   if (!myProfile.value) return
@@ -311,7 +311,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
 </script>
 
 <template>
-  <div class="smv-root">
+  <div class="smv-root fx-view-root">
 
     <!-- Header with action buttons (no subtabs) -->
     <div class="smv-header">
@@ -326,7 +326,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
       </div>
     </div>
 
-    <!-- One scrolling page — every section visible, actions via buttons + popups. -->
+    <!-- One scrolling page �?every section visible, actions via buttons + popups. -->
 
       <!-- Cover photo -->
       <div class="smv-section-label">Page Background Photo</div>
@@ -344,19 +344,19 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
 
       <!-- Base rate -->
       <div class="smv-section-label">Hourly Base Rate</div>
-      <div class="smv-card smv-rate-row">
+      <div class="smv-card fx-card smv-rate-row">
         <span class="smv-rate-prefix">RM</span>
         <input class="smv-rate-input" v-model="baseRate" type="number" min="1" step="1" placeholder="45" />
         <span class="smv-rate-suffix">/ hr</span>
         <button class="smv-rate-save" :disabled="savingRate" @click="saveRate">
-          {{ savingRate ? '…' : 'Save' }}
+          {{ savingRate ? '✓' : 'Save' }}
         </button>
       </div>
 
       <!-- Service items -->
       <div class="smv-section-label">Service Items</div>
       <div v-if="services.length" class="smv-service-list">
-        <div v-for="svc in services" :key="svc.sku" class="smv-card smv-svc-row">
+        <div v-for="svc in services" :key="svc.sku" class="smv-card fx-card smv-svc-row">
           <img v-if="svc.image_url" :src="svc.image_url" class="smv-svc-img" />
           <div class="smv-svc-info">
             <div class="smv-svc-name">{{ svc.name }}</div>
@@ -393,7 +393,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
       <div class="smv-section-label">Active Coupons</div>
 
       <div v-if="coupons.length" class="smv-service-list">
-        <div v-for="c in coupons" :key="c.id" class="smv-card smv-cpn-row">
+        <div v-for="c in coupons" :key="c.id" class="smv-card fx-card smv-cpn-row">
           <div class="smv-cpn-left">
             <div class="smv-cpn-code" :class="{ inactive: !c.is_active }">{{ c.code }}</div>
             <div class="smv-cpn-meta">
@@ -426,8 +426,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
       </button>
 
     <!-- ══ EDIT PROFILE MODAL ══ -->
-    <div v-if="showProfileForm" class="smv-modal-bg" @click.self="showProfileForm = false">
-      <div class="smv-modal">
+    <div v-if="showProfileForm" class="lg-overlay-center" @click.self="showProfileForm = false">
+      <div class="lg-modal liquid-glass-high smv-modal">
         <div class="smv-modal-header">
           <span class="smv-modal-title">Edit Profile</span>
           <button class="smv-modal-close" @click="showProfileForm = false">
@@ -456,8 +456,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
     </div>
 
     <!-- ══ SERVICE FORM MODAL ══ -->
-    <div v-if="showServiceForm" class="smv-modal-bg" @click.self="showServiceForm = false">
-      <div class="smv-modal">
+    <div v-if="showServiceForm" class="lg-overlay-center" @click.self="showServiceForm = false">
+      <div class="lg-modal liquid-glass-high smv-modal">
         <div class="smv-modal-header">
           <span class="smv-modal-title">{{ editingService ? 'Edit Service' : 'Add Service' }}</span>
           <button class="smv-modal-close" @click="showServiceForm = false">
@@ -501,8 +501,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
     </div>
 
     <!-- ══ COUPON FORM MODAL ══ -->
-    <div v-if="showCouponForm" class="smv-modal-bg" @click.self="showCouponForm = false">
-      <div class="smv-modal">
+    <div v-if="showCouponForm" class="lg-overlay-center" @click.self="showCouponForm = false">
+      <div class="lg-modal liquid-glass-high smv-modal">
         <div class="smv-modal-header">
           <span class="smv-modal-title">{{ editingCoupon ? 'Edit Coupon' : 'Add Coupon' }}</span>
           <button class="smv-modal-close" @click="showCouponForm = false">
@@ -548,7 +548,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
 </template>
 
 <style scoped>
-.smv-root { background: var(--fx-bg); min-height: 100vh; }
+.smv-root { min-height: 100vh; }
 
 /* Header */
 .smv-header {
@@ -571,16 +571,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
 .smv-hbtn.primary { background: #FF6635; color: #fff; border-color: transparent; }
 .smv-hbtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Cards */
+/* Cards — material from .fx-card */
 .smv-card {
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.55);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.75), 0 4px 20px rgba(0,0,0,0.05);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
   border-radius: 16px;
   padding: 14px 16px;
   margin: 0 12px 8px;
@@ -703,22 +695,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
   color: #FF6635; font-size: 12px; font-weight: 600;
 }
 
-/* Modal */
-.smv-modal-bg {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  display: flex; align-items: flex-end; justify-content: center;
-}
+/* Modal — shell from .lg-modal.liquid-glass-high */
 .smv-modal {
-  width: 100%; max-width: 480px;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 5%, rgba(255,255,255,0.35) 0%, transparent 65%),
-    rgba(255,255,255,0.88);
-  backdrop-filter: blur(40px) saturate(1.6);
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
-  border: 0.5px solid rgba(255,255,255,0.70);
-  border-radius: 28px 28px 0 0;
   padding: 20px 20px calc(28px + env(safe-area-inset-bottom));
 }
 .smv-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }

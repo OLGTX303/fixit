@@ -40,18 +40,18 @@ const other = computed(() => {
 })
 const otherName = computed(() => other.value?.name || 'Chat')
 const otherInitials = computed(() =>
-  (other.value?.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2))
+  (other.value?.name || '—').split(' ').map((w) => w[0]).join('').slice(0, 2))
 
 onMounted(async () => {
   await bookingsStore.load()
 
-  // ── Debug: E2E disabled → skip PIN, load/send plain text ──────────────────
+  // ── Debug: E2E disabled �?skip PIN, load/send plain text ──────────────────
   if (!E2E_ENABLED) {
     await initChat()
     return
   }
 
-  // ── E2E enabled → PIN setup / unlock then decrypt ─────────────────────────
+  // ── E2E enabled �?PIN setup / unlock then decrypt ─────────────────────────
   await chatCrypto.loadStatus()
   if (!chatCrypto.pinConfigured) {
     showPinSetup.value = true

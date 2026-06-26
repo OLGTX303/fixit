@@ -130,7 +130,7 @@ async function removeCard() {
           </div>
           <p style="font-size:12px;color:var(--fx-muted)">
             Use Stripe test card <strong>4242 4242 4242 4242</strong>, any future expiry, any CVC.
-            Card details go directly to Stripe — never stored on our servers.
+            Card details go directly to Stripe �?never stored on our servers.
           </p>
           <div ref="cardMount" class="mb-3" style="min-height:120px"></div>
           <div class="d-flex gap-2">

@@ -94,6 +94,35 @@
   /* Shape */
   --fx-radius:      16px;
   --fx-shadow:      0 8px 32px rgba(0,0,0,0.06);
+
+  /* Z-index scale */
+  --fx-z-dropdown:         100;
+  --fx-z-sticky:           200;
+  --fx-z-dock:            1000;
+  --fx-z-modal-backdrop:  1100;
+  --fx-z-modal:           1200;
+  --fx-z-toast:           1300;
+
+  /* Responsive glass (synced everywhere via body class from useViewport) */
+  --lg-surface-blur:  var(--lg-blur);
+  --lg-surface-bg:
+    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
+    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
+    rgba(255,255,255,0.04);
+  --lg-surface-shadow: var(--lg-shadow);
+}
+
+body.fx-mobile {
+  --lg-surface-blur: blur(3px) saturate(1.65) brightness(1.03);
+}
+
+body.fx-desktop {
+  --lg-surface-blur: var(--lg-blur-high);
+  --lg-surface-bg:
+    radial-gradient(ellipse 46% 32% at 14% 6%, rgba(255,255,255,0.32) 0%, transparent 60%),
+    linear-gradient(to bottom, rgba(255,255,255,0.24) 0%, transparent 24%),
+    rgba(255,255,255,0.05);
+  --lg-surface-shadow: var(--lg-shadow-raised);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -109,17 +138,21 @@
    This is the fix for child content being covered by the glare pseudo.
    Edge bevel comes entirely from inset box-shadows (--lg-edge).
    Hover shifts edge colours warm→cool to simulate chromatic dispersion on drag. */
-.lg {
+/* ── Unified liquid-glass material (single source — use everywhere) ── */
+.lg,
+.lg-surface,
+.liquid-glass,
+.fx-card,
+.glass-card {
   position: relative;
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.04);
-  backdrop-filter: var(--lg-blur);
-  -webkit-backdrop-filter: var(--lg-blur);
-  box-shadow: var(--lg-shadow);
+  background: var(--lg-surface-bg);
+  backdrop-filter: var(--lg-surface-blur);
+  -webkit-backdrop-filter: var(--lg-surface-blur);
+  box-shadow: var(--lg-surface-shadow);
   overflow: hidden;
-  transition: box-shadow 0.28s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  transition:
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Size + shape variants */
@@ -157,7 +190,15 @@
 .lg-interactive { cursor: pointer; }
 .lg-interactive:hover,
 [role="button"].lg:hover,
-button.lg:hover {
+button.lg:hover,
+.lg-interactive.lg-surface:hover,
+.lg-interactive.liquid-glass:hover,
+.lg-interactive.fx-card:hover,
+[role="button"].liquid-glass:hover,
+[role="button"].fx-card:hover,
+button.liquid-glass:hover,
+button.fx-card:hover,
+.glass-card.lg-interactive:hover {
   transform: translateY(-1px);
   box-shadow:
     0 0 0 0.5px rgba(255,255,255,0.78),
@@ -171,7 +212,12 @@ button.lg:hover {
 }
 .lg-interactive:active,
 [role="button"].lg:active,
-button.lg:active { transform: scale(0.97); transition-duration: 0.08s; }
+button.lg:active,
+.lg-interactive.liquid-glass:active,
+.lg-interactive.fx-card:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
+}
 
 /* ─── Reset & Base ───────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
@@ -210,20 +256,16 @@ body {
   /* Only visible on pointer devices */
   display: none;
 }
-/* ponytail: cursor blob stays disabled — it was the second warm decorative layer
-   on desktop (pointer:fine), doubling against the background. */
+@media (pointer: fine) {
+  #lg-cursor-blob { display: block; }
+}
 
-/* ─── Animated gradient-mesh background (lives in App.vue as fixed div) */
+/* ─── Animated gradient-mesh background (App.vue fixed layer) ───────── */
 .lg-mesh {
-  /* ponytail: DISABLED. The view roots (e.g. .acv-root) paint an opaque --fx-bg,
-     so the mesh only peeked through at the dock-padding edge — that warm-vs-flat
-     contrast was the "double layer". One background layer now: the uniform
-     --fx-bg under transparent/opaque view roots. Re-enable + make view roots
-     transparent if the animated mesh is wanted back. */
-  display: none !important;
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(at 0%   0%,   rgba(255,102,53,0.22) 0px, transparent 55%),
     radial-gradient(at 100% 0%,   rgba(255,181,159,0.28) 0px, transparent 55%),
@@ -232,11 +274,15 @@ body {
     radial-gradient(at 50%  50%,  rgba(255,102,53,0.12) 0px, transparent 55%);
   filter: blur(60px);
   animation: mesh-float 22s ease-in-out infinite alternate;
-  pointer-events: none;
 }
 @keyframes mesh-float {
   0%   { transform: scale(1)   translate(0,0); }
-  100% { transform: scale(1.1) translate(-3%,-3%); }
+  100% { transform: scale(1.08) translate(-2%,-2%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-mesh { animation: none; }
+  .lg, .lg-surface, .liquid-glass, .fx-card, .glass-card,
+  .lg-interactive, .fx-bottomnav { transition: none !important; }
 }
 
 /* ─── Layout Utilities (unchanged) ──────────────────────────────────── */
@@ -299,45 +345,76 @@ body {
    LEGACY CLASS UPGRADES — all now layered on top of .lg internals
    ────────────────────────────────────────────────────────────────────── */
 
-/* Level 1 — floating cards & panels. Glare baked into background, no ::before overlay. */
-.liquid-glass {
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.04);
-  backdrop-filter: var(--lg-blur);
-  -webkit-backdrop-filter: var(--lg-blur);
-  box-shadow: var(--lg-shadow);
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow 0.28s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
-}
-/* Hover: chromatic edge colour shift */
-.liquid-glass[role="button"]:hover,
-button.liquid-glass:hover,
-.liquid-glass.lg-interactive:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 0.5px rgba(255,255,255,0.78),
-    inset 0   1.5px 0   rgba(255,255,255,0.95),
-    inset 1.5px 0   0   rgba(255,190,155,0.70),
-    inset -1.5px 0  0   rgba(155,185,255,0.65),
-    inset 0  -1.5px 0   rgba(170,195,255,0.42),
-    0 4px 14px rgba(0,0,0,0.07),
-    0 12px 32px rgba(0,0,0,0.10);
+/* Card-shaped surfaces (inherits unified material above) */
+.fx-card,
+.glass-card {
+  border-radius: 22px;
+  padding: 16px;
 }
 
 /* Level 2 — modals & overlay panels */
-.liquid-glass-high {
+.liquid-glass-high,
+.lg-high {
   background:
-    radial-gradient(ellipse 50% 36% at 18% 8%, rgba(255,255,255,0.14) 0%, transparent 60%),
-    linear-gradient(to bottom, rgba(255,255,255,0.09) 0%, transparent 26%),
-    rgba(255,255,255,0.05);
+    radial-gradient(ellipse 50% 36% at 18% 8%, rgba(255,255,255,0.18) 0%, transparent 60%),
+    linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, transparent 26%),
+    rgba(255,255,255,0.06);
   backdrop-filter: var(--lg-blur-high);
   -webkit-backdrop-filter: var(--lg-blur-high);
   box-shadow: var(--lg-shadow-raised);
   position: relative;
   overflow: hidden;
+}
+
+/* Overlays — shared modal / sheet vocabulary */
+.lg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fx-z-modal-backdrop);
+  background: rgba(18, 14, 12, 0.42);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+}
+.lg-modal {
+  position: relative;
+  z-index: var(--fx-z-modal);
+  width: 100%;
+  max-width: 480px;
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 0;
+}
+.lg-sheet {
+  position: relative;
+  z-index: var(--fx-z-modal);
+  width: 100%;
+  max-width: 520px;
+  max-height: min(85vh, 680px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px 24px 16px 16px;
+  padding: 20px;
+}
+.lg-overlay-center {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fx-z-modal-backdrop);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: rgba(18, 14, 12, 0.42);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+}
+body.fx-desktop .lg-overlay-center {
+  align-items: center;
+  padding-bottom: 16px;
 }
 
 /* Glass input — edge-refract + Fresnel glow on focus */
@@ -518,34 +595,6 @@ button.liquid-glass:hover,
 .bg-accent     { background: var(--fx-accent) !important; }
 .bg-accent-soft{ background: var(--fx-accent-soft) !important; }
 
-/* ─── fx-card → Full Liquid Glass Card ──────────────────────────────── */
-.fx-card {
-  background:
-    radial-gradient(ellipse 44% 30% at 16% 7%, rgba(255,255,255,0.28) 0%, transparent 62%),
-    linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, transparent 26%),
-    rgba(255,255,255,0.04);
-  backdrop-filter: var(--lg-blur);
-  -webkit-backdrop-filter: var(--lg-blur);
-  box-shadow: var(--lg-shadow);
-  border-radius: 22px;
-  padding: 16px;
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow 0.28s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
-}
-.fx-card[role="button"]:hover,
-button.fx-card:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 0.5px rgba(255,255,255,0.78),
-    inset 0   1.5px 0   rgba(255,255,255,0.95),
-    inset 1.5px 0   0   rgba(255,190,155,0.70),
-    inset -1.5px 0  0   rgba(155,185,255,0.65),
-    inset 0  -1.5px 0   rgba(170,195,255,0.42),
-    0 4px 14px rgba(0,0,0,0.07),
-    0 12px 32px rgba(0,0,0,0.10);
-}
-
 /* ─── fx-chip → Liquid Glass Pill ───────────────────────────────────── */
 .fx-chip {
   display: inline-flex; align-items: center; white-space: nowrap;
@@ -648,7 +697,33 @@ button.fx-card:hover {
 }
 
 /* ─── App Shell ──────────────────────────────────────────────────────── */
-.fx-shell { position: relative; min-height: 100%; display: flex; flex-direction: column; }
+.fx-layout { display: block; width: 100%; }
+
+.fx-shell {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fx-bg);
+}
+
+/* Transparent page roots — mesh shows through glass surfaces */
+.fx-view-root {
+  min-height: 100vh;
+  background: transparent;
+  position: relative;
+}
+
+/* Small glass tiles (quick actions, icon buttons) */
+.lg-icon-tile {
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 100%),
+    rgba(255,102,53,0.06);
+  border-radius: 14px;
+  box-shadow: var(--lg-edge), 0 2px 8px rgba(255,102,53,0.08);
+  backdrop-filter: var(--lg-surface-blur);
+  -webkit-backdrop-filter: var(--lg-surface-blur);
+}
 
 .fx-main {
   flex: 1;
@@ -700,7 +775,7 @@ body.fx-modal-open .fx-bottomnav {
     0 32px 64px rgba(0,0,0,0.05);
   display: flex; flex-wrap: nowrap;
   padding: 8px 10px;
-  z-index: 1000;
+  z-index: var(--fx-z-dock);
   isolation: isolate;
   /* Glare + Fresnel via pseudo-element */
   overflow: hidden;
@@ -741,65 +816,80 @@ body.fx-modal-open .fx-bottomnav {
   transition: background 0.22s ease, box-shadow 0.22s ease;
 }
 
-/* ─── Side Nav — always hidden ────────────────────────────────────────── */
-.fx-sidenav { display: none !important; }
+/* ─── Side Nav — glass rail (desktop only) ───────────────────────────── */
+.fx-sidenav {
+  display: none;
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 16px;
+  bottom: 16px;
+  width: 220px;
+  z-index: var(--fx-z-sticky);
+  padding: 20px 14px;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 24px;
+  background: var(--lg-surface-bg);
+  backdrop-filter: var(--lg-surface-blur);
+  -webkit-backdrop-filter: var(--lg-surface-blur);
+  box-shadow: var(--lg-surface-shadow);
+  overflow: hidden;
+}
+.fx-sidenav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 60% at 15% 15%, rgba(255,255,255,0.35) 0%, transparent 70%),
+    linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, transparent 40%);
+}
+.fx-sidenav .nav-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--fx-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.fx-sidenav .nav-item:hover {
+  background: rgba(255,255,255,0.22);
+  color: var(--fx-text);
+}
+.fx-sidenav .nav-item.active {
+  background: linear-gradient(160deg, rgba(255,128,86,0.22) 0%, rgba(255,102,53,0.14) 100%);
+  color: var(--fx-accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
 
 /* ─── Desktop UI ──────────────────────────────────────────────────────
    Gated on body.fx-desktop (set by the single matchMedia condition in
    App.vue), NOT a bare media query — so when the mobile UI is active the
    desktop UI is fully disabled across every page, from one switch. */
 body.fx-desktop {
-  .fx-layout  { display: block; width: 100%; }
-  .fx-content { display: block; }
-  /* ponytail: symmetric 104px gutters so content centres in the true middle
-     (the right gutter clears the fixed dock); left-only padding shifted the
-     whole page off-centre vs the mobile single-column layout. */
-  .fx-main    { padding-bottom: 24px; padding-left: 104px; padding-right: 104px; }
+  .fx-layout  { display: flex; width: 100%; min-height: 100vh; }
+  .fx-sidenav { display: flex; }
+  .fx-content { display: block; flex: 1; min-width: 0; }
+  .fx-main    {
+    padding-bottom: 24px;
+    padding-left: 252px;
+    padding-right: 32px;
+  }
   .fx-content .msg-split { height: 100vh; }
 
-  /* Override the mobile bottom-center position entirely */
-  .fx-bottomnav {
-    bottom:    auto !important;
-    left:      auto !important;
-    transform: translateY(-50%) !important;
-    right: 16px;
-    top:   50%;
-    /* Vertical floating pill */
-    flex-direction: column;
-    width:  72px;
-    border-radius: 28px;
-    padding: 12px 8px;
-    gap:    6px;
-    max-width: none;
-  }
-
-  /* Exit right on sheet-open / modal */
-  body.sheet-open .fx-bottomnav,
-  body.provider-page .fx-bottomnav,
-  body.fx-modal-open .fx-bottomnav {
-    transform: translateY(-50%) translateX(200%) !important;
-    display: none !important;
-  }
-
-  /* Icon-only items stacked in column */
-  .fx-bottomnav .nav-item {
-    flex:    none;
-    width:   100%;
-    padding: 0;
-    border-radius: 50%;
-    gap:     0;
-  }
-
-  /* Hide text labels on desktop — icon alone is enough */
-  .fx-bottomnav .nav-item > span:last-child {
-    display: none;
-  }
-
-  /* Slightly larger icon circles */
-  .fx-bottomnav .nav-icon-wrap {
-    width:  52px;
-    height: 52px;
-  }
+  /* Desktop uses the glass side rail — hide the mobile bottom dock */
+  .fx-bottomnav { display: none !important; }
 }
 
 /* ─── Map ─────────────────────────────────────────────────────────────── */

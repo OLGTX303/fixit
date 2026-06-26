@@ -26,7 +26,7 @@ function cats(r) {
   <div class="fx-page">
     <h1 class="fw-bold mb-1" style="font-size:20px">Harm message review</h1>
     <div class="mb-3" style="font-size:13px;color:var(--fx-muted)">
-      Flagged E2E messages (metadata only — content is encrypted on server)
+      Flagged E2E messages (metadata only �?content is encrypted on server)
     </div>
 
     <div v-if="loading" class="text-muted">Loading…</div>
@@ -41,7 +41,7 @@ function cats(r) {
         Sender: {{ r.sender_name }} · Categories: {{ cats(r) }}
       </div>
       <div style="font-size:11px;color:var(--fx-muted-soft)" class="mt-1">
-        Hash: {{ r.content_hash?.slice(0, 16) }}… · {{ r.message_sent_at }}
+        Hash: {{ r.content_hash?.slice(0, 16) }}…· {{ r.message_sent_at }}
       </div>
       <input class="fx-input mt-2" v-model="notes[r.id]" placeholder="Admin notes (optional)" />
       <div class="d-flex gap-2 mt-2">

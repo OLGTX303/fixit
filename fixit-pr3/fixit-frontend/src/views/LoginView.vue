@@ -54,7 +54,7 @@ async function submit() {
             <a href="#" style="font-size:11px;font-weight:700;color:var(--fx-accent);text-decoration:none;letter-spacing:0.05em">FORGOT?</a>
           </div>
           <input class="glass-input lg-field" type="password" v-model="password"
-                 placeholder="••••••••" autocomplete="current-password" required />
+                 placeholder="•••••••" autocomplete="current-password" required />
         </div>
 
         <div v-if="auth.error" class="alert alert-danger" style="font-size:12px;padding:8px 12px">{{ auth.error }}</div>

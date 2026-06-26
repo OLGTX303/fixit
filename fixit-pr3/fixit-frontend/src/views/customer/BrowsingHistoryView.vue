@@ -26,7 +26,7 @@ async function clearAll() {
 </script>
 
 <template>
-  <div class="bh-root">
+  <div class="bh-root fx-view-root">
     <header class="bh-header">
       <button class="bh-back" @click="router.back()">
         <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
@@ -60,7 +60,7 @@ async function clearAll() {
 </template>
 
 <style scoped>
-.bh-root { min-height: 100vh; background: var(--fx-bg); padding-bottom: 80px; }
+.bh-root { min-height: 100vh; padding-bottom: 80px; }
 .bh-header { display: flex; align-items: center; gap: 8px; padding: 16px; }
 .bh-back { background: none; border: none; cursor: pointer; color: var(--fx-text); padding: 4px; }
 .bh-title { font-size: 20px; font-weight: 800; margin: 0; flex: 1; color: var(--fx-text); }

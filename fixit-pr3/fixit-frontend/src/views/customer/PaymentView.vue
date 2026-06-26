@@ -55,7 +55,7 @@ onMounted(async () => {
     }
   } catch (e) {
     // A failed config request (expired session, network, Stripe.js) is NOT the
-    // same as "keys missing" — surface it as a load error so we don't falsely
+    // same as "keys missing" �?surface it as a load error so we don't falsely
     // tell the user to edit the server .env.
     loadError.value = e.message || 'Could not load the payment module'
     error.value = e.message
@@ -178,7 +178,7 @@ function startReplace() {
 
     <div v-else-if="loadError" class="fx-card" style="padding:16px">
       <p style="font-size:13px;color:var(--fx-muted);margin:0 0 10px">
-        Couldn't load the payment module. Your session may have expired — try reloading or signing in again.
+        Couldn't load the payment module. Your session may have expired �?try reloading or signing in again.
       </p>
       <button class="btn btn-sm btn-outline-secondary" @click="$router.go(0)">Reload</button>
     </div>
@@ -237,7 +237,7 @@ function startReplace() {
         </div>
         <p style="font-size:12px;color:var(--fx-muted)">
           Use Stripe test card <strong>4242 4242 4242 4242</strong>, any future expiry, any CVC.
-          Card details go directly to Stripe — never stored on our servers.
+          Card details go directly to Stripe �?never stored on our servers.
         </p>
 
         <div ref="paymentMount" class="mb-3" style="min-height:120px"></div>
