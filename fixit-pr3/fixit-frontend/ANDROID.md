@@ -48,6 +48,26 @@ npm run cap:android
 
 In Android Studio: **Run ▶** on an emulator or connected device.
 
+## CI: deploy + APK together
+
+Every `git push origin master` runs **two parallel GitHub Actions jobs**:
+
+1. **Deploy to server** — SSH `redeploy.sh` (web + API + migrations)
+2. **Build & publish APK** — signed release uploaded to GitHub Releases (OTA via `/api/app/latest`)
+
+Required GitHub repo secrets for the APK job:
+
+| Secret | Description |
+|--------|-------------|
+| `ANDROID_KEYSTORE_BASE64` | Base64 of your `.jks` keystore (`base64 -w0 fixit-release-key.jks`) |
+| `ANDROID_STORE_PASSWORD` | Keystore password |
+| `ANDROID_KEY_ALIAS` | Key alias (e.g. `fixit`) |
+| `ANDROID_KEY_PASSWORD` | Key password |
+
+If signing secrets are missing, deploy still runs; the APK job is skipped with a warning.
+
+Manual semver releases: `git tag v1.2.0 && git push --tags` (uses `release-apk.yml`).
+
 ## CLI build (without Android Studio UI)
 
 ```bash
