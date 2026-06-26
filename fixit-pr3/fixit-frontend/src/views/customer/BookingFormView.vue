@@ -10,6 +10,7 @@ import { DEFAULT_ADDRESSES } from '../../services/geolocation'
 import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import AppIcon from '../../components/AppIcon.vue'
+import PaymentSheet from '../../components/PaymentSheet.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,6 +36,8 @@ const couponApplied = ref(null)
 const availableCoupons = ref([])
 const showCouponPicker = ref(false)
 const applyingCoupon = ref(false)
+const showPayment = ref(false)
+const paymentBooking = ref(null)
 
 useModalGuard(showCouponPicker)
 
@@ -124,6 +127,15 @@ function pickCoupon(c) {
   applyCoupon(c.code)
 }
 
+function onPaymentClose() {
+  showPayment.value = false
+}
+
+function onPaymentDone(bookingId) {
+  showPayment.value = false
+  router.push({ name: 'job-tracker', query: { id: bookingId, paid: '1' } })
+}
+
 async function confirm() {
   submitting.value = true
   try {
@@ -141,10 +153,11 @@ async function confirm() {
     recurrence_end_date:  recurring.value && recurrenceEndDate.value ? recurrenceEndDate.value : null,
     coupon_code:          couponApplied.value ? couponCode.value : undefined,
   })
-  router.push({
-    name: 'payment',
-    query: { booking_id: booking.id, amount: booking.total?.toFixed(2) ?? total.value.toFixed(2) },
-  })
+  paymentBooking.value = {
+    id: booking.id,
+    amount: parseFloat(booking.total ?? total.value),
+  }
+  showPayment.value = true
   } catch (e) {
     alert(e.message || 'Booking failed')
   } finally {
@@ -302,6 +315,14 @@ async function confirm() {
       </div>
     </div>
   </Teleport>
+
+  <PaymentSheet
+    :open="showPayment"
+    :booking-id="paymentBooking?.id ?? null"
+    :amount="paymentBooking?.amount ?? null"
+    @close="onPaymentClose"
+    @paid="onPaymentDone"
+  />
 </template>
 
 <style scoped>
