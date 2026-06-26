@@ -108,10 +108,10 @@ function isActive(item) {
         <LegalFooter class="fx-app-legal" />
       </main>
 
-      <!-- Floating liquid-glass dock — all viewports (Teleported to body) -->
+      <!-- Mobile: floating liquid-glass bottom dock -->
       <Teleport to="body">
-        <nav class="fx-bottomnav">
-          <button v-for="item in navItems" :key="item.label"
+        <nav class="fx-bottomnav" aria-label="Main navigation">
+          <button v-for="item in navItems" :key="'dock-' + item.label"
                   class="nav-item" :class="{ active: isActive(item) }" @click="go(item)">
             <div class="nav-icon-wrap">
               <span class="material-symbols-outlined"
@@ -120,6 +120,23 @@ function isActive(item) {
               </span>
             </div>
             <span>{{ item.label }}</span>
+          </button>
+        </nav>
+      </Teleport>
+
+      <!-- Desktop: right vertical liquid-glass rail -->
+      <Teleport to="body">
+        <nav class="fx-rightnav" aria-label="Main navigation">
+          <button v-for="item in navItems" :key="'rail-' + item.label"
+                  class="nav-item" :class="{ active: isActive(item) }" @click="go(item)"
+                  :title="item.label">
+            <div class="nav-icon-wrap">
+              <span class="material-symbols-outlined"
+                    :style="{ fontSize: '22px', fontVariationSettings: isActive(item) ? `'FILL' 1` : `'FILL' 0` }">
+                {{ item.msIcon }}
+              </span>
+            </div>
+            <span class="nav-label">{{ item.label }}</span>
           </button>
         </nav>
       </Teleport>
