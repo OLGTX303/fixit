@@ -206,22 +206,41 @@ return function (App $app): void {
     // OTA: the app polls this for the latest signed APK. Reads the newest GitHub
     // release (public repo, no token), cached 5 min to respect rate limits.
     $app->get('/api/app/latest', function ($request, $response) {
+        $parseVersionCode = static function (?string $body): ?int {
+            if ($body === null || $body === '') {
+                return null;
+            }
+            if (preg_match('/version_code:\s*(\d+)/i', $body, $m)) {
+                return (int) $m[1];
+            }
+            if (preg_match('/<!--\s*version_code:(\d+)\s*-->/', $body, $m)) {
+                return (int) $m[1];
+            }
+            return null;
+        };
+
         $cache = sys_get_temp_dir() . '/fixit_latest_release.json';
-        if (is_file($cache) && time() - filemtime($cache) < 300) {
+        $refresh = !empty($request->getQueryParams()['refresh']);
+        if (!$refresh && is_file($cache) && time() - filemtime($cache) < 300) {
             $response->getBody()->write((string) file_get_contents($cache));
             return $response->withHeader('Content-Type', 'application/json');
         }
-        $out = ['version' => null, 'apk_url' => null, 'name' => null, 'notes' => null];
+
+        $out = ['version' => null, 'version_code' => null, 'apk_url' => null, 'name' => null, 'notes' => null];
         try {
             $ch = curl_init('https://api.github.com/repos/OLGTX303/fixit/releases/latest');
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT => 8,
                 CURLOPT_HTTPHEADER => ['User-Agent: fixit-ota', 'Accept: application/vnd.github+json'],
             ]);
-            $rel = json_decode((string) curl_exec($ch), true);
+            $raw = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            if (is_array($rel) && !empty($rel['tag_name'])) {
+
+            $rel = json_decode((string) $raw, true);
+            if ($httpCode === 200 && is_array($rel) && !empty($rel['tag_name'])) {
                 $apk = null;
                 foreach (($rel['assets'] ?? []) as $a) {
                     if (str_ends_with(strtolower((string) ($a['name'] ?? '')), '.apk')) {
@@ -229,11 +248,13 @@ return function (App $app): void {
                         break;
                     }
                 }
+                $body = (string) ($rel['body'] ?? '');
                 $out = [
-                    'version' => ltrim((string) $rel['tag_name'], 'v'),
-                    'apk_url' => $apk,
-                    'name'    => $rel['name'] ?? $rel['tag_name'],
-                    'notes'   => $rel['body'] ?? null,
+                    'version'      => ltrim((string) $rel['tag_name'], 'v'),
+                    'version_code' => $parseVersionCode($body),
+                    'apk_url'      => $apk,
+                    'name'         => $rel['name'] ?? $rel['tag_name'],
+                    'notes'        => $body !== '' ? $body : null,
                 ];
                 @file_put_contents($cache, json_encode($out));
             }

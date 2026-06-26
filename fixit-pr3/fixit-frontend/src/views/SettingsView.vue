@@ -1,18 +1,46 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
+import { checkForUpdate } from '../capacitor'
 
 const router    = useRouter()
 const auth      = useAuthStore()
 const isNative  = computed(() => Capacitor.isNativePlatform())
+const appVersion = ref('')
+const checkingUpdate = ref(false)
+
+onMounted(async () => {
+  if (!isNative.value) return
+  try {
+    const info = await App.getInfo()
+    appVersion.value = info.build ? `${info.version} (build ${info.build})` : info.version
+  } catch { /* ignore */ }
+})
 
 function logout() { auth.logout(); router.push({ name: 'login' }) }
 
 function clearCache() {
   localStorage.clear()
   router.push({ name: 'login' })
+}
+
+async function checkUpdate() {
+  checkingUpdate.value = true
+  try {
+    const result = await checkForUpdate({ force: true })
+    if (result.status === 'current') {
+      window.alert('You are on the latest version.')
+    } else if (result.status === 'none') {
+      window.alert('No release is available yet.')
+    } else if (result.status === 'error') {
+      window.alert('Could not check for updates. Try again when you are online.')
+    }
+  } finally {
+    checkingUpdate.value = false
+  }
 }
 </script>
 
@@ -109,6 +137,16 @@ function clearCache() {
       </button>
       <template v-if="isNative">
         <div class="stv-sep"></div>
+        <button class="stv-row" :disabled="checkingUpdate" @click="checkUpdate">
+          <div class="stv-row-left">
+            <div class="stv-row-icon" style="background:rgba(255,102,53,0.10)">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#FF6635;font-variation-settings:'FILL' 1">system_update</span>
+            </div>
+            <span class="stv-row-lbl">{{ checkingUpdate ? 'Checking…' : 'Check for updates' }}</span>
+          </div>
+          <span class="material-symbols-outlined stv-chevron">chevron_right</span>
+        </button>
+        <div class="stv-sep"></div>
         <button class="stv-row" @click="clearCache">
           <div class="stv-row-left">
             <div class="stv-row-icon" style="background:rgba(239,68,68,0.10)">
@@ -129,7 +167,7 @@ function clearCache() {
       </button>
     </div>
 
-    <p class="stv-version">FixIt v1.0 · © 2026 FixIt Ltd</p>
+    <p class="stv-version">FixIt {{ appVersion || 'v1.0' }} · © 2026 FixIt Ltd</p>
   </div>
 </template>
 
