@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import * as api from '../../services/api'
 import { useInfiniteList } from '../../composables/useInfiniteList'
 import AppIcon from '../../components/AppIcon.vue'
@@ -8,6 +8,7 @@ const filter = ref('Pending')   // Pending | Approved | All
 const expanded = ref(null)
 const decisions = ref({})
 const counts = ref({ pending: 0, approved: 0 })
+const brokenAvatars = ref({})
 
 // Load only the providers for the active filter, 20 at a time, more on scroll.
 const verifiedParam = computed(() =>
@@ -17,7 +18,23 @@ const { items: shown, loading, done, sentinel, reset } = useInfiniteList(
 watch(filter, reset)
 
 async function loadStats() { try { counts.value = await api.getVerifyStats() } catch { /* non-fatal */ } }
-onMounted(loadStats)
+onMounted(() => {
+  loadStats()
+  window.addEventListener('focus', reset)
+})
+onUnmounted(() => window.removeEventListener('focus', reset))
+
+function showAvatar(p) {
+  return p.avatar_url && !brokenAvatars.value[p.id]
+}
+
+function onAvatarError(providerId) {
+  brokenAvatars.value[providerId] = true
+}
+
+function providerInitials(name) {
+  return (name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
 
 const rejectedCount = computed(() => Object.values(decisions.value).filter(d => d === 'rejected').length)
 const stats = computed(() => ({ pending: counts.value.pending, approved: counts.value.approved, rejected: rejectedCount.value }))
@@ -78,8 +95,11 @@ async function reject(id) {
     <div class="d-flex flex-column gap-2">
       <div v-for="p in shown" :key="p.id" class="fx-card" style="padding:12px">
         <div class="d-flex align-items-start gap-2">
-          <div class="fx-avatar" style="width:42px;height:42px;background:var(--fx-border-soft);color:var(--fx-muted)">
-            {{ p.name.split(' ').map(w => w[0]).join('') }}
+          <img v-if="showAvatar(p)" :src="p.avatar_url" :alt="p.name"
+               class="fx-avatar" style="width:42px;height:42px;flex-shrink:0;object-fit:cover"
+               @error="onAvatarError(p.id)" />
+          <div v-else class="fx-avatar" style="width:42px;height:42px;background:var(--fx-border-soft);color:var(--fx-muted)">
+            {{ providerInitials(p.name) }}
           </div>
           <div class="flex-grow-1" style="min-width:0">
             <div class="d-flex justify-content-between align-items-center">

@@ -11,13 +11,26 @@ const providersStore = useProvidersStore()
 const auth = useAuthStore()
 
 const tab = ref('new')
+const brokenAvatars = ref({})
 
 const myProviderId = computed(() =>
   providersStore.providers.find(p => p.user_id === auth.user?.id)?.id)
 
 onMounted(async () => {
-  await Promise.all([bookingsStore.load(), providersStore.load()])
+  await Promise.all([bookingsStore.reload(), providersStore.load()])
 })
+
+function customerInitials(b) {
+  return (b.customer?.name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function showAvatar(b) {
+  return b.customer?.avatar_url && !brokenAvatars.value[b.id]
+}
+
+function onAvatarError(bookingId) {
+  brokenAvatars.value[bookingId] = true
+}
 
 const all      = computed(() => bookingsStore.forProvider(myProviderId.value))
 const newJobs  = computed(() => all.value.filter(b => b.status === 'requested'))
@@ -75,7 +88,9 @@ const STATUS_COLOR = {
       <template v-if="tab==='new'">
         <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
-            <div class="brv-avatar">{{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}</div>
+            <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+                 class="brv-avatar brv-avatar-img" @error="onAvatarError(b.id)" />
+            <div v-else class="brv-avatar">{{ customerInitials(b) }}</div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
               <div class="brv-meta">{{ b.category?.name }} · {{ fmtDate(b.scheduled_at) }}</div>
@@ -101,8 +116,10 @@ const STATUS_COLOR = {
       <template v-if="tab==='active'">
         <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
-            <div class="brv-avatar" style="background:rgba(37,99,235,.12);color:#2563eb">
-              {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
+            <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+                 class="brv-avatar brv-avatar-img" @error="onAvatarError(b.id)" />
+            <div v-else class="brv-avatar" style="background:rgba(37,99,235,.12);color:#2563eb">
+              {{ customerInitials(b) }}
             </div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
@@ -160,8 +177,10 @@ const STATUS_COLOR = {
       <template v-if="tab==='done'">
         <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
-            <div class="brv-avatar" style="background:rgba(124,58,237,.10);color:#7c3aed">
-              {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
+            <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+                 class="brv-avatar brv-avatar-img" @error="onAvatarError(b.id)" />
+            <div v-else class="brv-avatar" style="background:rgba(124,58,237,.10);color:#7c3aed">
+              {{ customerInitials(b) }}
             </div>
             <div class="brv-card-info">
               <div class="brv-customer">{{ b.customer?.name || 'Customer' }}</div>
@@ -226,6 +245,11 @@ const STATUS_COLOR = {
   background: rgba(255,102,53,.12); color: #FF6635;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; font-weight: 700;
+}
+.brv-avatar-img {
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.65);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 .brv-card-info  { flex: 1; min-width: 0; }
 .brv-customer   { font-size: 14px; font-weight: 700; color: var(--fx-text); }
