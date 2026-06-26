@@ -39,6 +39,21 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY)
 }
 
+/** Clear cached app data but keep the signed-in session. */
+export function clearAppCache() {
+  const preserve = [TOKEN_KEY, USER_KEY, 'fixit_device_id']
+  const saved = {}
+  for (const key of preserve) {
+    const val = localStorage.getItem(key)
+    if (val !== null) saved[key] = val
+  }
+  localStorage.clear()
+  for (const [key, val] of Object.entries(saved)) {
+    localStorage.setItem(key, val)
+  }
+  try { sessionStorage.clear() } catch { /* ignore */ }
+}
+
 export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn
 }
