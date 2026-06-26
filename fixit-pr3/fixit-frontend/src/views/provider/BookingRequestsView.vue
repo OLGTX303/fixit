@@ -73,7 +73,7 @@ const STATUS_COLOR = {
 
       <!-- ── NEW REQUESTS ── -->
       <template v-if="tab==='new'">
-        <div v-for="b in shown" :key="b.id" class="brv-card">
+        <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
             <div class="brv-avatar">{{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}</div>
             <div class="brv-card-info">
@@ -99,7 +99,7 @@ const STATUS_COLOR = {
 
       <!-- ── ACTIVE JOBS ── -->
       <template v-if="tab==='active'">
-        <div v-for="b in shown" :key="b.id" class="brv-card">
+        <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
             <div class="brv-avatar" style="background:rgba(37,99,235,.12);color:#2563eb">
               {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
@@ -158,7 +158,7 @@ const STATUS_COLOR = {
 
       <!-- ── DONE ── -->
       <template v-if="tab==='done'">
-        <div v-for="b in shown" :key="b.id" class="brv-card">
+        <div v-for="b in shown" :key="b.id" class="brv-card fx-card">
           <div class="brv-card-top">
             <div class="brv-avatar" style="background:rgba(124,58,237,.10);color:#7c3aed">
               {{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}
@@ -215,8 +215,9 @@ const STATUS_COLOR = {
 /* List & Cards */
 .brv-list { display: flex; flex-direction: column; gap: 12px; }
 .brv-card {
-  background: var(--fx-card); border-radius: 16px; overflow: hidden;
-  border: 1px solid var(--fx-border); padding: 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 14px;
 }
 
 .brv-card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
