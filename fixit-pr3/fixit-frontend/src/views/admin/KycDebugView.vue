@@ -34,11 +34,14 @@ const flashColor = ref(null)
 const progress = ref({ current: 0, total: 8 })
 const livenessResult = ref(null)
 const faceInFrame = ref(false)
+const countdown = ref(0)   // auto-start countdown once a face is detected
 let faceTimer = null
+let autoTimer = null
 
 const STEPS = ['Gov ID', 'Face check', 'Done']
 const progressPct = computed(() => `${((step.value - 1) / (STEPS.length - 1)) * 100}%`)
 
+// Pick a file → analyse immediately (no extra button).
 function onIdSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -46,13 +49,7 @@ function onIdSelected(e) {
   idPreview.value = URL.createObjectURL(file)
   idResult.value = null
   error.value = ''
-}
-
-function clearId() {
-  idFile.value = null
-  idPreview.value = ''
-  idResult.value = null
-  error.value = ''
+  runIdRecognition()
 }
 
 function formatRejection(result) {
@@ -70,12 +67,14 @@ async function runIdRecognition() {
   try {
     const result = await analyzeGovernmentId(idFile.value, (m) => { statusMsg.value = m })
     idResult.value = result
-    if (!result.valid) error.value = formatRejection(result)
+    if (!result.valid) { error.value = formatRejection(result); return }
+    // Valid → advance to the face check automatically.
+    statusMsg.value = 'ID verified — opening camera…'
+    setTimeout(() => { statusMsg.value = ''; goLiveness() }, 900)
   } catch (e) {
     error.value = e.message || 'ID recognition failed'
   } finally {
     busy.value = false
-    statusMsg.value = ''
   }
 }
 
@@ -134,7 +133,29 @@ function attachStream() {
 }
 watch(videoRef, attachStream)
 
+function cancelAuto() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null }
+  countdown.value = 0
+}
+
+// Auto-run the 8-colour check once a face is stably in the circle — no Start
+// button to tap. Cancels if the face leaves the frame.
+watch([faceInFrame, busy, livenessResult], () => {
+  const idle = camState.value === 'ready' && !busy.value && !livenessResult.value
+  if (idle && faceInFrame.value && !autoTimer) {
+    countdown.value = 3
+    autoTimer = setInterval(() => {
+      if (!faceInFrame.value || busy.value) { cancelAuto(); return }
+      countdown.value -= 1
+      if (countdown.value <= 0) { cancelAuto(); runLiveness() }
+    }, 600)
+  } else if ((!faceInFrame.value || busy.value || livenessResult.value) && autoTimer) {
+    cancelAuto()
+  }
+})
+
 function stopCamera() {
+  cancelAuto()
   if (faceTimer) { clearInterval(faceTimer); faceTimer = null }
   if (streamRef.value) {
     streamRef.value.getTracks().forEach((t) => t.stop())
@@ -174,12 +195,8 @@ async function runLiveness() {
 function goLiveness() { error.value = ''; step.value = 2; startCamera() }
 function backToId() { stopCamera(); error.value = ''; step.value = 1 }
 
-function retry() {
-  stopCamera()
-  step.value = 1
-  clearId()
-  livenessResult.value = null
-}
+// Re-arm the check after a fail without leaving the stage.
+function retryLiveness() { error.value = ''; livenessResult.value = null }
 
 onUnmounted(stopCamera)
 </script>
@@ -219,7 +236,7 @@ onUnmounted(stopCamera)
         <!-- Step 1: Government ID -->
         <div v-if="step === 1">
           <p style="font-size:13px;color:var(--fx-muted)">
-            Upload or capture a passport, national ID, or driving licence. OCR + MRZ + anti-spoof checks run client-side.
+            Tap to upload or capture a passport, national ID, or driving licence — it verifies and moves on automatically.
           </p>
           <label class="kyc-drop mb-3" :class="{ filled: idPreview }">
             <input type="file" accept="image/*" capture="environment" class="d-none" @change="onIdSelected" />
@@ -249,28 +266,19 @@ onUnmounted(stopCamera)
               <ul v-if="!idResult.valid && idResult.rejection_reasons?.length" class="mt-2 mb-0 ps-3" style="color:var(--fx-error)">
                 <li v-for="(r, i) in idResult.rejection_reasons" :key="i">{{ r }}</li>
               </ul>
+              <div v-if="!idResult.valid" style="font-size:12px;color:var(--fx-muted);margin-top:6px">Tap the box above to try another photo.</div>
             </div>
           </Transition>
-
-          <div class="kyc-actions">
-            <button v-if="idFile" class="btn btn-ghost" :disabled="busy" @click="clearId">Clear</button>
-            <button v-if="!idResult?.valid" class="btn btn-primary flex-fill" :disabled="!idFile || busy" @click="runIdRecognition">
-              <span v-if="busy" class="kyc-spin me-2"></span>{{ busy ? 'Analysing ID…' : 'Recognise government ID' }}
-            </button>
-            <button v-else class="btn btn-primary flex-fill" @click="goLiveness">Continue to face check →</button>
-          </div>
         </div>
 
         <!-- Step 2: 8-colour liveness — camera opens as a full-screen stage so
              the whole display flashes the colour onto the face (see stage below). -->
         <div v-else-if="step === 2">
           <p style="font-size:13px;color:var(--fx-muted)">
-            The camera opens full-screen — the whole display flashes <strong>8 random colours</strong> onto your face,
-            while your face stays visible in the circle.
+            The camera opens full-screen and the check starts on its own once your face is in the circle.
           </p>
           <div class="kyc-actions">
             <button class="btn btn-ghost flex-fill" :disabled="busy" @click="backToId">← Back</button>
-            <button v-if="camState !== 'ready'" class="btn btn-primary flex-fill" @click="startCamera">Open camera</button>
           </div>
         </div>
 
@@ -285,10 +293,7 @@ onUnmounted(stopCamera)
             <div v-if="idResult" class="mb-1">ID: {{ idResult.document_label }} · {{ idResult.confidence }}% · fraud {{ idResult.fraud_score }}</div>
             <div v-if="livenessResult">Liveness: {{ livenessResult.score }}% ({{ livenessResult.checks?.matches }}/{{ livenessResult.checks?.colors_tested }})</div>
           </div>
-          <div class="kyc-actions mt-3">
-            <button class="btn btn-outline-primary flex-fill" @click="retry">↻ Run again</button>
-            <button class="btn btn-primary flex-fill" @click="router.push({ name: 'admin-verify' })">Back to Verifications</button>
-          </div>
+          <button class="btn btn-primary w-100 mt-3" @click="router.push({ name: 'admin-verify' })">Done</button>
         </div>
       </div>
     </Transition>
@@ -337,7 +342,9 @@ onUnmounted(stopCamera)
           </div>
           <div class="kyc-stage-status">
             <template v-if="busy">Colour {{ progress.current }} / {{ progress.total }}</template>
-            <template v-else>{{ faceInFrame ? 'Face in frame — ready' : 'Move your face into the circle' }}</template>
+            <template v-else-if="countdown > 0">Hold still… {{ countdown }}</template>
+            <template v-else-if="livenessResult && !livenessResult.passed">Didn't pass — hold still to retry</template>
+            <template v-else>Move your face into the circle</template>
           </div>
         </div>
 
@@ -359,10 +366,8 @@ onUnmounted(stopCamera)
               </div>
             </div>
           </Transition>
-          <button class="btn btn-primary w-100" :disabled="busy" @click="runLiveness">
-            <span v-if="busy" class="kyc-spin me-2"></span>
-            {{ busy ? 'Running…' : (livenessResult && !livenessResult.passed ? 'Retry 8-colour check' : 'Start 8-colour check') }}
-          </button>
+          <button v-if="livenessResult && !livenessResult.passed && !busy"
+                  class="btn btn-primary w-100" @click="retryLiveness">Try again</button>
         </div>
       </div>
     </Transition>
