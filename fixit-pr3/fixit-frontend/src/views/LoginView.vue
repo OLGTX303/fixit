@@ -29,7 +29,7 @@ async function submit() {
 
 <template>
   <div class="lg-login-wrap">
-    <main class="lg-login-card liquid-glass" style="border-radius:32px">
+    <main class="lg-login-card liquid-glass-high lg-login-glow" style="border-radius:32px">
       <!-- Logo -->
       <div class="lg-logo-section">
         <img :src="fixitLogo" alt="FixIt" width="140" height="140" style="display:block" />
@@ -102,6 +102,13 @@ async function submit() {
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
+}
+.lg-login-glow {
+  box-shadow:
+    var(--lg-edge),
+    0 0 0 1px rgba(255, 102, 53, 0.12),
+    0 24px 56px rgba(255, 102, 53, 0.14),
+    0 8px 32px rgba(0, 0, 0, 0.06);
 }
 .lg-logo-section {
   display: flex;

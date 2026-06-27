@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/auth'
 import { useProvidersStore } from './stores/providers'
 import { useBookingsStore } from './stores/bookings'
 import AppIcon from './components/AppIcon.vue'
+import FxAuroraBg from './components/FxAuroraBg.vue'
 import LegalFooter from './components/LegalFooter.vue'
 // Single viewport condition for ALL pages (self-syncs body.fx-desktop/fx-mobile).
 import './composables/useViewport.js'
@@ -93,8 +94,8 @@ function isActive(item) {
 
 <template>
   <div class="fx-shell">
-    <!-- Animated gradient mesh — sits behind everything -->
-    <div class="lg-mesh" aria-hidden="true"></div>
+    <!-- Flowing aurora (vue-bits) — brand orange, replaces static mesh -->
+    <FxAuroraBg />
 
     <!-- Liquid cursor blob (spring-follows mouse, creates liquid merge effect near glass surfaces) -->
     <div id="lg-cursor-blob" aria-hidden="true"></div>

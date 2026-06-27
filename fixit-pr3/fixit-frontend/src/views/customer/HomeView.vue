@@ -65,9 +65,13 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
 
     <div class="hv-content">
       <!-- Hero greeting -->
-      <section style="padding:18px 0 8px">
-        <h2 class="hv-greeting">{{ greeting() }}, {{ auth.user?.name?.split(' ')[0] }}</h2>
-        <p style="font-size:14px;color:var(--fx-muted);margin:6px 0 18px">What can we help you fix today?</p>
+      <section class="hv-hero" style="padding:18px 0 8px">
+        <p class="hv-hero-kicker">Home services, on demand</p>
+        <h2 class="hv-greeting">
+          {{ greeting() }},
+          <span class="hv-greeting-name">{{ auth.user?.name?.split(' ')[0] }}</span>
+        </h2>
+        <p class="hv-hero-sub">What can we help you fix today?</p>
 
         <!-- Search pill with inline Search button -->
         <div class="hv-search liquid-glass">
@@ -122,15 +126,19 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   z-index: 40;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 20px;
+  margin: 0 -20px;
   background:
-    radial-gradient(ellipse 60% 80% at 10% 50%, rgba(255,255,255,0.08) 0%, transparent 70%),
-    rgba(255,255,255,0.18);
-  backdrop-filter: blur(10px) saturate(1.80) brightness(1.04);
-  -webkit-backdrop-filter: blur(10px) saturate(1.80) brightness(1.04);
+    radial-gradient(ellipse 55% 90% at 8% 50%, rgba(255, 102, 53, 0.08) 0%, transparent 68%),
+    rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px) saturate(1.85) brightness(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.85) brightness(1.05);
   box-shadow:
-    inset 0 -1px 0 rgba(255,255,255,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.70),
-    0 2px 12px rgba(0,0,0,0.04);
+    inset 0 -1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 4px 20px rgba(255, 102, 53, 0.06);
+}
+@media (min-width: 992px) {
+  .hv-topbar { margin: 0 -32px; }
 }
 .hv-icon-btn {
   background: none; border: none; cursor: pointer; padding: 6px;
@@ -162,7 +170,33 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
 .hv-content { max-width: 640px; margin: 0 auto; padding: 0 20px; }
 @media (min-width: 992px) { .hv-content { max-width: 980px; padding: 0 32px; } }
 
-.hv-greeting { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
+.hv-hero-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fx-accent);
+}
+.hv-greeting {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+}
+.hv-greeting-name {
+  background: linear-gradient(135deg, var(--fx-accent) 0%, var(--fx-accent-light) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hv-hero-sub {
+  font-size: 14px;
+  color: var(--fx-muted);
+  margin: 8px 0 18px;
+}
 
 .hv-search {
   display: flex; align-items: center; gap: 10px;
