@@ -942,10 +942,22 @@ body.fx-desktop {
     padding-top: max(12px, env(safe-area-inset-top));
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - env(safe-area-inset-top));
+    /* Fixed viewport height (not min-height) so a long contact list scrolls
+       inside its own panel instead of growing the page and sliding the whole
+       split. min-height:0 defeats flexbox's auto min so the inner lists
+       (.msg-conv-list, .chat-list) actually own the scroll. */
+    flex: 0 0 auto;
+    height: calc(100vh - env(safe-area-inset-top));
+    min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
   }
+  /* Propagate the height cap so only the scroll containers scroll. */
+  .fx-main--full .msg-panel-left,
+  .fx-main--full .msg-panel-right,
+  .fx-main--full .msg-conv-list,
+  .fx-main--full .chat-root,
+  .fx-main--full .chat-list { min-height: 0; }
   .fx-bottomnav { display: none !important; }
   .fx-rightnav  { display: flex; }
 
