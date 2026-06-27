@@ -8,7 +8,7 @@ import AppIcon from './components/AppIcon.vue'
 import FxAuroraBg from './components/FxAuroraBg.vue'
 import LegalFooter from './components/LegalFooter.vue'
 // Single viewport condition for ALL pages (self-syncs body.fx-desktop/fx-mobile).
-import './composables/useViewport.js'
+	import { isDesktop } from './composables/useViewport.js'
 
 // ── Liquid cursor blob (mirrors the studio's mouse-spring follower) ──────
 let blobEl = null
@@ -62,9 +62,12 @@ const NAVS = {
   ],
 }
 
-const isLegalPage = computed(() => route.name === 'legal-terms' || route.name === 'legal-privacy')
-const showShell   = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
-const navItems    = computed(() => NAVS[auth.role] || [])
+	const isLegalPage = computed(() => route.name === 'legal-terms' || route.name === 'legal-privacy')
+	const showShell   = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
+	const navItems    = computed(() => NAVS[auth.role] || [])
+	const SPLIT_ROUTES = ['messages', 'cart', 'pro-chats', 'admin-chats']
+	const isSplitRoute = computed(() => SPLIT_ROUTES.includes(route.name))
+	const mainFull = computed(() => isDesktop.value && isSplitRoute.value)
 
 async function go(item) {
   if (item.jobRoute) {
@@ -104,10 +107,10 @@ function isActive(item) {
     <div class="fx-statusbar-bg" aria-hidden="true"></div>
 
     <template v-if="showShell">
-      <main class="fx-main">
-        <router-view />
-        <LegalFooter class="fx-app-legal" />
-      </main>
+	      <main class="fx-main" :class="{ 'fx-main--full': mainFull }">
+	        <router-view />
+	        <LegalFooter v-if="!mainFull" class="fx-app-legal" />
+	      </main>
 
       <!-- Mobile: floating liquid-glass bottom dock -->
       <Teleport to="body">

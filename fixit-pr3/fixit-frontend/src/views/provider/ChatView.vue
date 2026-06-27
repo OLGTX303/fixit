@@ -401,6 +401,8 @@ function timeOf(iso) {
 .chat-col {
   max-width: 72%; display: flex; flex-direction: column;
 }
+:global(body.fx-desktop) .chat-root.embedded .chat-col { max-width: min(480px, 58%); }
+:global(body.fx-desktop) .chat-root.embedded .chat-list { padding: 20px 28px; }
 .incoming .chat-col { align-items: flex-start; }
 .outgoing .chat-col { align-items: flex-end; }
 

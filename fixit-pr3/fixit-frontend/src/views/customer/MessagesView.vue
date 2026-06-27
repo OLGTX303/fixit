@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+	import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import { useAuthStore } from '../../stores/auth'
@@ -13,7 +13,14 @@ const auth = useAuthStore()
 const selectedId = ref(null)
 const brokenAvatars = ref({})
 
-onMounted(() => { bookingsStore.reload() })
+	onMounted(() => { bookingsStore.reload() })
+
+	watch(myBookings, (list) => {
+	  if (!isDesktop.value || !list.length) return
+	  if (!selectedId.value || !list.some((b) => b.id === selectedId.value)) {
+	    selectedId.value = list[0].id
+	  }
+	}, { immediate: true })
 
 const myBookings = computed(() => bookingsStore.forCustomer(auth.user?.id))
 
@@ -133,11 +140,13 @@ function select(b) {
 
 <style scoped>
 /* ── Desktop split panel ─────────────────────────────────────────────── */
-.msg-split {
-  display: flex;
-  height: calc(100vh - 0px);
-  overflow: hidden;
-}
+	.msg-split {
+	  display: flex;
+	  flex: 1;
+	  min-height: 0;
+	  height: 100%;
+	  overflow: hidden;
+	}
 
 /* Left panel */
 .msg-panel-left {
