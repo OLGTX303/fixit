@@ -28,7 +28,12 @@ final class SecureController
 
         $serverKp = sodium_crypto_box_keypair();
         $serverPub = sodium_crypto_box_publickey($serverKp);
-        $z = sodium_crypto_scalarmult(sodium_crypto_box_secretkey($serverKp), $clientPub);
+        try {
+            // Throws on low-order / all-zero public keys (libsodium guard).
+            $z = sodium_crypto_scalarmult(sodium_crypto_box_secretkey($serverKp), $clientPub);
+        } catch (\SodiumException) {
+            return ResponseHelper::error($response, 'Invalid client_pub', 422);
+        }
         $salt = random_bytes(32);
         $keys = SecureChannel::deriveKeys($z, $salt);
 
