@@ -13,16 +13,17 @@ const auth = useAuthStore()
 const selectedId = ref(null)
 const brokenAvatars = ref({})
 
-	onMounted(() => { bookingsStore.reload() })
-
-	watch(myBookings, (list) => {
-	  if (!isDesktop.value || !list.length) return
-	  if (!selectedId.value || !list.some((b) => b.id === selectedId.value)) {
-	    selectedId.value = list[0].id
-	  }
-	}, { immediate: true })
-
+// Must be declared before the watch below references it (TDZ).
 const myBookings = computed(() => bookingsStore.forCustomer(auth.user?.id))
+
+onMounted(() => { bookingsStore.reload() })
+
+watch(myBookings, (list) => {
+  if (!isDesktop.value || !list.length) return
+  if (!selectedId.value || !list.some((b) => b.id === selectedId.value)) {
+    selectedId.value = list[0].id
+  }
+}, { immediate: true })
 
 const STATUS = {
   inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
