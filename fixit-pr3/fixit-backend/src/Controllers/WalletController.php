@@ -46,7 +46,8 @@ final class WalletController
         try {
             $result = $this->service()->walletTopUp((int) $user['id'], (int) $data['amount_cents']);
             return ResponseHelper::json($response, $result);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException | \Stripe\Exception\ApiErrorException $e) {
+            // Stripe API errors carry a user-readable message — return 400, not 500.
             return ResponseHelper::error($response, $e->getMessage(), 400);
         }
     }
@@ -66,7 +67,8 @@ final class WalletController
                 ? $this->service()->providerWithdraw((int) $user['id'], (int) $data['amount_cents'])
                 : $this->service()->walletWithdraw((int) $user['id'], (int) $data['amount_cents']);
             return ResponseHelper::json($response, $result);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException | \Stripe\Exception\ApiErrorException $e) {
+            // Stripe API errors carry a user-readable message — return 400, not 500.
             return ResponseHelper::error($response, $e->getMessage(), 400);
         }
     }
