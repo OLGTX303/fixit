@@ -122,8 +122,6 @@ final class UserModel
 
     public function listAll(): array
     {
-        // ponytail: lazy column — add once, silently ignored if already exists
-        try { Connection::get()->exec('ALTER TABLE User ADD COLUMN is_blocked TINYINT(1) NOT NULL DEFAULT 0'); } catch (\Throwable) {}
         $stmt = Connection::get()->query('SELECT id, name, email, role, phone, avatar_url, is_blocked FROM User ORDER BY id');
         return $stmt->fetchAll();
     }

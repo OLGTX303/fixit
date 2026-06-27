@@ -14,6 +14,16 @@ final class CategoryModel
         return $stmt->fetchAll();
     }
 
+    /** @return array<int,array<string,mixed>> */
+    public function byId(): array
+    {
+        $out = [];
+        foreach ($this->all() as $c) {
+            $out[(int) $c['id']] = $c;
+        }
+        return $out;
+    }
+
     public function find(int $id): ?array
     {
         $stmt = Connection::get()->prepare('SELECT id, name, description, icon_url FROM ServiceCategory WHERE id = :id LIMIT 1');

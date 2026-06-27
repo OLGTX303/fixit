@@ -14,37 +14,35 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class MessageController
 {
+    private BookingModel $bookings;
+    private MessageModel $messages;
+
+    public function __construct()
+    {
+        $this->bookings = new BookingModel();
+        $this->messages = new MessageModel();
+    }
+
     public function list(Request $request, Response $response, array $args): Response
     {
         $user = $request->getAttribute('user');
         $jobId = (int) $args['id'];
-        $bookingModel = new BookingModel();
-        $booking = $bookingModel->findEnriched($jobId);
-        if (!$booking) {
-            return ResponseHelper::error($response, 'Job not found', 404);
-        }
-        if (!$bookingModel->userCanAccess($user, $booking)) {
-            return ResponseHelper::error($response, 'Forbidden', 403);
+        if ($err = $this->requireJob($user, $jobId)) {
+            return ResponseHelper::error($response, $err['msg'], $err['code']);
         }
 
         $params = $request->getQueryParams();
         $limit = isset($params['limit']) ? (int) $params['limit'] : 200;
         $offset = isset($params['offset']) ? (int) $params['offset'] : 0;
-        $messages = (new MessageModel())->forJob($jobId, $limit, $offset);
-        return ResponseHelper::json($response, $messages);
+        return ResponseHelper::json($response, $this->messages->forJob($jobId, $limit, $offset));
     }
 
     public function create(Request $request, Response $response, array $args): Response
     {
         $user = $request->getAttribute('user');
         $jobId = (int) $args['id'];
-        $bookingModel = new BookingModel();
-        $booking = $bookingModel->findEnriched($jobId);
-        if (!$booking) {
-            return ResponseHelper::error($response, 'Job not found', 404);
-        }
-        if (!$bookingModel->userCanAccess($user, $booking)) {
-            return ResponseHelper::error($response, 'Forbidden', 403);
+        if ($err = $this->requireJob($user, $jobId)) {
+            return ResponseHelper::error($response, $err['msg'], $err['code']);
         }
 
         $data = (array) $request->getParsedBody();
@@ -67,12 +65,9 @@ final class MessageController
         if (!in_array($clientHarm, ['clear', 'flagged', 'blocked'], true)) {
             return ResponseHelper::error($response, 'Invalid harm_status', 422);
         }
-        // Never trust client "clear" when categories were flagged, or when the
-        // client explicitly reports blocked.
-        $harmStatus = $clientHarm;
-        if ($clientHarm === 'blocked' || count($harmCategories) > 0) {
-            $harmStatus = $clientHarm === 'blocked' ? 'blocked' : 'flagged';
-        }
+        $harmStatus = ($clientHarm === 'blocked' || $harmCategories)
+            ? ($clientHarm === 'blocked' ? 'blocked' : 'flagged')
+            : $clientHarm;
         if ($harmStatus === 'blocked') {
             return ResponseHelper::error($response, 'Message blocked by safety review', 422);
         }
@@ -87,7 +82,7 @@ final class MessageController
             'content_hash' => $data['content_hash'] ?? null,
         ];
 
-        $message = (new MessageModel())->create($jobId, (int) $user['id'], $payload);
+        $message = $this->messages->create($jobId, (int) $user['id'], $payload);
 
         if ($harmStatus === 'flagged') {
             (new HarmReviewModel())->create(
@@ -95,11 +90,25 @@ final class MessageController
                 $jobId,
                 (int) $user['id'],
                 'flagged',
-                is_array($payload['harm_categories']) ? $payload['harm_categories'] : [],
+                $harmCategories,
                 $payload['content_hash']
             );
         }
 
         return ResponseHelper::json($response, $message, 201);
+    }
+
+    /** @param array<string,mixed> $user */
+    /** @return array{msg:string,code:int}|null */
+    private function requireJob(array $user, int $jobId): ?array
+    {
+        $booking = $this->bookings->findEnriched($jobId);
+        if (!$booking) {
+            return ['msg' => 'Job not found', 'code' => 404];
+        }
+        if (!$this->bookings->userCanAccess($user, $booking)) {
+            return ['msg' => 'Forbidden', 'code' => 403];
+        }
+        return null;
     }
 }

@@ -32,12 +32,7 @@ final class FavoriteModel
             return [];
         }
 
-        $categoryModel = new CategoryModel();
-        $catById = [];
-        foreach ($categoryModel->all() as $c) {
-            $catById[(int) $c['id']] = $c;
-        }
-
+        $catById = (new CategoryModel())->byId();
         $providerModel = new ProviderModel();
         return array_map(
             fn ($row) => ProviderModel::stripContact($providerModel->enrichFromJoinRow($row, $catById)),

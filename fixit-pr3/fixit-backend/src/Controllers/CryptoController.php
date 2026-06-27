@@ -13,22 +13,30 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class CryptoController
 {
+    private BookingModel $bookings;
+    private CryptoModel $crypto;
+
+    public function __construct()
+    {
+        $this->bookings = new BookingModel();
+        $this->crypto = new CryptoModel();
+    }
+
     public function status(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
         return ResponseHelper::json($response, [
-            'pin_configured' => (new CryptoModel())->hasPinSetup((int) $user['id']),
+            'pin_configured' => $this->crypto->hasPinSetup((int) $user['id']),
         ]);
     }
 
     public function getPinSalt(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
-        $crypto = new CryptoModel();
-        if (!$crypto->hasPinSetup((int) $user['id'])) {
+        if (!$this->crypto->hasPinSetup((int) $user['id'])) {
             return ResponseHelper::error($response, 'PIN not configured', 404);
         }
-        return ResponseHelper::json($response, ['pin_salt' => $crypto->getPinSalt((int) $user['id'])]);
+        return ResponseHelper::json($response, ['pin_salt' => $this->crypto->getPinSalt((int) $user['id'])]);
     }
 
     public function setupPin(Request $request, Response $response): Response
@@ -41,7 +49,7 @@ final class CryptoController
         }
 
         $jwk = is_array($data['public_key_jwk']) ? json_encode($data['public_key_jwk']) : (string) $data['public_key_jwk'];
-        (new CryptoModel())->setupPin(
+        $this->crypto->setupPin(
             (int) $user['id'],
             strtolower((string) $data['pin_salt']),
             strtolower((string) $data['pin_verifier']),
@@ -61,12 +69,11 @@ final class CryptoController
             return ResponseHelper::error($response, $err, 422);
         }
 
-        $crypto = new CryptoModel();
-        if (!$crypto->verifyPin((int) $user['id'], strtolower((string) $data['pin_verifier']))) {
+        if (!$this->crypto->verifyPin((int) $user['id'], strtolower((string) $data['pin_verifier']))) {
             return ResponseHelper::error($response, 'Incorrect PIN', 401);
         }
 
-        $bundle = $crypto->getUserCrypto((int) $user['id']);
+        $bundle = $this->crypto->getUserCrypto((int) $user['id']);
         return ResponseHelper::json($response, [
             'verified' => true,
             'pin_salt' => $bundle['pin_salt'],
@@ -78,7 +85,7 @@ final class CryptoController
     public function myPublicKey(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
-        $jwk = (new CryptoModel())->getPublicKeyJwk((int) $user['id']);
+        $jwk = $this->crypto->getPublicKeyJwk((int) $user['id']);
         if (!$jwk) {
             return ResponseHelper::error($response, 'Encryption keys not configured', 404);
         }
@@ -87,7 +94,7 @@ final class CryptoController
 
     public function getPublicKey(Request $request, Response $response, array $args): Response
     {
-        $jwk = (new CryptoModel())->getPublicKeyJwk((int) $args['userId']);
+        $jwk = $this->crypto->getPublicKeyJwk((int) $args['userId']);
         if (!$jwk) {
             return ResponseHelper::error($response, 'User has no encryption keys', 404);
         }
@@ -102,7 +109,7 @@ final class CryptoController
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 
-        $key = (new CryptoModel())->getJobKey($jobId, (int) $user['id']);
+        $key = $this->crypto->getJobKey($jobId, (int) $user['id']);
         return ResponseHelper::json($response, [
             'encrypted_job_key' => $key['encrypted_job_key'] ?? null,
         ]);
@@ -112,7 +119,8 @@ final class CryptoController
     {
         $user = $request->getAttribute('user');
         $jobId = (int) $args['id'];
-        if (!$this->canAccessJob($user, $jobId)) {
+        $booking = $this->bookings->findEnriched($jobId);
+        if (!$booking || !$this->bookings->userCanAccess($user, $booking)) {
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 
@@ -122,26 +130,20 @@ final class CryptoController
             return ResponseHelper::error($response, $err, 422);
         }
 
-        $crypto = new CryptoModel();
-        $crypto->saveJobKey($jobId, (int) $user['id'], (string) $data['encrypted_job_key']);
+        $this->crypto->saveJobKey($jobId, (int) $user['id'], (string) $data['encrypted_job_key']);
 
         if (!empty($data['target_user_id']) && !empty($data['encrypted_job_key_for_target'])) {
-            $booking = (new BookingModel())->findEnriched($jobId);
-            if (!$booking) {
-                return ResponseHelper::error($response, 'Job not found', 404);
-            }
             $targetId = (int) $data['target_user_id'];
             $customerId = (int) $booking['customer_id'];
             $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
-            $allowedPeers = [$customerId, $providerUserId];
-            if (!in_array($targetId, $allowedPeers, true) || $targetId === (int) $user['id']) {
+            if (!in_array($targetId, [$customerId, $providerUserId], true) || $targetId === (int) $user['id']) {
                 return ResponseHelper::error($response, 'Invalid target_user_id for this job', 422);
             }
-            $existing = $crypto->getJobKey($jobId, $targetId);
+            $existing = $this->crypto->getJobKey($jobId, $targetId);
             if ($existing && !empty($existing['encrypted_job_key'])) {
                 return ResponseHelper::error($response, 'Peer encryption key already provisioned', 409);
             }
-            $crypto->saveJobKeyIfAbsent($jobId, $targetId, (string) $data['encrypted_job_key_for_target']);
+            $this->crypto->saveJobKeyIfAbsent($jobId, $targetId, (string) $data['encrypted_job_key_for_target']);
         }
 
         return ResponseHelper::json($response, ['saved' => true]);
@@ -151,8 +153,8 @@ final class CryptoController
     {
         $user = $request->getAttribute('user');
         $jobId = (int) $args['id'];
-        $booking = (new BookingModel())->findEnriched($jobId);
-        if (!$booking || !(new BookingModel())->userCanAccess($user, $booking)) {
+        $booking = $this->bookings->findEnriched($jobId);
+        if (!$booking || !$this->bookings->userCanAccess($user, $booking)) {
             return ResponseHelper::error($response, 'Forbidden', 403);
         }
 
@@ -170,7 +172,7 @@ final class CryptoController
     /** @param array<string,mixed> $user */
     private function canAccessJob(array $user, int $jobId): bool
     {
-        $booking = (new BookingModel())->findEnriched($jobId);
-        return $booking && (new BookingModel())->userCanAccess($user, $booking);
+        $booking = $this->bookings->findEnriched($jobId);
+        return $booking && $this->bookings->userCanAccess($user, $booking);
     }
 }

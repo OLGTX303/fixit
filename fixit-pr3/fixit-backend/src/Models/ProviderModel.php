@@ -124,12 +124,7 @@ final class ProviderModel
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
 
-        $categoryModel = new CategoryModel();
-        $categories = $categoryModel->all();
-        $catById = [];
-        foreach ($categories as $c) {
-            $catById[(int) $c['id']] = $c;
-        }
+        $catById = (new CategoryModel())->byId();
 
         $map = fn ($row) => $this->enrichRow($row, $catById);
         if ($verifiedOnly) {
@@ -151,13 +146,16 @@ final class ProviderModel
         if (!$row) {
             return null;
         }
-        $categoryModel = new CategoryModel();
-        $categories = $categoryModel->all();
-        $catById = [];
-        foreach ($categories as $c) {
-            $catById[(int) $c['id']] = $c;
-        }
-        return $this->enrichRow($row, $catById);
+        return $this->enrichRow($row, (new CategoryModel())->byId());
+    }
+
+    public function hasCategory(int $providerId, int $categoryId): bool
+    {
+        $stmt = Connection::get()->prepare(
+            'SELECT 1 FROM ProviderCategory WHERE provider_id = :pid AND category_id = :cid LIMIT 1'
+        );
+        $stmt->execute(['pid' => $providerId, 'cid' => $categoryId]);
+        return (bool) $stmt->fetchColumn();
     }
 
     /**
@@ -168,14 +166,7 @@ final class ProviderModel
      */
     public function enrichFromJoinRow(array $row, ?array $catById = null): array
     {
-        if ($catById === null) {
-            $categoryModel = new CategoryModel();
-            $categories = $categoryModel->all();
-            $catById = [];
-            foreach ($categories as $c) {
-                $catById[(int) $c['id']] = $c;
-            }
-        }
+        $catById ??= (new CategoryModel())->byId();
 
         if (isset($row['category_ids_csv']) && $row['category_ids_csv'] !== null && $row['category_ids_csv'] !== '') {
             $categoryIds = array_map('intval', explode(',', (string) $row['category_ids_csv']));
@@ -295,11 +286,6 @@ final class ProviderModel
 
     public function update(int $id, array $data): ?array
     {
-        // Lazy-add cover_url column if not yet present
-        try {
-            Connection::get()->exec("ALTER TABLE ProviderProfile ADD COLUMN cover_url VARCHAR(512) NULL");
-        } catch (\Throwable) {}
-
         $stmt = Connection::get()->prepare(
             'UPDATE ProviderProfile SET
              bio = :bio, location = :location, base_rate = :rate,

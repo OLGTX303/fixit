@@ -30,6 +30,7 @@ final class ReviewController
         }
 
         $bookingModel = new BookingModel();
+        $reviewModel = new ReviewModel();
         $booking = $bookingModel->findEnriched($jobId);
         if (!$booking) {
             return ResponseHelper::error($response, 'Job not found', 404);
@@ -41,7 +42,7 @@ final class ReviewController
             return ResponseHelper::error($response, 'Job must be completed before reviewing', 422);
         }
 
-        if ((new ReviewModel())->existsForJob($jobId)) {
+        if ($reviewModel->existsForJob($jobId)) {
             return ResponseHelper::error($response, 'A review already exists for this job', 409);
         }
 
@@ -61,7 +62,7 @@ final class ReviewController
         }
 
         try {
-            $review = (new ReviewModel())->create(
+            $review = $reviewModel->create(
                 $jobId,
                 $rating,
                 isset($data['comment']) ? Validator::cleanText((string) $data['comment'], 2000) : null,
