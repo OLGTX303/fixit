@@ -100,6 +100,18 @@ async function ensureSession() {
 const SENSITIVE = [
   { m: 'POST', re: /^\/wallet\/topup$/ },
   { m: 'POST', re: /^\/wallet\/withdraw$/ },
+  { m: 'PATCH', re: /^\/users\/me$/ },
+  { m: 'POST', re: /^\/payments\/stripe\/customer$/ },
+  { m: 'POST', re: /^\/payments\/stripe\/setup-intent$/ },
+  { m: 'POST', re: /^\/payments\/stripe\/save-payment-method$/ },
+  { m: 'POST', re: /^\/payments\/stripe\/pay-with-saved-method$/ },
+  { m: 'POST', re: /^\/payments\/booking\/pay$/ },
+  { m: 'DELETE', re: /^\/payments\/stripe\/saved-payment-method$/ },
+  { m: 'POST', re: /^\/providers\/\d+\/kyc\/id-recognition$/ },
+  { m: 'POST', re: /^\/providers\/\d+\/kyc\/liveness$/ },
+  { m: 'POST', re: /^\/bookings$/ },
+  { m: 'PATCH', re: /^\/bookings\/\d+\/status$/ },
+  { m: 'DELETE', re: /^\/bookings\/\d+$/ },
 ]
 
 export function isSensitive(method, path) {
