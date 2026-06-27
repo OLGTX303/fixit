@@ -6,9 +6,12 @@ import { useInfiniteList } from '../../composables/useInfiniteList'
 const tab = ref('users')
 const query = ref('')
 const sortBy = ref('name')
-const blocking = ref(new Set())
 
-// ── Users: infinite scroll (load 20, more on scroll) ─────────────────────────
+// Track which user IDs are currently being blocked/unblocked
+// Use a plain ref<Set> and always reassign to trigger reactivity
+const blockingIds = ref(new Set())
+
+// ── Users: infinite scroll ────────────────────────────────────────────────────
 const total = ref(0)
 const counts = ref({ total: 0, customers: 0, providers: 0, blocked: 0 })
 const { items: users, loading: loadingUsers, done, sentinel, reset } = useInfiniteList(async (offset, size) => {
@@ -36,19 +39,40 @@ const STATUS_STYLE = {
 }
 
 async function toggleBlock(u) {
-  blocking.value.add(u.id)
-  const next = !u.is_blocked
-  await api.blockUser(u.id, next)
-  u.is_blocked = next ? 1 : 0
-  counts.value.blocked += next ? 1 : -1
-  blocking.value.delete(u.id)
+  if (blockingIds.value.has(u.id)) return
+
+  // Reassign to new Set so Vue tracks the change
+  blockingIds.value = new Set([...blockingIds.value, u.id])
+
+  try {
+    const nextBlocked = !u.is_blocked
+    await api.blockUser(u.id, nextBlocked)
+
+    // Replace the object in the array entirely so Vue detects the change
+    const idx = users.value.findIndex(x => x.id === u.id)
+    if (idx !== -1) {
+      users.value.splice(idx, 1, { ...users.value[idx], is_blocked: nextBlocked ? 1 : 0 })
+    }
+
+    counts.value = {
+      ...counts.value,
+      blocked: counts.value.blocked + (nextBlocked ? 1 : -1)
+    }
+  } catch (e) {
+    alert('Failed to update user: ' + (e.message || 'Unknown error'))
+  } finally {
+    const next = new Set(blockingIds.value)
+    next.delete(u.id)
+    blockingIds.value = next
+  }
 }
 
-// ── Categories tab (lazy; counts via a cheap aggregate, not the full list) ───
+// ── Categories tab ────────────────────────────────────────────────────────────
 const categories = ref([])
 const catCounts = ref({})
 const categoriesWithCounts = computed(() =>
   categories.value.map(c => ({ ...c, count: catCounts.value[c.id] || 0 })))
+
 async function loadCategories() {
   if (categories.value.length) return
   const [cats, stats] = await Promise.all([api.getCategories(), api.getCategoryStats()])
@@ -56,6 +80,33 @@ async function loadCategories() {
   catCounts.value = stats || {}
 }
 watch(tab, (t) => { if (t === 'categories') loadCategories() })
+
+// Expand/collapse category to show its providers
+const expandedCatId = ref(null)
+const catProviders = ref({})
+const loadingCatId = ref(null)
+
+async function toggleCategory(cat) {
+  if (expandedCatId.value === cat.id) {
+    expandedCatId.value = null
+    return
+  }
+  expandedCatId.value = cat.id
+  if (catProviders.value[cat.id]) return // already cached
+
+  loadingCatId.value = cat.id
+  try {
+    const res = await api.searchProviders({ category: cat.id, limit: 50 })
+    catProviders.value = {
+      ...catProviders.value,
+      [cat.id]: res.providers || res || []
+    }
+  } catch {
+    catProviders.value = { ...catProviders.value, [cat.id]: [] }
+  } finally {
+    loadingCatId.value = null
+  }
+}
 </script>
 
 <template>
@@ -118,9 +169,9 @@ watch(tab, (t) => { if (t === 'categories') loadCategories() })
             {{ statusOf(u) }}
           </span>
           <button class="um-block-btn" :class="u.is_blocked ? 'unblock' : 'block'"
-                  :disabled="blocking.has(u.id)"
+                  :disabled="blockingIds.has(u.id)"
                   @click="toggleBlock(u)">
-            {{ u.is_blocked ? 'Unblock' : 'Block' }}
+            {{ blockingIds.has(u.id) ? '…' : (u.is_blocked ? 'Unblock' : 'Block') }}
           </button>
         </div>
       </div>
@@ -136,13 +187,57 @@ watch(tab, (t) => { if (t === 'categories') loadCategories() })
     <!-- ── Categories tab ── -->
     <template v-else>
       <div class="d-flex flex-column gap-2">
-        <div v-for="c in categoriesWithCounts" :key="c.id" class="fx-card d-flex align-items-center gap-3">
-          <span style="font-size:24px">{{ c.icon_url }}</span>
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:600">{{ c.name }}</div>
-            <div style="font-size:12px;color:var(--fx-muted)">{{ c.description }}</div>
+        <div v-for="c in categoriesWithCounts" :key="c.id">
+
+          <!-- Category row -->
+          <div class="fx-card d-flex align-items-center gap-3 um-cat-row"
+               :class="{ expanded: expandedCatId === c.id }"
+               @click="toggleCategory(c)"
+               style="cursor:pointer;padding:14px 16px">
+            <span style="font-size:24px">{{ c.icon_url }}</span>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">{{ c.name }}</div>
+              <div style="font-size:12px;color:var(--fx-muted)">{{ c.description }}</div>
+            </div>
+            <span class="fx-badge" style="color:var(--fx-accent);background:var(--fx-accent-soft)">{{ c.count }} pros</span>
+            <span class="um-chevron" :class="{ open: expandedCatId === c.id }">›</span>
           </div>
-          <span class="fx-badge" style="color:var(--fx-accent);background:var(--fx-accent-soft)">{{ c.count }} pros</span>
+
+          <!-- Provider list (expands inline) -->
+          <div v-if="expandedCatId === c.id" class="um-cat-list">
+            <div v-if="loadingCatId === c.id"
+                 style="text-align:center;padding:16px;color:var(--fx-muted);font-size:13px">
+              Loading providers…
+            </div>
+            <div v-else-if="catProviders[c.id] && catProviders[c.id].length === 0"
+                 style="text-align:center;padding:16px;color:var(--fx-muted);font-size:13px">
+              No providers in this category.
+            </div>
+            <div v-else class="d-flex flex-column gap-2" style="padding:8px 0 4px">
+              <div v-for="p in (catProviders[c.id] || [])" :key="p.id"
+                   class="fx-card d-flex align-items-center gap-3"
+                   style="padding:10px 14px">
+                <img v-if="p.avatar_url" :src="p.avatar_url" :alt="p.name"
+                     class="fx-avatar" style="width:36px;height:36px;flex-shrink:0;object-fit:cover" />
+                <div v-else class="fx-avatar"
+                     style="width:36px;height:36px;font-size:12px;flex-shrink:0;background:var(--fx-accent-soft);color:var(--fx-accent)">
+                  {{ p.name?.split(' ').map(w=>w[0]).join('') || '?' }}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600">{{ p.name }}</div>
+                  <div style="font-size:11px;color:var(--fx-muted)">
+                    {{ p.email }}
+                    <span v-if="p.avg_rating"> · ⭐ {{ Number(p.avg_rating).toFixed(1) }}</span>
+                  </div>
+                </div>
+                <span class="fx-badge"
+                      :style="p.is_verified ? 'color:var(--fx-success);background:var(--fx-success-soft)' : 'color:var(--fx-warn);background:var(--fx-warn-soft)'">
+                  {{ p.is_verified ? 'Verified' : 'Pending' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </template>
@@ -167,9 +262,28 @@ watch(tab, (t) => { if (t === 'categories') loadCategories() })
 
 .um-block-btn {
   padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700;
-  border:1.5px solid; cursor:pointer; white-space:nowrap; flex-shrink:0;
+  border:1.5px solid; cursor:pointer; white-space:nowrap; flex-shrink:0; min-width:64px;
 }
 .um-block-btn.block   { color:#ef4444; border-color:#ef4444; background:transparent; }
 .um-block-btn.unblock { color:var(--fx-success); border-color:var(--fx-success); background:transparent; }
 .um-block-btn:disabled { opacity:0.5; cursor:wait; }
+
+.um-cat-row { transition: background 0.15s; }
+.um-cat-row:hover { background: var(--fx-border-soft, #f5f5f5); }
+.um-cat-row.expanded { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+.um-chevron {
+  font-size: 18px; color: var(--fx-muted); flex-shrink: 0;
+  display: inline-block; transition: transform 0.2s; transform: rotate(0deg);
+}
+.um-chevron.open { transform: rotate(90deg); }
+
+.um-cat-list {
+  border: 1.5px solid var(--fx-border, #eee);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  padding: 4px 10px 10px;
+  background: var(--fx-border-soft, #fafafa);
+  margin-bottom: 2px;
+}
 </style>
