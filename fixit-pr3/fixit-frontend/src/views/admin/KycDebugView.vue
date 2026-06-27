@@ -261,54 +261,16 @@ onUnmounted(stopCamera)
           </div>
         </div>
 
-        <!-- Step 2: 8-colour liveness -->
+        <!-- Step 2: 8-colour liveness — camera opens as a full-screen stage so
+             the whole display flashes the colour onto the face (see stage below). -->
         <div v-else-if="step === 2">
           <p style="font-size:13px;color:var(--fx-muted)">
-            Centre your face in the circle. The screen flashes <strong>8 random colours</strong> — your skin should reflect each one.
+            The camera opens full-screen — the whole display flashes <strong>8 random colours</strong> onto your face,
+            while your face stays visible in the circle.
           </p>
-          <div class="d-flex flex-column align-items-center mb-3">
-            <div class="kyc-cam-ring" :class="{ 'is-face': faceInFrame, 'is-empty': streamRef && !faceInFrame, 'is-busy': busy }">
-              <video ref="videoRef" autoplay playsinline muted class="kyc-cam-video" />
-              <div v-if="busy" class="kyc-cam-badge">Colour {{ progress.current }} / {{ progress.total }}</div>
-            </div>
-            <Transition name="fx-fade">
-              <div v-if="streamRef" class="kyc-face-tag mt-2" :class="faceInFrame ? 'ok' : 'warn'">
-                <AppIcon :name="faceInFrame ? 'shield' : 'user'" :size="14" />
-                {{ faceInFrame ? 'Face in frame' : 'Move your face into the circle' }}
-              </div>
-            </Transition>
-          </div>
-
-          <Transition name="fx-fade">
-            <div v-if="livenessResult" class="fx-card mb-3" style="font-size:13px">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-semibold">Liveness result</span>
-                <span class="fx-badge" :style="{
-                  color: livenessResult.passed ? 'var(--fx-success)' : 'var(--fx-error)',
-                  background: livenessResult.passed ? 'var(--fx-success-soft)' : 'var(--fx-error-soft)' }">
-                  {{ livenessResult.passed ? 'PASSED' : 'FAILED' }} · {{ livenessResult.score }}%
-                </span>
-              </div>
-              <div style="font-size:12px;color:var(--fx-muted)">
-                {{ livenessResult.checks?.matches }}/{{ livenessResult.checks?.colors_tested }} colours reflected (threshold {{ livenessResult.checks?.threshold }})
-              </div>
-              <div class="d-flex flex-wrap gap-1 mt-2">
-                <span v-for="(f, i) in livenessResult.checks?.flash_results || []" :key="i"
-                      class="fx-badge" style="font-size:11px"
-                      :style="{
-                        color: f.reflected ? 'var(--fx-success)' : 'var(--fx-error)',
-                        background: f.reflected ? 'var(--fx-success-soft)' : 'var(--fx-error-soft)' }">
-                  {{ f.color }} {{ f.reflected ? '✓' : '✗' }}
-                </span>
-              </div>
-            </div>
-          </Transition>
-
           <div class="kyc-actions">
-            <button class="btn btn-ghost" :disabled="busy" @click="backToId">← Back</button>
-            <button class="btn btn-primary flex-fill" :disabled="!streamRef || busy" @click="runLiveness">
-              <span v-if="busy" class="kyc-spin me-2"></span>{{ busy ? 'Running…' : 'Start 8-colour check' }}
-            </button>
+            <button class="btn btn-ghost flex-fill" :disabled="busy" @click="backToId">← Back</button>
+            <button v-if="camState !== 'ready'" class="btn btn-primary flex-fill" @click="startCamera">Open camera</button>
           </div>
         </div>
 
@@ -360,10 +322,50 @@ onUnmounted(stopCamera)
     </Transition>
   </Teleport>
 
-  <!-- Colour flash: the screen is the light source (full-screen — the nav is
-       hidden in KYC mode, so it can flood the whole viewport). -->
+  <!-- Liveness stage: the colour fills the screen BEHIND the live frame (so it
+       reflects on the face) while the round camera stays visible on top —
+       the colour is the surround, never an overlay covering the frame. -->
   <Teleport to="body">
-    <div v-if="flashColor" class="kyc-flash" :style="{ background: flashColor }"></div>
+    <Transition name="fx-fade">
+      <div v-if="step === 2 && camState === 'ready'" class="kyc-stage"
+           :style="{ background: flashColor || '#0b0b0b' }">
+        <button class="kyc-stage-back" :disabled="busy" aria-label="Back" @click="backToId">←</button>
+
+        <div class="kyc-stage-body">
+          <div class="kyc-cam-ring" :class="{ 'is-face': faceInFrame && !flashColor, 'is-busy': busy }">
+            <video ref="videoRef" autoplay playsinline muted class="kyc-cam-video" />
+          </div>
+          <div class="kyc-stage-status">
+            <template v-if="busy">Colour {{ progress.current }} / {{ progress.total }}</template>
+            <template v-else>{{ faceInFrame ? 'Face in frame — ready' : 'Move your face into the circle' }}</template>
+          </div>
+        </div>
+
+        <div class="kyc-stage-foot">
+          <Transition name="fx-fade">
+            <div v-if="livenessResult" class="kyc-stage-result">
+              <span class="fx-badge mb-1" :style="{
+                color: livenessResult.passed ? 'var(--fx-success)' : 'var(--fx-error)',
+                background: '#fff' }">
+                {{ livenessResult.passed ? 'PASSED' : 'FAILED' }} · {{ livenessResult.score }}%
+                ({{ livenessResult.checks?.matches }}/{{ livenessResult.checks?.colors_tested }})
+              </span>
+              <div class="d-flex flex-wrap gap-1 justify-content-center">
+                <span v-for="(f, i) in livenessResult.checks?.flash_results || []" :key="i"
+                      class="fx-badge" style="font-size:11px;background:rgba(255,255,255,0.12)"
+                      :style="{ color: f.reflected ? '#7CF0A8' : '#FF9D9D' }">
+                  {{ f.color }} {{ f.reflected ? '✓' : '✗' }}
+                </span>
+              </div>
+            </div>
+          </Transition>
+          <button class="btn btn-primary w-100" :disabled="busy" @click="runLiveness">
+            <span v-if="busy" class="kyc-spin me-2"></span>
+            {{ busy ? 'Running…' : (livenessResult && !livenessResult.passed ? 'Retry 8-colour check' : 'Start 8-colour check') }}
+          </button>
+        </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -445,8 +447,26 @@ onUnmounted(stopCamera)
 
 .kyc-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: kyc-rotate 0.7s linear infinite; vertical-align: -2px; }
 
-/* Full-screen — nav is hidden in KYC mode, so the flash floods the viewport. */
-.kyc-flash { position: fixed; inset: 0; z-index: 2400; pointer-events: none; }
+/* Liveness stage — colour fills the screen behind the live camera frame. */
+.kyc-stage {
+  position: fixed; inset: 0; z-index: 2400;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 56px 20px 32px;
+  transition: background 90ms linear;
+}
+.kyc-stage-back {
+  position: absolute; top: 16px; left: 16px;
+  width: 40px; height: 40px; border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.22); color: #fff; font-size: 22px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.kyc-stage-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.kyc-stage-status {
+  font-size: 14px; font-weight: 500; color: #fff;
+  padding: 6px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.35);
+}
+.kyc-stage-foot { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; }
+.kyc-stage-result { text-align: center; color: #fff; }
 
 .kyc-modal-backdrop {
   position: fixed; inset: 0; z-index: 3500;
