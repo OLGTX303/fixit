@@ -7,6 +7,7 @@ import * as api from '../../services/api'
 import RatingStars from '../../components/RatingStars.vue'
 import { useFavoritesStore } from '../../stores/favorites'
 import { useModalGuard } from '../../composables/useModalGuard'
+import { isDesktop } from '../../composables/useViewport.js'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -274,17 +275,30 @@ function fmtDate(d) {
 
     <!-- ── META STRIP ────────────────────────────────────────────────── -->
     <div class="ppv-meta-strip">
-      <div class="ppv-meta-item">
-        <span class="material-symbols-outlined ppv-meta-icon">schedule</span>
-        <span>Mon–Sun · All day</span>
+      <div class="ppv-meta-items">
+        <div class="ppv-meta-item">
+          <span class="material-symbols-outlined ppv-meta-icon">schedule</span>
+          <span>Mon–Sun · All day</span>
+        </div>
+        <div class="ppv-meta-item">
+          <span class="material-symbols-outlined ppv-meta-icon">location_on</span>
+          <span>{{ provider.location }}</span>
+        </div>
+        <div class="ppv-meta-item">
+          <span class="material-symbols-outlined ppv-meta-icon">currency_exchange</span>
+          <span>From RM{{ provider.base_rate }}/hr</span>
+        </div>
       </div>
-      <div class="ppv-meta-item">
-        <span class="material-symbols-outlined ppv-meta-icon">location_on</span>
-        <span>{{ provider.location }}</span>
-      </div>
-      <div class="ppv-meta-item">
-        <span class="material-symbols-outlined ppv-meta-icon">currency_exchange</span>
-        <span>From RM{{ provider.base_rate }}/hr</span>
+      <div v-if="!isOwner && isDesktop" class="ppv-meta-actions">
+        <button class="ppv-cart-btn" :class="{ saved: inCart }" @click="toggleCart" :title="inCart ? 'Remove from cart' : 'Save to cart'">
+          <span class="material-symbols-outlined" style="font-size:20px" :style="inCart ? 'font-variation-settings:\'FILL\' 1' : ''">
+            {{ inCart ? 'shopping_cart_checkout' : 'add_shopping_cart' }}
+          </span>
+        </button>
+        <button class="ppv-book-btn ppv-book-btn--inline" @click="messageProvider">
+          <span class="material-symbols-outlined ppv-book-btn-icon">chat</span>
+          Message
+        </button>
       </div>
       <button v-if="isOwner" class="ppv-edit-btn" @click="openEdit">
         <span class="material-symbols-outlined" style="font-size:16px">edit</span>
@@ -423,16 +437,16 @@ function fmtDate(d) {
       </div>
     </div>
 
-    <!-- ── BOTTOM BOOK BUTTON ─────────────────────────────────────────── -->
-    <div v-if="!isOwner" class="ppv-book-bar">
+    <!-- ── BOTTOM BOOK BUTTON (mobile only) ───────────────────────────── -->
+    <div v-if="!isOwner && !isDesktop" class="ppv-book-bar">
       <button class="ppv-cart-btn" :class="{ saved: inCart }" @click="toggleCart" :title="inCart ? 'Remove from cart' : 'Save to cart'">
         <span class="material-symbols-outlined" style="font-size:20px" :style="inCart ? 'font-variation-settings:\'FILL\' 1' : ''">
           {{ inCart ? 'shopping_cart_checkout' : 'add_shopping_cart' }}
         </span>
       </button>
-      <button class="ppv-book-btn" style="flex:1" @click="messageProvider">
-        <span class="material-symbols-outlined" style="font-size:18px">chat</span>
-        Message Provider
+      <button class="ppv-book-btn" @click="messageProvider">
+        <span class="material-symbols-outlined ppv-book-btn-icon">chat</span>
+        <span class="ppv-book-btn-label">Message Provider</span>
       </button>
     </div>
 
@@ -564,7 +578,9 @@ function fmtDate(d) {
   display:flex; flex-direction:column; gap:7px;
   border-bottom:1px solid var(--fx-border);
 }
+.ppv-meta-items { display:flex; flex-direction:column; gap:7px; }
 .ppv-meta-item { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--fx-muted); }
+.ppv-meta-actions { display:none; }
 .ppv-meta-icon { font-size:16px; color:#FF6635; }
 .ppv-edit-btn {
   align-self:flex-start; display:flex; align-items:center; gap:5px;
@@ -709,10 +725,36 @@ function fmtDate(d) {
 }
 .ppv-cart-btn.saved { background:var(--fx-accent); color:#fff; }
 .ppv-book-btn {
-  width:100%; padding:14px; border-radius:14px; border:none;
+  flex:1; min-width:0;
+  padding:14px; border-radius:14px; border:none;
   background:#FF6635; color:#fff; font-size:15px; font-weight:800;
   display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
   box-shadow:0 4px 16px rgba(255,102,53,.35);
+}
+.ppv-book-btn-icon { font-size:18px; flex-shrink:0; }
+.ppv-book-btn-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ppv-book-btn--inline { flex:none; width:auto; }
+
+@media (min-width: 992px) {
+  .ppv-meta-strip {
+    flex-direction:row; align-items:center; flex-wrap:wrap;
+    gap:12px 20px; padding:14px 20px;
+  }
+  .ppv-meta-items {
+    flex-direction:row; flex-wrap:wrap; flex:1; min-width:0; gap:12px 24px;
+  }
+  .ppv-meta-actions {
+    display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto;
+  }
+  .ppv-edit-btn { margin-left:auto; margin-top:0; align-self:center; }
+  .ppv-book-btn--inline {
+    padding:10px 18px; font-size:13px; border-radius:12px;
+    box-shadow:0 2px 10px rgba(255,102,53,.28);
+  }
+  .ppv-meta-actions .ppv-cart-btn {
+    width:44px; height:44px; border-radius:12px;
+  }
+  .ppv-root { padding-bottom:24px; }
 }
 
 /* ── Lightbox ───────────────────────────────────────────────────────────── */
