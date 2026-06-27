@@ -6,6 +6,7 @@ namespace FixIt\Controllers;
 
 use FixIt\Models\ProviderModel;
 use FixIt\Services\FaceMatchService;
+use FixIt\Support\KycImageStore;
 use FixIt\Support\KycValidator;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
@@ -115,9 +116,16 @@ final class KycController
             return ResponseHelper::error($response, 'checks must be an object', 422);
         }
 
-        $filename = basename((string) ($data['filename'] ?? 'government_id.jpg'));
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'government_id.jpg';
-        $docUrl = '/uploads/kyc/' . $id . '_' . $filename;
+        $idImg = self::decodeImage($data['id_image'] ?? null);
+        if (!$idImg) {
+            return ResponseHelper::error($response, 'Government ID image (id_image) is required', 422);
+        }
+
+        try {
+            $docUrl = KycImageStore::save($id, $idImg['bin'], $idImg['mime']);
+        } catch (\Throwable $e) {
+            return ResponseHelper::error($response, 'Failed to store ID image: ' . $e->getMessage(), 502);
+        }
 
         $summary = $model->saveIdRecognition($id, [
             'valid' => true,
@@ -175,29 +183,35 @@ final class KycController
             return ResponseHelper::error($response, 'Invalid color_sequence_hash', 422);
         }
 
-        $passed = (bool) $data['passed'];
+        if (!FaceMatchService::isConfigured()) {
+            return ResponseHelper::error($response, 'Face match service is required for KYC but is not configured', 503);
+        }
 
-        // Server-side face match: compare the ID photo against the live selfie via
-        // the local gateway. A real same-person score gates the pass; a detection
-        // failure (no face / gateway down) is recorded but stays inconclusive.
-        $idImg = self::decodeImage($data['id_image'] ?? null);
         $selfieImg = self::decodeImage($data['selfie_image'] ?? null);
-        if (FaceMatchService::isConfigured() && (!$idImg || !$selfieImg)) {
-            return ResponseHelper::error($response, 'ID and selfie images are required for liveness verification', 422);
+        if (!$selfieImg) {
+            return ResponseHelper::error($response, 'Live selfie image (selfie_image) is required', 422);
         }
-        if (FaceMatchService::isConfigured() && $idImg && $selfieImg) {
-            $fm = (new FaceMatchService())->match($idImg['bin'], $idImg['mime'], $selfieImg['bin'], $selfieImg['mime']);
-            $checks['face_match'] = [
-                'score' => $fm['score'],
-                'min_score' => (new FaceMatchService())->minScore(),
-                'gateway_ok' => $fm['ok'],
-                'message' => $fm['message'],
-                'passed' => $fm['passed'],
-            ];
-            if ($fm['passed'] === false) {
-                $passed = false;
-            }
+
+        $idImg = self::decodeImage($data['id_image'] ?? null)
+            ?? KycImageStore::load((string) ($existing['kyc_doc_url'] ?? ''));
+        if (!$idImg) {
+            return ResponseHelper::error($response, 'Government ID image not found — please re-submit your ID photo', 422);
         }
+
+        $liveReview = KycValidator::validateLiveness($data);
+        $checks['server_liveness_review'] = $liveReview;
+
+        $faceMatch = new FaceMatchService();
+        $fm = $faceMatch->match($idImg['bin'], $idImg['mime'], $selfieImg['bin'], $selfieImg['mime']);
+        $checks['face_match'] = [
+            'score' => $fm['score'],
+            'min_score' => $faceMatch->minScore(),
+            'gateway_ok' => $fm['ok'],
+            'message' => $fm['message'],
+            'passed' => $fm['passed'],
+        ];
+
+        $passed = $liveReview['approved'] && $fm['passed'] === true;
 
         $summary = $model->saveLivenessCheck($id, [
             'passed' => $passed,
@@ -206,12 +220,19 @@ final class KycController
             'checks' => $checks,
         ]);
 
-        if (!$passed && isset($checks['face_match']) && $checks['face_match']['passed'] === false) {
-            return ResponseHelper::error(
-                $response,
-                'Face does not match the ID photo (match score ' . ($checks['face_match']['score'] ?? '?') . '%).',
-                422
-            );
+        if (!$passed) {
+            if (!$liveReview['approved']) {
+                $msg = 'Face liveness check failed: ' . implode('; ', $liveReview['rejection_reasons']);
+            } elseif ($fm['passed'] !== true) {
+                $msg = $fm['score'] !== null
+                    ? 'Face does not match the government ID photo (score '
+                        . $fm['score'] . '%, need ' . $faceMatch->minScore() . '%)'
+                    : 'Face match failed: ' . $fm['message'];
+            } else {
+                $msg = 'KYC verification failed';
+            }
+
+            return ResponseHelper::error($response, $msg, 422);
         }
 
         return ResponseHelper::json($response, self::kycPayload($summary));

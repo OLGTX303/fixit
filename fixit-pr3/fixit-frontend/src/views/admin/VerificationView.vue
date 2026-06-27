@@ -139,8 +139,14 @@ async function reject(id) {
               <div v-if="p.kyc_id_checks?.extracted_preview" style="font-size:11px;color:var(--fx-muted);margin-top:4px">
                 OCR: {{ p.kyc_id_checks.extracted_preview }}
               </div>
+              <div v-if="p.kyc_liveness_checks?.face_match" style="font-size:12px;margin-top:4px"
+                   :style="{ color: p.kyc_liveness_checks.face_match.passed ? 'var(--fx-success)' : 'var(--fx-error)' }">
+                {{ p.kyc_liveness_checks.face_match.passed ? '✓' : '✗' }}
+                ID↔face match {{ p.kyc_liveness_checks.face_match.score ?? '?' }}%
+                (min {{ p.kyc_liveness_checks.face_match.min_score ?? 65 }}%)
+              </div>
               <div v-if="p.kyc_liveness_passed" style="font-size:12px;color:var(--fx-success);margin-top:4px">
-                ✓ 8-colour face liveness passed ({{ p.kyc_liveness_score }}%)
+                ✓ 8-colour liveness passed ({{ p.kyc_liveness_score }}%)
               </div>
               <div style="font-size:12px;color:var(--fx-muted);margin-top:4px">{{ p.email }} · {{ p.phone }}</div>
             </div>
