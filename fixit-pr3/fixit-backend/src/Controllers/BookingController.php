@@ -44,12 +44,10 @@ final class BookingController
     public function get(Request $request, Response $response, array $args): Response
     {
         $user = $request->getAttribute('user');
-        $booking = (new BookingModel())->findEnriched((int) $args['id']);
-        if (!$booking) {
-            return ResponseHelper::error($response, 'Booking not found', 404);
-        }
-        if (!(new BookingModel())->userCanAccess($user, $booking)) {
-            return ResponseHelper::error($response, 'Forbidden', 403);
+        $model = new BookingModel();
+        $booking = $model->findEnriched((int) $args['id']);
+        if (!$booking || !$model->userCanAccess($user, $booking)) {
+            return ResponseHelper::error($response, $booking ? 'Forbidden' : 'Booking not found', $booking ? 403 : 404);
         }
         return ResponseHelper::json($response, $booking);
     }
@@ -63,7 +61,8 @@ final class BookingController
             return ResponseHelper::error($response, $err, 422);
         }
 
-        $provider = (new ProviderModel())->findRaw((int) $data['provider_id']);
+        $providerModel = new ProviderModel();
+        $provider = $providerModel->findRaw((int) $data['provider_id']);
         if (!$provider || !(bool) $provider['is_verified']) {
             return ResponseHelper::error($response, 'Provider not available', 422);
         }
@@ -72,8 +71,7 @@ final class BookingController
         if (!(new CategoryModel())->find($categoryId)) {
             return ResponseHelper::error($response, 'Invalid category_id', 422);
         }
-        $providerCategories = (new ProviderModel())->getEnriched((int) $data['provider_id'])['category_ids'] ?? [];
-        if (!in_array($categoryId, $providerCategories, true)) {
+        if (!$providerModel->hasCategory((int) $data['provider_id'], $categoryId)) {
             return ResponseHelper::error($response, 'Provider does not offer this category', 422);
         }
 
@@ -144,7 +142,7 @@ final class BookingController
             }
         }
 
-        return ResponseHelper::json($response, $bookingModel->findEnriched((int) $booking['id']) ?? $booking, 201);
+        return ResponseHelper::json($response, $booking, 201);
     }
 
     /**

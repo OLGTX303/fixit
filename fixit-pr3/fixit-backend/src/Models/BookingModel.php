@@ -62,7 +62,7 @@ final class BookingModel
             $sql .= ' AND j.customer_id = :uid';
             $params['uid'] = $user['id'];
         } elseif ($user['role'] === 'provider') {
-            $profile = (new ProviderModel())->findByUserId((int) $user['id']);
+            $profile = $this->providers->findByUserId((int) $user['id']);
             if (!$profile) {
                 return [];
             }
@@ -96,12 +96,7 @@ final class BookingModel
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
 
-        $catById = [];
-        foreach ($this->categories->all() as $c) {
-            $catById[(int) $c['id']] = $c;
-        }
-
-        return array_map(fn ($row) => $this->mapJoinedRow($row, $catById), $rows);
+        return array_map(fn ($row) => $this->mapJoinedRow($row, $this->categories->byId()), $rows);
     }
 
     public function findEnriched(int $id): ?array
@@ -234,26 +229,7 @@ final class BookingModel
             'review_count' => $row['pp_review_count'],
         ];
 
-        return [
-            'id'                   => (int) $row['id'],
-            'customer_id'          => (int) $row['customer_id'],
-            'provider_id'          => (int) $row['provider_id'],
-            'category_id'          => (int) $row['category_id'],
-            'status'               => $row['status'],
-            'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
-            'address'              => $row['address'],
-            'total'                => $row['total'] !== null ? (float) $row['total'] : null,
-            'coupon_id'            => isset($row['coupon_id']) && $row['coupon_id'] !== null
-                ? (int) $row['coupon_id'] : null,
-            'discount_amount'      => isset($row['discount_amount']) && $row['discount_amount'] !== null
-                ? (float) $row['discount_amount'] : null,
-            'notes'                => $row['notes'],
-            'recurrence_type'      => $row['recurrence_type'] ?? 'none',
-            'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,
-            'customer'             => $customer,
-            'provider'             => $this->providers->enrichFromJoinRow($providerRow, $catById),
-            'category'             => $category,
-        ];
+        return $this->jobPayload($row, $customer, $this->providers->enrichFromJoinRow($providerRow, $catById), $category);
     }
 
     /** Strip Stripe/payment PII from customer objects embedded in booking responses. */
@@ -276,15 +252,15 @@ final class BookingModel
     /** @param array<string,mixed> $row */
     private static function publicCustomerFields(array $row): array
     {
-        return [
-            'id' => (int) $row['cu_id'],
+        return self::sanitizeCustomer([
+            'id' => $row['cu_id'],
             'name' => $row['cu_name'],
             'email' => $row['cu_email'],
             'role' => $row['cu_role'],
             'phone' => $row['cu_phone'],
             'avatar_url' => $row['cu_avatar_url'],
-            'is_blocked' => (int) $row['cu_is_blocked'],
-        ];
+            'is_blocked' => $row['cu_is_blocked'],
+        ]) ?? [];
     }
 
     /** @param array<string,mixed> $row */
@@ -294,25 +270,31 @@ final class BookingModel
         $provider = $this->providers->getEnriched((int) $row['provider_id']);
         $category = $this->categories->find((int) $row['category_id']);
 
+        return $this->jobPayload($row, $customer, $provider, $category);
+    }
+
+    /** @param array<string,mixed> $row */
+    private function jobPayload(array $row, ?array $customer, ?array $provider, ?array $category): array
+    {
         return [
-            'id'                   => (int) $row['id'],
-            'customer_id'          => (int) $row['customer_id'],
-            'provider_id'          => (int) $row['provider_id'],
-            'category_id'          => (int) $row['category_id'],
-            'status'               => $row['status'],
-            'scheduled_at'         => str_replace(' ', 'T', $row['scheduled_at']),
-            'address'              => $row['address'],
-            'total'                => $row['total'] !== null ? (float) $row['total'] : null,
-            'coupon_id'            => isset($row['coupon_id']) && $row['coupon_id'] !== null
+            'id'                  => (int) $row['id'],
+            'customer_id'         => (int) $row['customer_id'],
+            'provider_id'         => (int) $row['provider_id'],
+            'category_id'         => (int) $row['category_id'],
+            'status'              => $row['status'],
+            'scheduled_at'        => str_replace(' ', 'T', $row['scheduled_at']),
+            'address'             => $row['address'],
+            'total'               => $row['total'] !== null ? (float) $row['total'] : null,
+            'coupon_id'           => isset($row['coupon_id']) && $row['coupon_id'] !== null
                 ? (int) $row['coupon_id'] : null,
-            'discount_amount'      => isset($row['discount_amount']) && $row['discount_amount'] !== null
+            'discount_amount'     => isset($row['discount_amount']) && $row['discount_amount'] !== null
                 ? (float) $row['discount_amount'] : null,
-            'notes'                => $row['notes'],
-            'recurrence_type'      => $row['recurrence_type'] ?? 'none',
-            'recurrence_end_date'  => $row['recurrence_end_date'] ?? null,
-            'customer'             => $customer,
-            'provider'             => $provider,
-            'category'             => $category,
+            'notes'               => $row['notes'],
+            'recurrence_type'     => $row['recurrence_type'] ?? 'none',
+            'recurrence_end_date' => $row['recurrence_end_date'] ?? null,
+            'customer'            => $customer,
+            'provider'            => $provider,
+            'category'            => $category,
         ];
     }
 }
