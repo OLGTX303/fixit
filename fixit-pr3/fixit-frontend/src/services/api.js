@@ -1,5 +1,7 @@
 // PR3: Slim REST API + JWT via fetch (no axios).
 
+import { isSensitive, secureRequest } from './secureTransport'
+
 const TOKEN_KEY = 'fixit_token'
 const USER_KEY = 'fixit_user'
 const BASE = import.meta.env.VITE_API_URL || 'https://fixit.olgtx.com/api'
@@ -75,6 +77,14 @@ function salvageJson(text) {
 }
 
 async function request(method, path, body) {
+  // Sensitive writes go through the per-interaction encryption channel.
+  if (isSensitive(method, path)) {
+    const { ok, status, data } = await secureRequest(method, path, body)
+    if (status === 401 && onUnauthorized) onUnauthorized()
+    if (!ok) throw new Error(data?.error || 'Request failed')
+    return data
+  }
+
   const headers = { 'Content-Type': 'application/json' }
   const token = getStoredToken()
   if (token) headers.Authorization = `Bearer ${token}`

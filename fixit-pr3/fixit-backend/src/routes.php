@@ -16,11 +16,13 @@ use FixIt\Controllers\MessageController;
 use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ProviderServiceController;
 use FixIt\Controllers\ReviewController;
+use FixIt\Controllers\SecureController;
 use FixIt\Controllers\StripePaymentController;
 use FixIt\Controllers\UserController;
 use FixIt\Controllers\WalletController;
 use FixIt\Middleware\JwtAuth;
 use FixIt\Middleware\RateLimitMiddleware;
+use FixIt\Middleware\SecureChannelMiddleware;
 use FixIt\Middleware\RoleGuard;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
@@ -78,11 +80,17 @@ return function (App $app): void {
             $secure->get('/me/provider', [$providers, 'me'])
                 ->add(new RoleGuard(['provider', 'admin']));
 
+            // X25519 handshake for the per-interaction encryption channel (§4a).
+            $secure->post('/secure/handshake', [new SecureController(), 'handshake']);
+
             $secure->get('/wallet', [$wallet, 'get']);
+            // Money path — body encrypted + signed per interaction (v2 skill).
             $secure->post('/wallet/topup', [$wallet, 'topUp'])
-                ->add(new RoleGuard(['customer']));
+                ->add(new RoleGuard(['customer']))
+                ->add(new SecureChannelMiddleware());
             $secure->post('/wallet/withdraw', [$wallet, 'withdraw'])
-                ->add(new RoleGuard(['customer', 'provider']));
+                ->add(new RoleGuard(['customer', 'provider']))
+                ->add(new SecureChannelMiddleware());
             $secure->patch('/users/me', [$users, 'updateMe']);
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
             $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp'])->add($rateLimit);
