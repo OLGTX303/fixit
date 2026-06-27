@@ -72,7 +72,9 @@ final class StripePaymentController
         try {
             $summary = $this->service()->savePaymentMethod((int) $user['id'], $pmId);
             return ResponseHelper::json($response, $summary);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException | \Stripe\Exception\ApiErrorException $e) {
+            // Stripe API errors (card declined, amount below min, etc.) carry a
+            // user-readable message — surface it as 400 instead of a generic 500.
             return ResponseHelper::error($response, $e->getMessage(), 400);
         }
     }
@@ -92,7 +94,9 @@ final class StripePaymentController
         try {
             $result = $this->service()->payBooking((int) $user['id'], $bookingId, $useWallet);
             return ResponseHelper::json($response, $result);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException | \Stripe\Exception\ApiErrorException $e) {
+            // Stripe API errors (card declined, amount below min, etc.) carry a
+            // user-readable message — surface it as 400 instead of a generic 500.
             return ResponseHelper::error($response, $e->getMessage(), 400);
         }
     }
@@ -118,7 +122,9 @@ final class StripePaymentController
                 $currency
             );
             return ResponseHelper::json($response, $result);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException | \Stripe\Exception\ApiErrorException $e) {
+            // Stripe API errors (card declined, amount below min, etc.) carry a
+            // user-readable message — surface it as 400 instead of a generic 500.
             return ResponseHelper::error($response, $e->getMessage(), 400);
         }
     }
