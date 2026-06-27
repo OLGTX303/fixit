@@ -7,12 +7,17 @@ import { useChatCryptoStore } from '../../stores/chatCrypto'
 import * as api from '../../services/api'
 import * as harmReview from '../../services/harmReview'
 import PinModal from '../../components/PinModal.vue'
+import { useModalGuard } from '../../composables/useModalGuard'
 import { E2E_ENABLED } from '../../config'
 
 const props = defineProps({
   bookingId: { type: [Number, String], default: null },
   embedded:  { type: Boolean, default: false },
 })
+
+// Standalone chat is a focused full-screen view — hide the bottom dock so the
+// compose bar isn't overlapped. Embedded (desktop split panel) keeps the nav.
+useModalGuard(computed(() => !props.embedded))
 
 const route = useRoute()
 const router = useRouter()
@@ -315,11 +320,27 @@ function timeOf(iso) {
 </template>
 
 <style scoped>
-.chat-root {
-  height: calc(100vh - 100px);
-  background: transparent;
-}
+.chat-root { background: transparent; }
 .chat-root.embedded { height: 100%; }
+
+/* Standalone (not embedded): own the viewport — fits mobile (dynamic vh + safe
+   areas, dock hidden via useModalGuard) and desktop (centered column). */
+.chat-root:not(.embedded) {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+}
+.chat-root:not(.embedded) .chat-compose {
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+:global(body.fx-desktop) .chat-root:not(.embedded) {
+  max-width: 860px;
+  margin: 0 auto;
+  border-left: 0.5px solid rgba(255, 255, 255, 0.40);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.40);
+}
 
 .chat-header {
   display: flex; align-items: center; gap: 12px;
