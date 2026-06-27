@@ -8,6 +8,12 @@ import * as api from './api'
 
 let stripePromise = null
 
+export function formatSavedCard(saved, { style = 'dots', fallback = null } = {}) {
+  if (!saved?.has_saved_payment_method) return fallback
+  const brand = (saved.brand || 'card').replace(/^./, (c) => c.toUpperCase())
+  return style === 'ending' ? `${brand} ending in ${saved.last4}` : `${brand} •••• ${saved.last4}`
+}
+
 export async function getStripe() {
   const config = await api.getStripeConfig()
   if (!config.configured || !config.publishable_key) {
@@ -91,6 +97,17 @@ export async function mountSaveCardElement(containerEl, { returnUrl } = {}) {
   }
 }
 
+async function confirm3dsIfNeeded(stripe, result) {
+  if (!result.requires_action || !result.client_secret) return result
+  const { error, paymentIntent } = await stripe.confirmCardPayment(result.client_secret)
+  if (error) throw new Error(error.message)
+  return {
+    ...result,
+    status: paymentIntent?.status ?? result.status,
+    paid: paymentIntent?.status === 'succeeded',
+  }
+}
+
 /** Pay using saved pm_ without re-entering card details. */
 export async function payWithSavedCard({ amountCents, bookingId, currency = 'myr' }) {
   const { stripe } = await getStripe()
@@ -99,14 +116,7 @@ export async function payWithSavedCard({ amountCents, bookingId, currency = 'myr
     booking_id: bookingId,
     currency,
   })
-
-  if (result.requires_action && result.client_secret) {
-    const { error, paymentIntent } = await stripe.confirmCardPayment(result.client_secret)
-    if (error) throw new Error(error.message)
-    return { ...result, status: paymentIntent?.status ?? result.status, paid: paymentIntent?.status === 'succeeded' }
-  }
-
-  return result
+  return confirm3dsIfNeeded(stripe, result)
 }
 
 /** Pay booking with wallet balance, card, or both (wallet applied first). */
@@ -116,16 +126,5 @@ export async function payBooking({ bookingId, useWallet = true }) {
     booking_id: bookingId,
     use_wallet: useWallet,
   })
-
-  if (result.requires_action && result.client_secret) {
-    const { error, paymentIntent } = await stripe.confirmCardPayment(result.client_secret)
-    if (error) throw new Error(error.message)
-    return {
-      ...result,
-      status: paymentIntent?.status ?? result.status,
-      paid: paymentIntent?.status === 'succeeded',
-    }
-  }
-
-  return result
+  return confirm3dsIfNeeded(stripe, result)
 }

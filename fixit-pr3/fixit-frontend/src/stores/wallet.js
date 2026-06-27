@@ -25,13 +25,11 @@ export const useWalletStore = defineStore('wallet', {
     },
     async topUp(amountCents) {
       const res = await api.walletTopUp(amountCents)
-      if (res.balance_cents != null) this.balanceCents = res.balance_cents
-      await this.load() // refresh transaction list
+      await this.load()
       return res
     },
     async withdraw(amountCents) {
       const res = await api.walletWithdraw(amountCents)
-      if (res.balance_cents != null) this.balanceCents = res.balance_cents
       await this.load()
       return res
     },

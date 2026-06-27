@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useBookingsStore } from '../stores/bookings'
 import { useWalletStore } from '../stores/wallet'
-import { getStripe, mountSaveCardElement } from '../services/stripePayments'
+import { getStripe, mountSaveCardElement, formatSavedCard } from '../services/stripePayments'
 import * as api from '../services/api'
 import { useModalGuard } from '../composables/useModalGuard'
 
@@ -45,11 +45,7 @@ let cardSession = null
 const hasSavedCard = computed(() =>
   savedCard.value?.has_saved_payment_method && !useNewCard.value)
 
-const savedCardLabel = computed(() => {
-  if (!savedCard.value?.has_saved_payment_method) return ''
-  const brand = (savedCard.value.brand || 'Card').replace(/^./, c => c.toUpperCase())
-  return `${brand} •••• ${savedCard.value.last4}`
-})
+const savedCardLabel = computed(() => formatSavedCard(savedCard.value, { fallback: '' }))
 
 function openSheet(mode = 'topup') {
   sheetMode.value = mode

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted, nextTick, toRef } from 'vue'
 import * as api from '../services/api'
-import { getStripe, mountSaveCardElement, payBooking } from '../services/stripePayments'
+import { getStripe, mountSaveCardElement, payBooking, formatSavedCard } from '../services/stripePayments'
 import { useWalletStore } from '../stores/wallet'
 import { useModalGuard } from '../composables/useModalGuard'
 
@@ -36,9 +36,8 @@ let successTimer = null
 
 const SUCCESS_MS = 2000
 
-const amountDollars = computed(() => props.amount)
 const amountCents = computed(() =>
-  amountDollars.value ? Math.round(amountDollars.value * 100) : null)
+  props.amount ? Math.round(props.amount * 100) : null)
 
 const walletBalanceCents = computed(() => wallet.balanceCents)
 const walletBalanceLabel = computed(() => `RM${(walletBalanceCents.value / 100).toFixed(2)}`)
@@ -58,11 +57,7 @@ const canPayWithWalletOnly = computed(() =>
 
 const needsSavedCard = computed(() => cardDueCents.value > 0)
 
-const savedCardLabel = computed(() => {
-  if (!saved.value?.has_saved_payment_method) return null
-  const brand = (saved.value.brand || 'card').replace(/^./, (c) => c.toUpperCase())
-  return `${brand} •••• ${saved.value.last4}`
-})
+const savedCardLabel = computed(() => formatSavedCard(saved.value))
 
 const showSaveForm = computed(() =>
   configured.value && needsSavedCard.value && (!saved.value?.has_saved_payment_method || replaceMode.value))
@@ -78,8 +73,8 @@ const payButtonLabel = computed(() => {
     return `Pay RM${(walletAppliedCents.value / 100).toFixed(2)} wallet + RM${(cardDueCents.value / 100).toFixed(2)} card`
   }
   return savedCardLabel.value
-    ? `Pay RM${amountDollars.value?.toFixed(2)} with card`
-    : `Pay RM${amountDollars.value?.toFixed(2)}`
+    ? `Pay RM${props.amount?.toFixed(2)} with card`
+    : `Pay RM${props.amount?.toFixed(2)}`
 })
 
 const stripeReturnUrl = computed(() => {
@@ -281,7 +276,7 @@ function close() {
             </div>
             <div class="pv-success-title">Payment successful!</div>
             <div class="pv-success-sub">
-              RM{{ amountDollars?.toFixed(2) }} paid for booking #{{ bookingId }}
+              RM{{ amount?.toFixed(2) }} paid for booking #{{ bookingId }}
             </div>
             <div class="pv-success-hint">Taking you to your bookings…</div>
           </div>
@@ -302,10 +297,10 @@ function close() {
           </div>
 
           <div v-else key="form">
-            <div v-if="amountDollars" class="pv-panel pv-panel-accent mb-3">
+            <div v-if="amount" class="pv-panel pv-panel-accent mb-3">
               <div class="d-flex justify-content-between align-items-center">
                 <span class="fw-semibold" style="font-size:14px">Amount due</span>
-                <span class="fw-bold text-accent" style="font-size:20px">RM{{ amountDollars.toFixed(2) }}</span>
+                <span class="fw-bold text-accent" style="font-size:20px">RM{{ amount.toFixed(2) }}</span>
               </div>
               <div v-if="bookingId" style="font-size:12px;color:var(--fx-muted);margin-top:4px">
                 Booking #{{ bookingId }}

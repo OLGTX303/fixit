@@ -109,6 +109,16 @@ const put = (path, body) => request('PUT', path, body)
 const patch = (path, body) => request('PATCH', path, body)
 const del = (path) => request('DELETE', path)
 
+// ponytail: one query builder for paginated/list GETs
+function queryString(entries) {
+  const p = new URLSearchParams()
+  for (const [k, v] of entries) {
+    if (v != null && v !== '') p.set(k, String(v))
+  }
+  const s = p.toString()
+  return s ? `?${s}` : ''
+}
+
 // ── Reads ───────────────────────────────────────────────────────────────────
 export const getUsers = ({ q = '', limit = 25, offset = 0, sort = 'name' } = {}) =>
   get(`/admin/users?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=${sort}`)
@@ -116,11 +126,9 @@ export const getCategoryStats = () => get('/admin/category-stats')
 export const getVerifyStats = () => get('/admin/verify-stats')
 // Admin provider list, paginated. opts: { verified (0|1), limit, offset }
 export function getAdminProviders(opts = {}) {
-  const p = new URLSearchParams()
-  if (opts.verified != null) p.set('verified', opts.verified)
-  p.set('limit', opts.limit ?? 20)
-  p.set('offset', opts.offset ?? 0)
-  return get(`/admin/providers?${p.toString()}`)
+  const entries = [['limit', opts.limit ?? 20], ['offset', opts.offset ?? 0]]
+  if (opts.verified != null) entries.unshift(['verified', opts.verified])
+  return get(`/admin/providers${queryString(entries)}`)
 }
 export const blockUser = (id, blocked) => patch(`/admin/users/${id}/block`, { blocked })
 export const getCategories = () => get('/categories')
@@ -138,27 +146,29 @@ export const getProvider = (id) => get(`/providers/${id}`)
 
 // Paginated provider list/search. opts: { q, category, sort, priority, lat, lng, limit, offset }
 export function searchProviders(opts = {}) {
-  const p = new URLSearchParams()
-  if (opts.q) p.set('q', opts.q)
-  if (opts.category) p.set('category', opts.category)
-  if (opts.sort) p.set('sort', opts.sort)
-  if (opts.priority) p.set('priority', '1')
-  if (opts.region) p.set('region', opts.region)
-  if (opts.lat != null && opts.lng != null) { p.set('lat', opts.lat); p.set('lng', opts.lng) }
-  p.set('limit', opts.limit ?? 20)
-  p.set('offset', opts.offset ?? 0)
-  return get(`/providers?${p.toString()}`)
+  const entries = [
+    ['q', opts.q],
+    ['category', opts.category],
+    ['sort', opts.sort],
+    ['region', opts.region],
+    ['limit', opts.limit ?? 20],
+    ['offset', opts.offset ?? 0],
+  ]
+  if (opts.priority) entries.push(['priority', '1'])
+  if (opts.lat != null && opts.lng != null) {
+    entries.push(['lat', opts.lat], ['lng', opts.lng])
+  }
+  return get(`/providers${queryString(entries)}`)
 }
 export const getRecommendedProviders = (limit = 20, offset = 0) =>
-  get(`/providers?sort=recommended&limit=${limit}&offset=${offset}`)
+  searchProviders({ sort: 'recommended', limit, offset })
 // The logged-in provider's own profile (works even while unverified).
 export const getMyProviderProfile = () => get('/me/provider')
 export function getBookings({ limit = 0, offset = 0, status } = {}) {
-  const p = new URLSearchParams()
-  if (limit > 0) { p.set('limit', limit); p.set('offset', offset) }
-  if (status) p.set('status', status)
-  const qs = p.toString()
-  return get(`/bookings${qs ? `?${qs}` : ''}`)
+  const entries = []
+  if (limit > 0) entries.push(['limit', limit], ['offset', offset])
+  if (status) entries.push(['status', status])
+  return get(`/bookings${queryString(entries)}`)
 }
 export const getReviews = ({ limit = 25, offset = 0 } = {}) =>
   get(`/admin/reviews?limit=${limit}&offset=${offset}`)
@@ -294,10 +304,7 @@ export const setProviderPriority = (id, isPriority) =>
 
 // ── Favourites ───────────────────────────────────────────────────────────────
 export function getFavorites({ limit = 20, offset = 0 } = {}) {
-  const p = new URLSearchParams()
-  p.set('limit', limit)
-  p.set('offset', offset)
-  return get(`/favorites?${p.toString()}`)
+  return get(`/favorites${queryString([['limit', limit], ['offset', offset]])}`)
 }
 export const favoriteProvider = (providerId) => post(`/providers/${providerId}/favorite`)
 export const unfavoriteProvider = (providerId) => del(`/providers/${providerId}/favorite`)
@@ -313,10 +320,7 @@ export const createMyCoupon = (payload) => post('/me/coupons', payload)
 export const updateMyCoupon = (id, payload) => put(`/me/coupons/${id}`, payload)
 export const deleteMyCoupon = (id) => del(`/me/coupons/${id}`)
 export function getAdminCoupons({ limit = 25, offset = 0 } = {}) {
-  const p = new URLSearchParams()
-  p.set('limit', limit)
-  p.set('offset', offset)
-  return get(`/admin/coupons?${p.toString()}`)
+  return get(`/admin/coupons${queryString([['limit', limit], ['offset', offset]])}`)
 }
 export const createAdminCoupon = (payload) => post('/admin/coupons', payload)
 export const updateAdminCoupon = (id, payload) => put(`/admin/coupons/${id}`, payload)
@@ -325,9 +329,6 @@ export const deleteAdminCoupon = (id) => del(`/admin/coupons/${id}`)
 // ── Browsing history ─────────────────────────────────────────────────────────
 export const recordBrowsingHistory = (providerId) => post('/me/history', { provider_id: providerId })
 export function getBrowsingHistory({ limit = 20, offset = 0 } = {}) {
-  const p = new URLSearchParams()
-  p.set('limit', limit)
-  p.set('offset', offset)
-  return get(`/me/history?${p.toString()}`)
+  return get(`/me/history${queryString([['limit', limit], ['offset', offset]])}`)
 }
 export const clearBrowsingHistory = () => del('/me/history')

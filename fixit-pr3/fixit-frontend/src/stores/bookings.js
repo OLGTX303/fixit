@@ -40,8 +40,7 @@ export const useBookingsStore = defineStore('bookings', {
       this.bookings = this.bookings.filter(b => b.id !== Number(bookingId))
     },
     async reload() {
-      this.loaded = false
-      this.bookings = []
+      this.resetCache()
       await this.load()
     },
     /** Keep nested customer/provider avatars in sync after profile photo upload. */
