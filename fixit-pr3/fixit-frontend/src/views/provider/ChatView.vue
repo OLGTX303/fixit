@@ -335,7 +335,7 @@ function timeOf(iso) {
 .chat-root:not(.embedded) .chat-compose {
   padding-bottom: max(10px, env(safe-area-inset-bottom));
 }
-:global(body.fx-desktop) .chat-root:not(.embedded) {
+:global(body.fx-desktop .chat-root:not(.embedded)) {
   max-width: 860px;
   margin: 0 auto;
   border-left: 0.5px solid rgba(255, 255, 255, 0.40);
@@ -422,8 +422,8 @@ function timeOf(iso) {
 .chat-col {
   max-width: 72%; display: flex; flex-direction: column;
 }
-:global(body.fx-desktop) .chat-root.embedded .chat-col { max-width: min(480px, 58%); }
-:global(body.fx-desktop) .chat-root.embedded .chat-list { padding: 20px 28px; }
+:global(body.fx-desktop .chat-root.embedded .chat-col) { max-width: min(480px, 58%); }
+:global(body.fx-desktop .chat-root.embedded .chat-list) { padding: 20px 28px; }
 .incoming .chat-col { align-items: flex-start; }
 .outgoing .chat-col { align-items: flex-end; }
 
