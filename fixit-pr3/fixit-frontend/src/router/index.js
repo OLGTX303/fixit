@@ -51,6 +51,7 @@ const routes = [
   { path: '/admin/coupons', name: 'admin-coupons', component: () => import('../views/admin/AdminCouponsView.vue'), meta: { role: 'admin' } },
   { path: '/admin/chats', name: 'admin-chats', component: () => import('../views/admin/AdminChatView.vue'), meta: { role: 'admin' } },
   { path: '/admin/chat/:id', name: 'admin-chat', component: () => import('../views/provider/ChatView.vue'), meta: { role: 'admin' } },
+  { path: '/admin/kyc-debug', name: 'admin-kyc-debug', component: () => import('../views/admin/KycDebugView.vue'), meta: { role: 'admin' } },
 ]
 
 const router = createRouter({

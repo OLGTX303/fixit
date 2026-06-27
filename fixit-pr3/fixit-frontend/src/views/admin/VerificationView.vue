@@ -67,7 +67,11 @@ async function reject(id) {
 
 <template>
   <div class="fx-page">
-    <h1 class="fw-bold mb-1" style="font-size:20px">Verifications</h1>
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <h1 class="fw-bold mb-0" style="font-size:20px">Verifications</h1>
+      <router-link :to="{ name: 'admin-kyc-debug' }" class="btn btn-outline-primary btn-sm"
+                   style="font-size:12px;padding:4px 10px">🔬 Test liveness</router-link>
+    </div>
     <div class="mb-3" style="font-size:13px;color:var(--fx-muted)">Admin Dashboard</div>
 
     <div class="d-flex gap-2 mb-3">
