@@ -25,7 +25,7 @@ final class FaceMatchService
     }
 
     /**
-     * @return array{ok:bool, score:?int, message:string, passed:?bool}
+     * @return array{ok:bool, score:?int, message:string, passed:bool}
      */
     public function match(string $binA, string $mimeA, string $binB, string $mimeB): array
     {
@@ -65,9 +65,8 @@ final class FaceMatchService
             $score = isset($json['data']['score']) ? (int) $json['data']['score'] : null;
             $message = (string) ($json['status']['message'] ?? 'unknown');
 
-            // passed only when the gateway produced a usable score; a detection
-            // failure (no face / unreachable) is inconclusive, not an auto-fail.
-            $passed = ($ok && $score !== null) ? ($score >= $this->minScore()) : null;
+            // KYC requires a definitive same-person result — inconclusive = fail.
+            $passed = ($ok && $score !== null) ? ($score >= $this->minScore()) : false;
 
             return ['ok' => $ok, 'score' => $score, 'message' => $message, 'passed' => $passed];
         } finally {

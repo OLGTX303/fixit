@@ -98,4 +98,45 @@ final class KycValidator
             'fraud_score' => $fraudScore,
         ];
     }
+
+    /** @param array<string,mixed> $data */
+    public static function validateLiveness(array $data): array
+    {
+        $reasons = [];
+        $score = (float) ($data['score'] ?? 0);
+        $checks = $data['checks'] ?? [];
+
+        if (!is_array($checks)) {
+            return self::reject(['Invalid liveness checks payload']);
+        }
+
+        if (($checks['method'] ?? '') !== '8_color_random_reflection') {
+            $reasons[] = 'Invalid liveness method';
+        }
+
+        $matches = (int) ($checks['matches'] ?? 0);
+        $threshold = (int) ($checks['threshold'] ?? 4);
+        if ($matches < $threshold) {
+            $reasons[] = "Colour reflection matches ({$matches}) below threshold ({$threshold})";
+        }
+
+        if ($score < 50) {
+            $reasons[] = 'Liveness score below server minimum (50%)';
+        }
+
+        $hash = (string) ($data['color_sequence_hash'] ?? '');
+        if (!preg_match('/^[a-f0-9]{64}$/', $hash)) {
+            $reasons[] = 'Invalid color_sequence_hash';
+        }
+
+        $clientPassed = (bool) ($data['passed'] ?? false);
+        if ($clientPassed && !empty($reasons)) {
+            $reasons[] = 'Client marked passed but server liveness checks failed';
+        }
+
+        return [
+            'approved' => empty($reasons) && $clientPassed,
+            'rejection_reasons' => $reasons,
+        ];
+    }
 }

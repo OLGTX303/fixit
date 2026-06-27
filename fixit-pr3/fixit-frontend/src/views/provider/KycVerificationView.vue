@@ -100,6 +100,7 @@ async function runIdRecognition() {
       ocr_confidence: result.ocr_confidence,
       checks: result.checks,
       filename: idFile.value.name,
+      id_image: await fileToDataUrl(idFile.value),
       image_hash: result.image_hash,
       extracted_preview: result.extracted_preview,
       module_version: result.module_version,
@@ -216,7 +217,7 @@ function retry() {
   <div class="fx-page" style="max-width:560px">
     <h1 class="fw-bold mb-1" style="font-size:20px">Identity Verification</h1>
     <p class="mb-3" style="font-size:13px;color:var(--fx-muted)">
-      Production KYC: OCR + MRZ validation + anti-spoof checks, then 8-colour face liveness
+      OCR + MRZ + anti-spoof on your ID, then 8-colour liveness plus a server-side 1:1 face match against your ID photo
     </p>
 
     <div class="fx-card mb-3 d-flex align-items-center gap-2" style="padding:12px">
@@ -282,7 +283,7 @@ function retry() {
     <!-- Step 2: 8-color liveness -->
     <div v-if="step === 2">
       <p style="font-size:13px;color:var(--fx-muted)">
-        Centre your face in the oval. The screen will flash <strong>8 random colours</strong> — your skin should reflect each colour. This confirms you are live, not a photo.
+        Centre your face in the oval. The screen flashes <strong>8 random colours</strong> (liveness), then the server compares your live selfie <strong>1:1</strong> with the face on your government ID.
       </p>
 
       <div class="position-relative mb-3" style="border-radius:16px;overflow:hidden;background:#111">
@@ -308,7 +309,7 @@ function retry() {
       <div class="mb-3" style="font-size:48px">✓</div>
       <h2 class="fw-bold" style="font-size:18px">Verification submitted</h2>
       <p style="font-size:13px;color:var(--fx-muted)">
-        Your government ID and face liveness passed automated checks. An admin will review and approve your provider account.
+        Your ID, liveness, and ID-to-face match passed automated checks. An admin will review and approve your provider account.
       </p>
       <div v-if="livenessResult || kycStatus" class="fx-card text-start mt-3" style="font-size:12px">
         <div v-if="myProfile?.kyc_id_type">Document: {{ myProfile.kyc_id_type.replace('_', ' ') }}</div>
