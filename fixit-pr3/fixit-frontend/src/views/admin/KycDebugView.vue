@@ -1,14 +1,21 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { analyzeGovernmentId } from '../../services/kyc/idRecognition'
 import { runColorReflectionCheck, openFrontCamera, REFLECTION_COLORS } from '../../services/kyc/colorReflectionLiveness'
+import { useModalGuard } from '../../composables/useModalGuard'
 import AppIcon from '../../components/AppIcon.vue'
 
 // Admin debug harness: runs the SAME pipeline providers use — government-ID
 // recognition then 8-colour reflection liveness — purely client-side, no submit.
 
 const router = useRouter()
+
+// KYC mode hides the bottom nav for the whole page (same as the provider flow).
+useModalGuard()
+
+// Camera permission popup state: idle | requesting | ready | denied.
+const camState = ref('idle')
 
 const step = ref(1)
 const busy = ref(false)
@@ -100,21 +107,32 @@ function probeFace() {
   faceInFrame.value = mean > 45 && (sumSq / n - mean * mean) > 120
 }
 
+// Auto-request the camera (triggers the browser permission popup). If already
+// granted / a camera exists it resolves silently and enables straight away.
 async function startCamera() {
+  stopCamera()
   error.value = ''
+  camState.value = 'requesting'
   try {
-    stopCamera()
-    const stream = await openFrontCamera()
-    streamRef.value = stream
-    if (videoRef.value) {
-      videoRef.value.srcObject = stream
-      await videoRef.value.play()
-    }
+    streamRef.value = await openFrontCamera()
+    attachStream()
     faceTimer = setInterval(probeFace, 300)
+    camState.value = 'ready'
   } catch {
-    error.value = 'Camera access required for the liveness test.'
+    camState.value = 'denied'
   }
 }
+
+// The <video> mounts after the step transition, so attach the stream both now
+// and whenever the element appears.
+function attachStream() {
+  const v = videoRef.value
+  if (v && streamRef.value) {
+    v.srcObject = streamRef.value
+    v.play().catch(() => {})
+  }
+}
+watch(videoRef, attachStream)
 
 function stopCamera() {
   if (faceTimer) { clearInterval(faceTimer); faceTimer = null }
@@ -124,6 +142,7 @@ function stopCamera() {
   }
   if (videoRef.value) videoRef.value.srcObject = null
   faceInFrame.value = false
+  camState.value = 'idle'
 }
 
 async function runLiveness() {
@@ -152,7 +171,7 @@ async function runLiveness() {
   }
 }
 
-function goLiveness() { error.value = ''; step.value = 2 }
+function goLiveness() { error.value = ''; step.value = 2; startCamera() }
 function backToId() { stopCamera(); error.value = ''; step.value = 1 }
 
 function retry() {
@@ -167,8 +186,11 @@ onUnmounted(stopCamera)
 
 <template>
   <div class="fx-page kyc-dbg" style="max-width:560px">
-    <!-- Commercial header -->
+    <!-- Commercial header — nav is hidden in KYC mode, so this back button is
+         the way out. -->
     <div class="kyc-hero mb-3">
+      <button class="kyc-hero-back" aria-label="Back to verifications"
+              @click="router.push({ name: 'admin-verify' })">←</button>
       <div class="kyc-hero-icon"><AppIcon name="shield" :size="22" /></div>
       <div>
         <div class="fw-bold" style="font-size:18px;line-height:1.2">Identity Verification</div>
@@ -284,8 +306,7 @@ onUnmounted(stopCamera)
 
           <div class="kyc-actions">
             <button class="btn btn-ghost" :disabled="busy" @click="backToId">← Back</button>
-            <button v-if="!streamRef" class="btn btn-outline-primary flex-fill" @click="startCamera">Enable camera</button>
-            <button v-else class="btn btn-primary flex-fill" :disabled="busy" @click="runLiveness">
+            <button class="btn btn-primary flex-fill" :disabled="!streamRef || busy" @click="runLiveness">
               <span v-if="busy" class="kyc-spin me-2"></span>{{ busy ? 'Running…' : 'Start 8-colour check' }}
             </button>
           </div>
@@ -315,8 +336,32 @@ onUnmounted(stopCamera)
     </div>
   </div>
 
-  <!-- Colour flash: the screen is the light source. Stops above the floating
-       dock so the bottom nav stays visible during the check. -->
+  <!-- Camera permission popup: auto-requests on entering the face step. -->
+  <Teleport to="body">
+    <Transition name="fx-fade">
+      <div v-if="camState === 'requesting' || camState === 'denied'" class="kyc-modal-backdrop">
+        <div class="kyc-modal">
+          <div class="kyc-modal-icon"><AppIcon name="user" :size="26" /></div>
+          <template v-if="camState === 'requesting'">
+            <div class="fw-bold" style="font-size:16px">Allow camera access</div>
+            <p style="font-size:13px;color:var(--fx-muted);margin:6px 0 0">Accept the browser prompt to start the face check.</p>
+            <span class="kyc-spin" style="margin:14px auto 2px"></span>
+          </template>
+          <template v-else>
+            <div class="fw-bold" style="font-size:16px">Camera blocked</div>
+            <p style="font-size:13px;color:var(--fx-muted);margin:6px 0 0">Enable camera permission in your browser, then try again.</p>
+            <div class="kyc-actions mt-3">
+              <button class="btn btn-ghost flex-fill" @click="backToId">← Back</button>
+              <button class="btn btn-primary flex-fill" @click="startCamera">Try again</button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Colour flash: the screen is the light source (full-screen — the nav is
+       hidden in KYC mode, so it can flood the whole viewport). -->
   <Teleport to="body">
     <div v-if="flashColor" class="kyc-flash" :style="{ background: flashColor }"></div>
   </Teleport>
@@ -400,8 +445,36 @@ onUnmounted(stopCamera)
 
 .kyc-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: kyc-rotate 0.7s linear infinite; vertical-align: -2px; }
 
-/* Flash stops short of the floating dock so the nav stays visible. */
-.kyc-flash { position: fixed; top: 0; left: 0; right: 0; bottom: 110px; z-index: 2400; pointer-events: none; }
+/* Full-screen — nav is hidden in KYC mode, so the flash floods the viewport. */
+.kyc-flash { position: fixed; inset: 0; z-index: 2400; pointer-events: none; }
+
+.kyc-modal-backdrop {
+  position: fixed; inset: 0; z-index: 3500;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
+}
+.kyc-modal {
+  width: 100%; max-width: 320px; text-align: center;
+  background: #fff; color: var(--fx-text);
+  border-radius: var(--fx-radius); padding: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  animation: kyc-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kyc-modal-icon {
+  width: 52px; height: 52px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; background: var(--fx-accent-soft); color: var(--fx-accent);
+}
+
+.kyc-hero-back {
+  width: 34px; height: 34px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 20px; line-height: 1;
+  transition: background 0.2s ease, transform 0.12s ease;
+}
+.kyc-hero-back:hover { background: rgba(255, 255, 255, 0.32); }
+.kyc-hero-back:active { transform: scale(0.92); }
 
 .fx-step-enter-active, .fx-step-leave-active { transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.32,0.72,0,1); }
 .fx-step-enter-from { opacity: 0; transform: translateX(18px); }
