@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import * as api from '../services/api'
-import { getStoredUser } from '../services/api'
 
 // Holds the provider directory + categories. Shared by the customer Search view
 // and the admin Verification view — approving a provider in admin instantly
@@ -22,7 +21,7 @@ export const useProvidersStore = defineStore('providers', {
       if (this.loaded) return
       this.loading = true
       try {
-        const user = getStoredUser()
+        const user = api.getStoredUser()
         const categories = await api.getCategories()
         this.categories = categories
 

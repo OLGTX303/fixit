@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as api from '../services/api'
-import { getStripe, mountSaveCardElement } from '../services/stripePayments'
+import { getStripe, mountSaveCardElement, formatSavedCard } from '../services/stripePayments'
 import AppIcon from '../components/AppIcon.vue'
 
 const router = useRouter()
@@ -16,11 +16,7 @@ const busy = ref(false)
 const cardMount = ref(null)
 let cardSession = null
 
-const savedCardLabel = computed(() => {
-  if (!savedCard.value?.has_saved_payment_method) return null
-  const brand = (savedCard.value.brand || 'card').replace(/^./, (c) => c.toUpperCase())
-  return `${brand} ending in ${savedCard.value.last4}`
-})
+const savedCardLabel = computed(() => formatSavedCard(savedCard.value, { style: 'ending' }))
 const showCardForm = computed(() =>
   configured.value && (!savedCard.value?.has_saved_payment_method || replaceMode.value))
 

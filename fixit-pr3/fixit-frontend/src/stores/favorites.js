@@ -16,15 +16,14 @@ export const useFavoritesStore = defineStore('favorites', {
       this.loading = true
       try {
         const all = []
-        let offset = 0
         const page = 50
-        for (;;) {
-          const batch = await api.getFavorites({ limit: page, offset })
-          if (!batch.length) break
+        let offset = 0
+        let batch
+        do {
+          batch = await api.getFavorites({ limit: page, offset })
           all.push(...batch)
-          if (batch.length < page) break
           offset += batch.length
-        }
+        } while (batch.length === page)
         this.ids = all.map(p => p.id)
         this.loaded = true
       } catch {
