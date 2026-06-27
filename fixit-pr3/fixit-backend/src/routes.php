@@ -91,18 +91,25 @@ return function (App $app): void {
             $secure->post('/wallet/withdraw', [$wallet, 'withdraw'])
                 ->add(new RoleGuard(['customer', 'provider']))
                 ->add(new SecureChannelMiddleware());
-            $secure->patch('/users/me', [$users, 'updateMe']);
+            $secure->patch('/users/me', [$users, 'updateMe'])
+                ->add(new SecureChannelMiddleware());
             $secure->post('/users/me/avatar', [$users, 'uploadAvatar']);
             $secure->post('/users/me/email/otp', [$users, 'requestEmailOtp'])->add($rateLimit);
             $secure->post('/users/me/email/verify', [$users, 'verifyEmailOtp'])->add($rateLimit);
             $secure->get('/payments/stripe/config', [$stripe, 'config']);
-            $secure->post('/payments/stripe/customer', [$stripe, 'ensureCustomer']);
-            $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent']);
-            $secure->post('/payments/stripe/save-payment-method', [$stripe, 'savePaymentMethod']);
-            $secure->post('/payments/stripe/pay-with-saved-method', [$stripe, 'payWithSavedMethod']);
+            $secure->post('/payments/stripe/customer', [$stripe, 'ensureCustomer'])
+                ->add(new SecureChannelMiddleware());
+            $secure->post('/payments/stripe/setup-intent', [$stripe, 'createSetupIntent'])
+                ->add(new SecureChannelMiddleware());
+            $secure->post('/payments/stripe/save-payment-method', [$stripe, 'savePaymentMethod'])
+                ->add(new SecureChannelMiddleware());
+            $secure->post('/payments/stripe/pay-with-saved-method', [$stripe, 'payWithSavedMethod'])
+                ->add(new SecureChannelMiddleware());
             $secure->post('/payments/booking/pay', [$stripe, 'payBooking'])
-                ->add(new RoleGuard(['customer']));
-            $secure->delete('/payments/stripe/saved-payment-method', [$stripe, 'removeSavedPaymentMethod']);
+                ->add(new RoleGuard(['customer']))
+                ->add(new SecureChannelMiddleware());
+            $secure->delete('/payments/stripe/saved-payment-method', [$stripe, 'removeSavedPaymentMethod'])
+                ->add(new SecureChannelMiddleware());
             $secure->get('/crypto/status', [$crypto, 'status']);
             $secure->get('/crypto/pin/salt', [$crypto, 'getPinSalt']);
             $secure->get('/crypto/public-key', [$crypto, 'myPublicKey']);
@@ -122,9 +129,11 @@ return function (App $app): void {
             $secure->get('/providers/{id}/kyc', [$kyc, 'status'])
                 ->add(new RoleGuard(['provider', 'admin']));
             $secure->post('/providers/{id}/kyc/id-recognition', [$kyc, 'submitIdRecognition'])
-                ->add(new RoleGuard(['provider']));
+                ->add(new RoleGuard(['provider']))
+                ->add(new SecureChannelMiddleware());
             $secure->post('/providers/{id}/kyc/liveness', [$kyc, 'submitLiveness'])
-                ->add(new RoleGuard(['provider']));
+                ->add(new RoleGuard(['provider']))
+                ->add(new SecureChannelMiddleware());
             $secure->put('/providers/{id}/availability', [$availability, 'save'])
                 ->add(new RoleGuard(['provider', 'admin']));
 
@@ -194,9 +203,12 @@ return function (App $app): void {
             $secure->get('/bookings', [$bookings, 'list']);
             $secure->get('/bookings/{id}', [$bookings, 'get']);
             $secure->post('/bookings', [$bookings, 'create'])
-                ->add(new RoleGuard(['customer']));
-            $secure->patch('/bookings/{id}/status', [$bookings, 'updateStatus']);
-            $secure->delete('/bookings/{id}', [$bookings, 'delete']);
+                ->add(new RoleGuard(['customer']))
+                ->add(new SecureChannelMiddleware());
+            $secure->patch('/bookings/{id}/status', [$bookings, 'updateStatus'])
+                ->add(new SecureChannelMiddleware());
+            $secure->delete('/bookings/{id}', [$bookings, 'delete'])
+                ->add(new SecureChannelMiddleware());
 
             $secure->post('/upload/image', [$users, 'uploadImage']);
             $secure->post('/reviews', [$reviews, 'create'])
