@@ -8,16 +8,22 @@ import { useFavoritesStore } from '../../stores/favorites'
 import CategoryGrid from '../../components/CategoryGrid.vue'
 import ProviderGridCard from '../../components/ProviderGridCard.vue'
 import fixitLogo from '../../assets/fixit-logo.svg'
+import { promptLogin } from '../../composables/useLoginPrompt'
 
 const auth   = useAuthStore()
 const router = useRouter()
 const favorites = useFavoritesStore()
 const search = ref('')
 
+// Guests see only the 9 cards; any action opens login.
+const isGuest = computed(() => !auth.isAuthenticated)
+const guestCards = computed(() => recommended.value.slice(0, 9))
+
 const categories = ref([])
 const sortBy = ref('recommended')
 
 function runSearch() {
+  if (isGuest.value) return promptLogin()
   const q = search.value.trim()
   router.push({ name: 'search', query: q ? { q } : {} })
 }
@@ -40,8 +46,8 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
 }
 
-function openCategory(cat) { router.push({ name: 'search', query: { category: cat.id } }) }
-function openProvider(p)   { router.push({ name: 'provider-profile', params: { id: p.id } }) }
+function openCategory(cat) { if (isGuest.value) return promptLogin(); router.push({ name: 'search', query: { category: cat.id } }) }
+function openProvider(p)   { if (isGuest.value) return promptLogin(); router.push({ name: 'provider-profile', params: { id: p.id } }) }
 </script>
 
 <template>
@@ -52,19 +58,21 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
         <img :src="fixitLogo" alt="FixIt" class="hv-logo" />
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="hv-icon-btn hv-bell" aria-label="Notifications">
+        <button v-if="!isGuest" class="hv-icon-btn hv-bell" aria-label="Notifications">
           <span class="material-symbols-outlined" style="font-size:24px;color:var(--fx-muted)">notifications</span>
           <span class="hv-bell-dot"></span>
         </button>
-        <button class="hv-avatar" @click="router.push({ name: 'account' })" aria-label="Profile">
+        <button class="hv-avatar" @click="isGuest ? promptLogin() : router.push({ name: 'account' })" aria-label="Profile">
           <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" alt="avatar" />
+          <img v-else-if="isGuest" :src="fixitLogo" alt="Sign in" class="hv-avatar-logo" />
           <span v-else>{{ initials }}</span>
         </button>
       </div>
     </header>
 
     <div class="hv-content">
-      <!-- Hero greeting -->
+      <!-- Hero greeting + search + categories: members only -->
+      <template v-if="!isGuest">
       <section class="hv-hero" style="padding:18px 0 8px">
         <p class="hv-hero-kicker">Home services, on demand</p>
         <h2 class="hv-greeting">
@@ -95,10 +103,18 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
         </div>
         <CategoryGrid :categories="categories" @select="openCategory" />
       </section>
+      </template>
 
-      <!-- Recommended for you �?responsive card grid (2 cols mobile / 6 desktop) -->
+      <!-- Guest hero -->
+      <section v-if="isGuest" class="hv-hero" style="padding:20px 0 4px">
+        <p class="hv-hero-kicker">Home services, on demand</p>
+        <h2 class="hv-greeting">Popular near you</h2>
+        <p class="hv-hero-sub">Sign in to search, book, and chat with providers.</p>
+      </section>
+
+      <!-- Provider cards: 9 for guests (gated), infinite for members -->
       <section style="padding:8px 0 18px">
-        <div class="hv-section-head">
+        <div v-if="!isGuest" class="hv-section-head">
           <span class="fx-headline">Recommended for you</span>
           <select v-model="sortBy" class="hv-sort" aria-label="Sort providers">
             <option value="recommended">Recommended</option>
@@ -108,12 +124,20 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
         </div>
 
         <div class="hv-grid">
-          <ProviderGridCard v-for="p in recommended" :key="p.id" :provider="p" show-favorite @select="openProvider" />
+          <ProviderGridCard v-for="p in (isGuest ? guestCards : recommended)" :key="p.id"
+                            :provider="p" :show-favorite="!isGuest" @select="openProvider" />
         </div>
-        <div ref="sentinel" style="height:1px"></div>
-        <div v-if="loading" style="text-align:center;padding:18px 0;color:var(--fx-muted);font-size:13px">Loading…</div>
-        <div v-else-if="done && recommended.length" style="text-align:center;padding:14px 0;color:var(--fx-muted-soft);font-size:12px">— end —</div>
-        <div v-else-if="done && !recommended.length" style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">No providers yet.</div>
+
+        <template v-if="!isGuest">
+          <div ref="sentinel" style="height:1px"></div>
+          <div v-if="loading" style="text-align:center;padding:18px 0;color:var(--fx-muted);font-size:13px">Loading…</div>
+          <div v-else-if="done && recommended.length" style="text-align:center;padding:14px 0;color:var(--fx-muted-soft);font-size:12px">— end —</div>
+          <div v-else-if="done && !recommended.length" style="text-align:center;padding:24px 0;color:var(--fx-muted);font-size:14px">No providers yet.</div>
+        </template>
+
+        <button v-if="isGuest" class="btn btn-primary w-100" style="margin-top:16px;height:50px;border-radius:999px;font-weight:700" @click="promptLogin()">
+          Sign in to get started
+        </button>
       </section>
     </div>
   </div>
@@ -165,6 +189,7 @@ function openProvider(p)   { router.push({ name: 'provider-profile', params: { i
   display: flex; align-items: center; justify-content: center;
 }
 .hv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.hv-avatar img.hv-avatar-logo { object-fit: contain; padding: 4px; background: #fff; }
 
 /* page content padding �?full-bleed so the rail can scroll edge-to-edge */
 .hv-content { max-width: 640px; margin: 0 auto; padding: 0 20px; }

@@ -8,9 +8,18 @@
 //
 // Standalone (reads the JWT from localStorage) to avoid a cycle with api.js.
 
+import { reactive } from 'vue'
+
 const BASE = import.meta.env.VITE_API_URL || 'https://fixit.olgtx.com/api'
 const te = new TextEncoder()
 const td = new TextDecoder()
+
+// Debug capsule feed: the most recent sensitive requests' payloads, both ways.
+export const secureDebug = reactive({ events: [] })
+function pushDebug(e) {
+  secureDebug.events.unshift(e)
+  if (secureDebug.events.length > 25) secureDebug.events.pop()
+}
 
 let session = null // { id, master, mac, salt, counter, expiresAt }
 
@@ -148,14 +157,25 @@ export async function secureRequest(method, path, body) {
   })
 
   const text = await res.text()
+  const encryptedResp = res.headers.get('X-Sec-Enc') === '1'
   let data = null
-  if (res.headers.get('X-Sec-Enc') === '1') {
+  let respPlain = text
+  if (encryptedResp) {
     const respKey = await hkdf(s.master, s.salt, `fixit/v2/response/${counter}/${nonce}`)
     const aadResp = `fixit/v2|response|${s.id}|${counter}|${nonce}|${ts}|${extra}`
-    const plain = await aesDecrypt(respKey, unb64(text), aadResp)
-    data = plain ? JSON.parse(plain) : null
+    respPlain = await aesDecrypt(respKey, unb64(text), aadResp)
+    data = respPlain ? JSON.parse(respPlain) : null
   } else if (text) {
     try { data = JSON.parse(text) } catch { data = { error: text } }
   }
+
+  pushDebug({
+    method, path: fullPath, encrypted: encryptedResp,
+    encBefore: JSON.stringify(body ?? {}),
+    encAfter: bodyB64,
+    decBefore: text,
+    decAfter: respPlain,
+  })
+
   return { ok: res.ok, status: res.status, data }
 }
