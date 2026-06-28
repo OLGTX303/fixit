@@ -5,8 +5,11 @@ import { useAuthStore } from '../stores/auth'
 import { useBookingsStore } from '../stores/bookings'
 import { useWalletStore } from '../stores/wallet'
 import * as api from '../services/api'
+import { promptLogin } from '../composables/useLoginPrompt'
+import fixitLogo from '../assets/fixit-logo.svg'
 
 const auth   = useAuthStore()
+const isGuest = computed(() => !auth.isAuthenticated)
 const router = useRouter()
 const bookingsStore = useBookingsStore()
 const wallet = useWalletStore()
@@ -18,6 +21,7 @@ const isProvider = computed(() => auth.role === 'provider')
 
 // ── Customer data ──────────────────────────────────────────────────
 onMounted(async () => {
+  if (isGuest.value) return
   if (isAdmin.value) {
     await loadAdminStats()
   } else {
@@ -79,6 +83,18 @@ const CUSTOMER_QUICK = [
 
 <template>
   <div class="acv-root fx-view-root">
+
+    <!-- ── Guest: tap to log in (logo as avatar) ── -->
+    <div v-if="isGuest" class="acv-guest" @click="promptLogin()">
+      <img :src="fixitLogo" alt="FixIt" class="acv-guest-avatar" />
+      <div class="acv-guest-text">
+        <div class="acv-guest-title">点击登录 · Tap to log in</div>
+        <div class="acv-guest-sub">Sign in to view orders, wallet, and messages</div>
+      </div>
+      <span class="material-symbols-outlined" style="color:var(--fx-muted-soft)">chevron_right</span>
+    </div>
+
+    <template v-else>
 
     <!-- ── Hero ── -->
     <div class="acv-hero" :class="isAdmin ? 'hero-admin' : 'hero-customer'">
@@ -306,12 +322,26 @@ const CUSTOMER_QUICK = [
 
     </template>
 
+    </template>
+
     <div class="fx-mobile-spacer"></div>
   </div>
 </template>
 
 <style scoped>
 .acv-root { min-height: 100vh; padding-bottom: 8px; }
+.acv-guest {
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  margin: 16px; padding: 18px 16px; border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+.acv-guest-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: contain; background: #fff; padding: 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.acv-guest-text { flex: 1; min-width: 0; }
+.acv-guest-title { font-size: 18px; font-weight: 800; color: var(--fx-text); }
+.acv-guest-sub { font-size: 13px; color: var(--fx-muted); margin-top: 2px; }
 
 /* ── Hero ── */
 .acv-hero {

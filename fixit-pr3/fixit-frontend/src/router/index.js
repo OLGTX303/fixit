@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { isDesktop } from '../composables/useViewport.js'
+import { loginSheetOpen } from '../composables/useLoginPrompt.js'
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', redirect: '/home' },
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true } },
   { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { public: true } },
   { path: '/legal/terms', name: 'legal-terms', component: () => import('../views/legal/LegalDocumentView.vue'), meta: { public: true, legalKey: 'terms' } },
@@ -60,12 +62,18 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
-// Role-aware guard: must be logged in for non-public routes, and the route's
-// role (if any) must match the session role.
+// Guests may browse home + their (empty) account hub; everything else is gated.
+// Desktop opens the login bottom-sheet over home; mobile goes to the /login page.
+const GUEST_OK = new Set(['home', 'account'])
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
   if (to.meta.public) return true
-  if (!auth.isAuthenticated) return { name: 'login' }
+  if (!auth.isAuthenticated) {
+    if (GUEST_OK.has(to.name)) return true
+    if (isDesktop.value) { loginSheetOpen.value = true; return { name: 'home' } }
+    return { name: 'login' }
+  }
   if (to.meta.role && to.meta.role !== auth.role) {
     const landing = { customer: 'home', provider: 'pro-requests', admin: 'admin-verify' }
     return { name: landing[auth.role] || 'login' }

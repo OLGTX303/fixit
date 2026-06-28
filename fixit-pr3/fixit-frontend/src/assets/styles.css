@@ -825,7 +825,8 @@ body.fx-modal-open .fx-rightnav {
   transition: color 0.2s ease;
   position: relative; z-index: 1;
 }
-.fx-bottomnav .nav-item.active { color: #fff; }
+.fx-bottomnav .nav-item.active { color: #FF6635; }
+.fx-bottomnav .nav-item.active .nav-icon-wrap { color: #fff; }
 .fx-bottomnav .nav-item.active .nav-icon-wrap {
   background: linear-gradient(160deg, #FF8056 0%, #FF6635 55%, #E8501C 100%);
   box-shadow:
@@ -900,7 +901,8 @@ body.provider-page .fx-rightnav {
   background: rgba(255,255,255,0.18);
   color: var(--fx-text);
 }
-.fx-rightnav .nav-item.active { color: #fff; }
+.fx-rightnav .nav-item.active { color: #FF6635; }
+.fx-rightnav .nav-item.active .nav-icon-wrap { color: #fff; }
 .fx-rightnav .nav-item.active .nav-icon-wrap {
   background: linear-gradient(160deg, #FF8056 0%, #FF6635 55%, #E8501C 100%);
   box-shadow:
@@ -942,22 +944,10 @@ body.fx-desktop {
     padding-top: max(12px, env(safe-area-inset-top));
     display: flex;
     flex-direction: column;
-    /* Fixed viewport height (not min-height) so a long contact list scrolls
-       inside its own panel instead of growing the page and sliding the whole
-       split. min-height:0 defeats flexbox's auto min so the inner lists
-       (.msg-conv-list, .chat-list) actually own the scroll. */
-    flex: 0 0 auto;
-    height: calc(100vh - env(safe-area-inset-top));
-    min-height: 0;
+    min-height: calc(100vh - env(safe-area-inset-top));
     overflow: hidden;
     box-sizing: border-box;
   }
-  /* Propagate the height cap so only the scroll containers scroll. */
-  .fx-main--full .msg-panel-left,
-  .fx-main--full .msg-panel-right,
-  .fx-main--full .msg-conv-list,
-  .fx-main--full .chat-root,
-  .fx-main--full .chat-list { min-height: 0; }
   .fx-bottomnav { display: none !important; }
   .fx-rightnav  { display: flex; }
 

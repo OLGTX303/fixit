@@ -317,6 +317,7 @@ const label = s => s.replace('_', ' ')
                 {{ f==='All'?'All':label(f) }}
               </span>
             </div>
+            <div class="crm-blist">
             <div v-for="b in filtered" :key="b.id" class="crm-brow">
               <div class="crm-bdot" :style="{ background:STATUS_COLOR[b.status] }"/>
               <div class="crm-binfo">
@@ -326,6 +327,7 @@ const label = s => s.replace('_', ' ')
               <span class="crm-btotal">RM {{ b.total }}</span>
             </div>
             <div v-if="!filtered.length" class="crm-empty">No bookings</div>
+            </div>
           </div>
 
         </div>
@@ -456,6 +458,7 @@ const label = s => s.replace('_', ' ')
 @media (min-width: 760px) { .crm-panel { flex: 1.5; min-width: 0; } }
 .crm-right { display: flex; flex-direction: column; gap: 12px; }
 @media (min-width: 760px) { .crm-right { flex: 1; min-width: 0; } }
+@media (min-width: 760px) { .crm-blist { max-height: 200px; overflow-y: auto; } }
 
 .crm-panel-hdr   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .crm-panel-title { font-size: 13px; font-weight: 700; }

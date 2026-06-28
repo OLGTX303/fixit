@@ -7,6 +7,8 @@ import { useBookingsStore } from './stores/bookings'
 import AppIcon from './components/AppIcon.vue'
 import FxAuroraBg from './components/FxAuroraBg.vue'
 import LegalFooter from './components/LegalFooter.vue'
+import LoginSheet from './components/LoginSheet.vue'
+import DebugCapsule from './components/DebugCapsule.vue'
 // Single viewport condition for ALL pages (self-syncs body.fx-desktop/fx-mobile).
 	import { isDesktop } from './composables/useViewport.js'
 
@@ -63,8 +65,10 @@ const NAVS = {
 }
 
 	const isLegalPage = computed(() => route.name === 'legal-terms' || route.name === 'legal-privacy')
-	const showShell   = computed(() => auth.isAuthenticated && !route.meta.public && !isLegalPage.value)
-	const navItems    = computed(() => NAVS[auth.role] || [])
+	// Guests may see the shell on home + their account hub (guest states).
+	const isGuestRoute = computed(() => route.name === 'home' || route.name === 'account')
+	const showShell   = computed(() => (auth.isAuthenticated || isGuestRoute.value) && !route.meta.public && !isLegalPage.value)
+	const navItems    = computed(() => NAVS[auth.role] || NAVS.customer)
 	const SPLIT_ROUTES = ['messages', 'cart', 'pro-chats', 'admin-chats']
 	const isSplitRoute = computed(() => SPLIT_ROUTES.includes(route.name))
 	const mainFull = computed(() => isDesktop.value && isSplitRoute.value)
@@ -150,5 +154,9 @@ function isActive(item) {
       <router-view />
       <LegalFooter v-if="!isLegalPage" class="fx-page" style="padding-top:0" />
     </main>
+
+    <!-- Guest login (desktop bottom-sheet) + encryption debug capsule -->
+    <LoginSheet />
+    <DebugCapsule />
   </div>
 </template>
