@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useProvidersStore } from './stores/providers'
@@ -91,6 +91,12 @@ async function go(item) {
   }
   router.push({ name: item.to })
 }
+// Mobile scrolls inside .fx-main (not the document), so reset its scroll on
+// each navigation — the router's window-level scrollBehavior no longer applies.
+watch(() => route.fullPath, () => {
+  nextTick(() => { document.querySelector('.fx-main')?.scrollTo?.(0, 0) })
+})
+
 const CHAT_CHILD_ROUTES = { messages: ['chat'], 'pro-chats': ['pro-chat'], 'admin-chats': ['admin-chat'] }
 function isActive(item) {
   if (route.name === item.to) return true

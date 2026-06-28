@@ -15,6 +15,42 @@ export function useInfiniteList(fetchPage, pageSize = 20) {
   const offset  = ref(0)
   const sentinel = ref(null)
   let observer = null
+  let scroller = null   // the element (or window) that actually scrolls
+
+  // The scroller may be the document (desktop) or an inner container
+  // (mobile shell uses overflow:auto on .fx-main). Observe against whichever
+  // actually scrolls, or the observer never fires inside a container.
+  function scrollRoot(el) {
+    let p = el?.parentElement
+    while (p && p !== document.body) {
+      const oy = getComputedStyle(p).overflowY
+      if (oy === 'auto' || oy === 'scroll') return p
+      p = p.parentElement
+    }
+    return null // viewport
+  }
+  function onScroll() {
+    const el = scroller
+    const nearBottom = el && el !== window
+      ? el.scrollTop + el.clientHeight >= el.scrollHeight - 400
+      : window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 400
+    if (nearBottom) loadMore()
+  }
+  function attach() {
+    observer?.disconnect()
+    scroller?.removeEventListener?.('scroll', onScroll)
+    if (!sentinel.value) return
+    const root = scrollRoot(sentinel.value)
+    observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore() },
+      { root, rootMargin: '300px' },
+    )
+    observer.observe(sentinel.value)
+    // Scroll-position fallback — robust if IntersectionObserver misses inside
+    // a container scroller (some WebViews/edge cases).
+    scroller = root || window
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+  }
 
   async function loadMore() {
     if (loading.value || done.value) return
@@ -40,22 +76,14 @@ export function useInfiniteList(fetchPage, pageSize = 20) {
   }
 
   onMounted(() => {
-    observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMore() },
-      { rootMargin: '300px' },
-    )
-    if (sentinel.value) observer.observe(sentinel.value)
+    attach()
     reset()
   })
 
-  // Re-observe whenever the sentinel element mounts/changes (e.g. v-if results).
-  watch(sentinel, (el, old) => {
-    if (!observer) return
-    if (old) observer.unobserve(old)
-    if (el) observer.observe(el)
-  })
+  // Re-attach whenever the sentinel element mounts/changes (e.g. v-if results).
+  watch(sentinel, () => attach())
 
-  onUnmounted(() => observer?.disconnect())
+  onUnmounted(() => { observer?.disconnect(); scroller?.removeEventListener?.('scroll', onScroll) })
 
   return { items, loading, done, offset, sentinel, loadMore, reset }
 }
