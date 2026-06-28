@@ -21,7 +21,7 @@ onMounted(async () => {
   } catch { /* ignore */ }
 })
 
-function logout() { auth.logout(); router.push({ name: 'login' }) }
+function logout() { auth.logout(); router.push({ name: 'home' }) }
 
 function clearCache() {
   clearAppCache()

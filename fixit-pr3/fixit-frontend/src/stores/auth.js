@@ -67,8 +67,9 @@ export const useAuthStore = defineStore('auth', {
     },
     logoutAndRedirect() {
       this.logout()
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+      // Guests live on home now (not /login).
+      if (window.location.pathname !== '/home') {
+        window.location.href = '/home'
       }
     },
   },
