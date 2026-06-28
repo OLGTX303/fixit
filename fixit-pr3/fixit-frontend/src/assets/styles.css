@@ -754,6 +754,19 @@ body.fx-desktop .lg-overlay-center {
   padding-bottom: 100px;
 }
 
+/* Mobile (incl. Capacitor WebView): scroll INSIDE the main, not the document.
+   Android WebView repositions position:fixed elements during document fling-
+   scroll, so the floating dock visibly drifts on the tall home feed. With an
+   inner scroller the document never scrolls and the dock stays rock-stable. */
+body.fx-mobile .fx-shell { height: 100dvh; overflow: hidden; }
+body.fx-mobile .fx-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Status bar — full liquid glass treatment */
 .fx-statusbar-bg {
   position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
