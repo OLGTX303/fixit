@@ -769,7 +769,7 @@ body.fx-desktop .lg-overlay-center {
 body.sheet-open .fx-bottomnav,
 body.provider-page .fx-bottomnav,
 body.fx-modal-open .fx-bottomnav {
-  transform: translateX(-50%) translateY(120%);
+  transform: translate3d(-50%, 120%, 0);
   pointer-events: none;
   transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
 }
@@ -781,7 +781,11 @@ body.fx-modal-open .fx-rightnav {
   transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
   position: fixed;
   bottom: max(20px, env(safe-area-inset-bottom));
-  left: 50%; transform: translateX(-50%);
+  /* Own GPU layer so the tall, growing home feed scrolling underneath can't
+     force the dock to repaint/shift — keeps it rock-stable on mobile. */
+  left: 50%; transform: translate3d(-50%, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
   width: calc(100% - 40px); max-width: 460px;
   border-radius: 999px;
   /* Glass dock — translucent enough to look like glass, readable over content */
