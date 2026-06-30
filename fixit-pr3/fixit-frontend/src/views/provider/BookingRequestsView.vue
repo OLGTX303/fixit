@@ -12,6 +12,8 @@ const auth = useAuthStore()
 
 const tab = ref('new')
 const brokenAvatars = ref({})
+const actionBusy = ref({})
+const actionError = ref('')
 
 const myProviderId = computed(() =>
   providersStore.providers.find(p => p.user_id === auth.user?.id)?.id)
@@ -43,10 +45,42 @@ const shown = computed(() => {
   return done.value
 })
 
-async function accept(b)  { await bookingsStore.advanceStatus(b.id, 'accepted') }
-async function decline(b) { await bookingsStore.remove(b.id) }
-async function setStatus(b, key) { await bookingsStore.advanceStatus(b.id, key) }
-async function complete(b) { await bookingsStore.advanceStatus(b.id, 'completed') }
+function busyKey(b, action) {
+  return `${b.id}:${action}`
+}
+
+function isBusy(b, action) {
+  return !!actionBusy.value[busyKey(b, action)]
+}
+
+async function runJobAction(b, action, fn) {
+  const key = busyKey(b, action)
+  actionError.value = ''
+  actionBusy.value = { ...actionBusy.value, [key]: true }
+  try {
+    await fn()
+  } catch (err) {
+    actionError.value = err.message || 'Could not update this job. Please try again.'
+  } finally {
+    const next = { ...actionBusy.value }
+    delete next[key]
+    actionBusy.value = next
+  }
+}
+
+async function accept(b)  {
+  await runJobAction(b, 'accept', () => bookingsStore.advanceStatus(b.id, 'accepted'))
+}
+async function decline(b) {
+  if (!window.confirm(`Decline ${b.customer?.name || 'this customer'}'s booking request?`)) return
+  await runJobAction(b, 'decline', () => bookingsStore.remove(b.id))
+}
+async function setStatus(b, key) {
+  await runJobAction(b, key, () => bookingsStore.advanceStatus(b.id, key))
+}
+async function complete(b) {
+  await runJobAction(b, 'completed', () => bookingsStore.advanceStatus(b.id, 'completed'))
+}
 
 function openChat(b) { router.push({ name: 'pro-chat', params: { id: b.id } }) }
 
@@ -68,6 +102,10 @@ const STATUS_COLOR = {
     <div class="brv-header">
       <h1 class="brv-title">My Jobs</h1>
       <span v-if="newJobs.length" class="brv-new-badge">{{ newJobs.length }} new</span>
+    </div>
+    <div v-if="actionError" class="brv-error">
+      <span class="material-symbols-outlined" style="font-size:16px">error</span>
+      {{ actionError }}
     </div>
 
     <!-- Sub-tabs -->
@@ -99,10 +137,12 @@ const STATUS_COLOR = {
             <div class="brv-amount">RM{{ b.total }}</div>
           </div>
           <div class="brv-actions">
-            <button class="brv-btn outline-danger" @click="decline(b)">Decline</button>
-            <button class="brv-btn primary" @click="accept(b)">
+            <button class="brv-btn outline-danger" :disabled="isBusy(b, 'decline') || isBusy(b, 'accept')" @click="decline(b)">
+              {{ isBusy(b, 'decline') ? 'Declining...' : 'Decline' }}
+            </button>
+            <button class="brv-btn primary" :disabled="isBusy(b, 'accept') || isBusy(b, 'decline')" @click="accept(b)">
               <span class="material-symbols-outlined" style="font-size:16px">check_circle</span>
-              Accept
+              {{ isBusy(b, 'accept') ? 'Accepting...' : 'Accept' }}
             </button>
           </div>
         </div>
@@ -157,13 +197,13 @@ const STATUS_COLOR = {
               <span class="material-symbols-outlined" style="font-size:16px">chat</span>
               Chat
             </button>
-            <button v-if="b.status==='accepted'" class="brv-btn primary" @click="setStatus(b,'in_progress')">
+            <button v-if="b.status==='accepted'" class="brv-btn primary" :disabled="isBusy(b, 'in_progress')" @click="setStatus(b,'in_progress')">
               <span class="material-symbols-outlined" style="font-size:16px">directions_run</span>
-              Start Work
+              {{ isBusy(b, 'in_progress') ? 'Starting...' : 'Start Work' }}
             </button>
-            <button v-else-if="b.status==='in_progress'" class="brv-btn success" @click="complete(b)">
+            <button v-else-if="b.status==='in_progress'" class="brv-btn success" :disabled="isBusy(b, 'completed')" @click="complete(b)">
               <span class="material-symbols-outlined" style="font-size:16px">task_alt</span>
-              Mark Complete
+              {{ isBusy(b, 'completed') ? 'Completing...' : 'Mark Complete' }}
             </button>
           </div>
         </div>
@@ -215,6 +255,12 @@ const STATUS_COLOR = {
 .brv-new-badge {
   padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
   background: #FF6635; color: #fff;
+}
+.brv-error {
+  display: flex; align-items: center; gap: 6px;
+  margin: -4px 0 12px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(239,68,68,0.10); color: #dc2626;
+  font-size: 12px; font-weight: 700;
 }
 
 /* Tabs */
@@ -294,6 +340,7 @@ const STATUS_COLOR = {
 .brv-btn.ghost   { background: var(--fx-glass-bg); color: var(--fx-text); border: 1.5px solid var(--fx-border); flex: 0 0 auto; padding: 9px 14px; }
 .brv-btn.sm      { padding: 6px 10px; font-size: 12px; flex: 0 0 auto; }
 .brv-btn.outline-danger { background: transparent; color: #ef4444; border: 1.5px solid #ef4444; }
+.brv-btn:disabled { opacity: 0.62; cursor: wait; }
 
 .brv-done-row { display: flex; align-items: center; justify-content: space-between; }
 
