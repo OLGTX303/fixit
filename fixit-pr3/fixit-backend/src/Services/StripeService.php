@@ -418,54 +418,17 @@ final class StripeService
         );
     }
 
-    private function creditWalletBookingRefund(int $userId, int $bookingId): bool
-    {
-        $ref = 'booking_pay_' . $bookingId;
-        $pdo = Connection::get();
-        $stmt = $pdo->prepare(
-            "SELECT amount_cents FROM WalletTransaction
-             WHERE user_id = :uid AND kind = 'booking_pay' AND stripe_ref = :ref AND status = 'settled'
-             LIMIT 1"
-        );
-        $stmt->execute(['uid' => $userId, 'ref' => $ref]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$row) {
-            return false;
-        }
-        $debited = abs((int) $row['amount_cents']);
-        if ($debited <= 0) {
-            return false;
-        }
-        $refundRef = 'booking_refund_' . $bookingId;
-        $chk = $pdo->prepare(
-            "SELECT 1 FROM WalletTransaction WHERE kind = 'booking_refund' AND stripe_ref = :ref LIMIT 1"
-        );
-        $chk->execute(['ref' => $refundRef]);
-        if ($chk->fetchColumn()) {
-            return true;
-        }
-        $this->wallet->add(
-            $userId,
-            'booking_refund',
-            $debited,
-            'myr',
-            $refundRef,
-            'Booking #' . $bookingId . ' refund (wallet)'
-        );
-        return true;
-    }
-
     // ── Wallet ────────────────────────────────────────────────────────────
     // The wallet is a ledger (WalletModel). Top-up = a real PaymentIntent on the
     // saved card; withdraw = a real Refund of prior top-ups. Both produce real
     // Stripe sandbox objects AND a settled ledger row — no fake balances.
 
-    public function getWallet(int $userId): array
+    public function getWallet(int $userId, ?string $fromDate = null, ?string $toDate = null): array
     {
         return [
             'balance_cents' => $this->wallet->balanceCents($userId),
             'currency' => 'myr',
-            'transactions' => $this->wallet->list($userId),
+            'transactions' => $this->wallet->list($userId, 50, $fromDate, $toDate),
             'mode' => 'test',
         ];
     }
@@ -672,10 +635,6 @@ final class StripeService
     public function refundBookingIfPaid(int $bookingId, int $customerUserId): bool
     {
         $payments = $this->payments->findAllSucceededByBooking($bookingId);
-        if (!$payments) {
-            return false;
-        }
-
         $refundedAny = false;
         foreach ($payments as $payment) {
             if ((int) $payment['user_id'] !== $customerUserId) {
@@ -684,7 +643,7 @@ final class StripeService
 
             $piId = (string) $payment['stripe_payment_intent_id'];
             if (str_starts_with($piId, 'wallet_booking_')) {
-                if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
+                if ($this->wallet->refundBookingPayment($customerUserId, $bookingId)) {
                     $refundedAny = true;
                 }
                 continue;
@@ -713,7 +672,7 @@ final class StripeService
             $refundedAny = true;
         }
 
-        if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
+        if ($this->wallet->refundBookingPayment($customerUserId, $bookingId)) {
             $refundedAny = true;
         }
 

@@ -257,6 +257,8 @@ final class BookingController
                 } catch (\Throwable $e) {
                     return ResponseHelper::error($response, 'Refund failed: ' . $e->getMessage(), 502);
                 }
+            } else {
+                (new WalletModel())->refundBookingPayment((int) $booking['customer_id'], $id);
             }
             $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
             if ($providerUserId > 0) {

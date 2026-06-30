@@ -3,12 +3,14 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
+import { useWalletStore } from '../../stores/wallet'
 import { useInfiniteList } from '../../composables/useInfiniteList'
 import { useModalGuard } from '../../composables/useModalGuard'
 import * as api from '../../services/api'
 
 const auth = useAuthStore()
 const bookingsStore = useBookingsStore()
+const walletStore = useWalletStore()
 const router = useRouter()
 const activeTab = ref('all')
 const cancellingId = ref(null)
@@ -146,6 +148,7 @@ async function doCancel(b) {
     await api.updateBookingStatus(b.id, 'cancelled')
     b.status = 'cancelled'
     bookingsStore.resetCache()
+    await walletStore.load().catch(() => null)
     confirmId.value = null
   } catch (e) {
     alert(e.message || 'Could not cancel booking')

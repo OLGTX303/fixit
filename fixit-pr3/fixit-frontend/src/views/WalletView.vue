@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useBookingsStore } from '../stores/bookings'
 import { useWalletStore } from '../stores/wallet'
@@ -16,11 +16,78 @@ const isProvider = computed(() => auth.role === 'provider')
 // ── Wallet balance �?from the server ledger (single source of truth) ─────────
 const balance = computed(() => wallet.balanceCents / 100)
 
+const selectedRange = ref('all')
+const customFrom = ref('')
+const customTo = ref('')
+
+const RANGE_PRESETS = [
+  { key: 'all', label: 'All dates' },
+  { key: 'today', label: 'Today' },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: '90d', label: 'Last 90 days' },
+  { key: '1y', label: 'Last 1 year' },
+]
+
+function dateKey(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function daysAgo(days) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - days)
+  return dateKey(d)
+}
+
+function rangeForPreset(key) {
+  const today = daysAgo(0)
+  if (key === 'today') return { from: today, to: today }
+  if (key === 'yesterday') {
+    const yesterday = daysAgo(1)
+    return { from: yesterday, to: yesterday }
+  }
+  if (key === '7d') return { from: daysAgo(6), to: today }
+  if (key === '30d') return { from: daysAgo(29), to: today }
+  if (key === '90d') return { from: daysAgo(89), to: today }
+  if (key === '1y') return { from: daysAgo(364), to: today }
+  return { from: '', to: '' }
+}
+
+function selectRange(key) {
+  selectedRange.value = key
+  const range = rangeForPreset(key)
+  customFrom.value = range.from
+  customTo.value = range.to
+}
+
+function markCustomRange() {
+  selectedRange.value = 'custom'
+}
+
+const dateRange = computed(() => {
+  let from = customFrom.value
+  let to = customTo.value
+  if (from && to && from > to) [from, to] = [to, from]
+  return { from, to }
+})
+
+const walletLoadOpts = computed(() => ({
+  from: dateRange.value.from,
+  to: dateRange.value.to,
+}))
+
 onMounted(async () => {
   await bookingsStore.load()
   // Providers need the ledger too �?their earnings are credited to the same
   // real wallet when jobs complete, so "My Earnings" reads the server balance.
-  try { await wallet.load() } catch { /* stripe may be unconfigured */ }
+  try { await wallet.load(walletLoadOpts.value) } catch { /* stripe may be unconfigured */ }
+})
+
+watch(dateRange, async () => {
+  try { await wallet.load(walletLoadOpts.value) } catch { /* stripe may be unconfigured */ }
 })
 
 // ── Top-up / withdraw bottom sheet ───────────────────────────────────────────
@@ -138,6 +205,7 @@ async function realTopUp() {
   if (res.requires_action) {
     throw new Error('Card needs extra authentication �?try a 4242 test card')
   }
+  await wallet.load(walletLoadOpts.value)
   stripeOk.value = true
   setTimeout(() => closeSheet(), 1800)
 }
@@ -179,6 +247,7 @@ async function doWithdraw() {
   stripeErr.value  = ''
   try {
     await wallet.withdraw(Math.round(topupAmt.value * 100))
+    await wallet.load(walletLoadOpts.value)
     stripeOk.value = true
     setTimeout(() => closeSheet(), 1800)
   } catch (e) {
@@ -230,11 +299,9 @@ const transactions = computed(() => {
     // Real ledger entries �?job payouts (and any withdrawals) from the server.
     wallet.transactions.forEach(tx => {
       const positive = tx.amount_cents > 0
-      const label = tx.kind === 'payout' ? 'Job Payout'
-        : tx.kind === 'topup' ? 'Wallet Top Up' : 'Withdrawal'
       txs.push({
         id: `w${tx.id}`,
-        label,
+        label: txLabel(tx.kind),
         sub: tx.note || '',
         amount: `${positive ? '+' : '-'}RM ${(Math.abs(tx.amount_cents) / 100).toFixed(2)}`,
         positive,
@@ -247,27 +314,38 @@ const transactions = computed(() => {
       const positive = tx.amount_cents > 0
       txs.push({
         id: `w${tx.id}`,
-        label: tx.kind === 'topup' ? 'Wallet Top Up' : 'Withdrawal',
-        sub: tx.note || (tx.kind === 'topup' ? 'Via Stripe (test)' : 'Refund to card'),
+        label: txLabel(tx.kind),
+        sub: tx.note || txFallbackSub(tx.kind),
         amount: `${positive ? '+' : '-'}RM ${(Math.abs(tx.amount_cents) / 100).toFixed(2)}`,
         positive,
         date: tx.created_at,
       })
     })
-    bookingsStore.forCustomer(auth.user?.id)
-      .filter(b => ['completed','reviewed'].includes(b.status))
-      .forEach(b => txs.push({
-        id: b.id,
-        label: `${b.category?.name || 'Service'} · #${b.id}`,
-        sub: b.provider?.name || 'Provider',
-        amount: `-RM ${parseFloat(b.total_price || b.provider?.base_rate || 0).toFixed(2)}`,
-        positive: false,
-        date: b.updated_at || b.created_at,
-      }))
-    txs.sort((a, b) => new Date(b.date) - new Date(a.date))
   }
-  return txs
+  return txs.sort((a, b) => new Date(b.date) - new Date(a.date))
 })
+
+function txLabel(kind) {
+  return ({
+    topup: 'Wallet Top Up',
+    withdraw: 'Withdrawal',
+    booking_pay: 'Booking Payment',
+    booking_refund: 'Booking Refund',
+    payout: 'Job Payout',
+    adjustment: 'Adjustment',
+  })[kind] || 'Wallet Transaction'
+}
+
+function txFallbackSub(kind) {
+  return ({
+    topup: 'Wallet top-up',
+    withdraw: 'Refund to card',
+    booking_pay: 'Paid from wallet',
+    booking_refund: 'Returned to wallet',
+    payout: 'Job earnings',
+    adjustment: 'Wallet adjustment',
+  })[kind] || ''
+}
 
 function fmtDate(d) {
   if (!d) return ''
@@ -343,6 +421,32 @@ function fmtDate(d) {
       <div class="wv-section-head">
         <span class="wv-section-title">{{ isProvider ? 'Earnings History' : 'Transactions' }}</span>
       </div>
+      <section class="wv-range">
+        <div class="wv-range-presets" aria-label="Transaction date range">
+          <button
+            v-for="range in RANGE_PRESETS"
+            :key="range.key"
+            class="wv-range-chip"
+            :class="{ active: selectedRange === range.key }"
+            type="button"
+            @click="selectRange(range.key)"
+          >
+            {{ range.label }}
+          </button>
+        </div>
+
+        <div class="wv-custom-range">
+          <label class="wv-date-field">
+            <span>From</span>
+            <input v-model="customFrom" type="date" @input="markCustomRange">
+          </label>
+          <span class="wv-date-dash">-</span>
+          <label class="wv-date-field">
+            <span>To</span>
+            <input v-model="customTo" type="date" @input="markCustomRange">
+          </label>
+        </div>
+      </section>
       <div v-if="!transactions.length" class="wv-empty">
         <span class="material-symbols-outlined" style="font-size:42px;opacity:.2">receipt_long</span>
         <p>No transactions yet.</p>
@@ -562,6 +666,44 @@ function fmtDate(d) {
 .wv-section { padding: 0 0 20px; }
 .wv-section-head { padding: 8px 16px 10px; }
 .wv-section-title { font-size: 16px; font-weight: 700; color: var(--fx-text); }
+.wv-range {
+  padding: 0 16px 10px;
+}
+.wv-range-presets {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px;
+  scrollbar-width: none;
+}
+.wv-range-presets::-webkit-scrollbar { display: none; }
+.wv-range-chip {
+  flex-shrink: 0; border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
+  background: rgba(255,255,255,0.68); color: var(--fx-muted);
+  padding: 8px 12px; font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; white-space: nowrap; transition: background .18s, color .18s, border-color .18s;
+}
+.wv-range-chip.active {
+  color: var(--fx-accent); background: rgba(255,102,53,0.12); border-color: rgba(255,102,53,0.28);
+}
+.wv-custom-range {
+  display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 8px; align-items: end;
+}
+.wv-date-field {
+  min-width: 0; display: flex; flex-direction: column; gap: 5px;
+  color: var(--fx-muted); font-size: 11px; font-weight: 700;
+}
+.wv-date-field input {
+  min-width: 0; width: 100%; height: 38px; border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.75);
+  color: var(--fx-text); padding: 0 10px; font: inherit; font-size: 13px; font-weight: 600;
+}
+.wv-date-field input:focus {
+  outline: none; border-color: rgba(255,102,53,0.55);
+  box-shadow: 0 0 0 3px rgba(255,102,53,0.12);
+}
+.wv-date-dash {
+  height: 38px; display: flex; align-items: center; color: var(--fx-muted);
+  font-weight: 800;
+}
 .wv-empty {
   text-align: center; padding: 40px 24px; color: var(--fx-muted);
   font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;
