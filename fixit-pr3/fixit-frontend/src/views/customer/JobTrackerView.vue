@@ -274,7 +274,7 @@ async function doCancel(b) {
       <div v-if="confirmId" class="lg-overlay-center" @click.self="dismissCancel">
         <div class="lg-modal liquid-glass-high jt-modal">
           <h3 class="jt-modal-title">Cancel booking?</h3>
-          <p class="jt-modal-text">If you already paid, your card will be refunded automatically.</p>
+          <p class="jt-modal-text">If you already paid, the amount will be returned to your wallet.</p>
           <div class="jt-modal-actions">
             <button class="jt-btn outline" @click="dismissCancel">Keep booking</button>
             <button
