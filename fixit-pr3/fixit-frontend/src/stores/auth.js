@@ -17,6 +17,11 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     init() {
       api.setUnauthorizedHandler(() => this.logoutAndRedirect())
+      if (this.token) this.registerPush()
+    },
+    // Lazy import breaks the auth ↔ router ↔ push import cycle.
+    registerPush() {
+      import('../services/push').then((m) => m.initPush()).catch(() => {})
     },
     async login(email, password) {
       this.loading = true
@@ -25,6 +30,7 @@ export const useAuthStore = defineStore('auth', {
         const { token, user } = await api.login(email, password)
         this.token = token
         this.user = user
+        this.registerPush()
         return user
       } catch (e) {
         this.error = e.message
@@ -40,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
         const { token, user } = await api.register(payload)
         this.token = token
         this.user = user
+        this.registerPush()
         return user
       } catch (e) {
         this.error = e.message

@@ -37,6 +37,12 @@ function fmt(iso) {
 }
 const fmtRM = (n) => `RM ${Number(n || 0).toFixed(2)}`
 
+// Avatars (synced from the freshly-fetched booking: customer + provider both
+// carry avatar_url). Fall back to initials if absent or the image 404s.
+const broken = ref({})
+const initials = (n) => (n || '—').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+const avatarOk = (url, key) => url && !broken.value[key]
+
 // Order-history timeline. "reached" comes from the status rank so a completed
 // order never shows an earlier step as pending, even if its timestamp is null;
 // the timestamp is shown when present. Cancelled appears only when it happened.
@@ -104,16 +110,24 @@ const subtotal = computed(() => {
         <div class="fw-semibold mb-3" style="font-size:13px;color:var(--fx-muted)">ORDER SNAPSHOT</div>
 
         <div class="d-flex align-items-center gap-3 mb-3">
-          <div class="fx-avatar" style="width:46px;height:46px;background:var(--fx-blue-soft);color:var(--fx-blue)">
-            {{ (booking.provider?.name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() }}
-          </div>
+          <img v-if="avatarOk(booking.provider?.avatar_url, 'prov')" :src="booking.provider.avatar_url"
+               :alt="booking.provider?.name" class="od-avatar" @error="broken['prov'] = true" />
+          <div v-else class="od-avatar od-avatar-fallback">{{ initials(booking.provider?.name) }}</div>
           <div class="flex-grow-1">
             <div class="fw-semibold">{{ booking.provider?.name || '—' }}</div>
             <div style="font-size:12px;color:var(--fx-muted)">{{ booking.category?.name }}</div>
           </div>
         </div>
 
-        <div class="od-row"><span>Customer</span><b>{{ booking.customer?.name || '—' }}</b></div>
+        <div class="od-row">
+          <span>Customer</span>
+          <b class="d-flex align-items-center gap-2">
+            <img v-if="avatarOk(booking.customer?.avatar_url, 'cust')" :src="booking.customer.avatar_url"
+                 :alt="booking.customer?.name" class="od-avatar od-avatar-sm" @error="broken['cust'] = true" />
+            <span v-else class="od-avatar od-avatar-sm od-avatar-fallback">{{ initials(booking.customer?.name) }}</span>
+            {{ booking.customer?.name || '—' }}
+          </b>
+        </div>
         <div class="od-row"><span>Service</span><b>{{ booking.category?.name || '—' }}</b></div>
         <div class="od-row"><span>Scheduled</span><b>{{ fmt(booking.scheduled_at) || '—' }}</b></div>
         <div class="od-row"><span>Address</span><b class="text-end">{{ booking.address || '—' }}</b></div>
@@ -155,6 +169,12 @@ const subtotal = computed(() => {
 <style scoped>
 .od-root { min-height: 100vh; padding-bottom: 100px; }
 .od-badge { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; text-transform: capitalize; }
+
+.od-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.65); }
+.od-avatar-sm { width: 22px; height: 22px; border: 1.5px solid rgba(255,255,255,0.6); }
+.od-avatar-fallback { display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 14px; background: linear-gradient(160deg, #FF8056, #FF6635); }
+.od-avatar-sm.od-avatar-fallback { font-size: 9px; }
 
 .od-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; font-size: 13px; color: var(--fx-muted); }
 .od-row b { color: var(--fx-text); font-weight: 600; }
