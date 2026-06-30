@@ -76,6 +76,18 @@ function isCustomerMsg(m) {
   return m.sender_id === booking.value?.customer_id
 }
 
+function isProviderMsg(m) {
+  return m.sender_id === providerUserId.value
+}
+
+// A message that didn't come from the customer or the provider on this job is
+// from an admin/CS agent — true for both the admin's own outbound messages
+// and, from the customer/provider's point of view, any CS reply they receive.
+function isSupportMsg(m) {
+  if (!booking.value || m.is_system) return false
+  return !isCustomerMsg(m) && !isProviderMsg(m)
+}
+
 function isMine(m) {
   return m.sender_id === auth.user?.id
 }
@@ -90,7 +102,8 @@ function senderLabel(m) {
   if (!b) return 'User'
   if (m.sender_id === auth.user?.id && isAdmin.value) return 'Customer Service'
   if (isCustomerMsg(m)) return b.customer?.name || 'Customer'
-  return b.provider?.name || 'Provider'
+  if (isProviderMsg(m)) return b.provider?.name || 'Provider'
+  return 'Customer Service'
 }
 
 function avatarFor(m) {
@@ -415,7 +428,11 @@ async function sendQuick(text) {
 
         <div class="chat-col">
           <div v-if="isAdmin" class="chat-sender">{{ senderLabel(m) }}</div>
-          <div class="chat-bubble" :class="isOutgoing(m) ? 'bubble-out' : 'bubble-in'">
+          <div v-else-if="isSupportMsg(m)" class="chat-sender chat-sender-support">
+            <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">support_agent</span>
+            Customer Service
+          </div>
+          <div class="chat-bubble" :class="isOutgoing(m) ? 'bubble-out' : (isSupportMsg(m) ? 'bubble-support' : 'bubble-in')">
             <template v-if="bodyText(m) !== null">{{ bodyText(m) }}</template>
             <span v-else class="chat-encrypted">🔒 Encrypted message</span>
           </div>
@@ -645,6 +662,10 @@ async function sendQuick(text) {
 .chat-sender {
   font-size: 11px; color: var(--fx-muted); margin-bottom: 3px;
 }
+.chat-sender-support {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-weight: 700; color: var(--fx-accent);
+}
 
 .chat-bubble {
   padding: 10px 14px; border-radius: 18px;
@@ -656,6 +677,15 @@ async function sendQuick(text) {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 0.5px solid rgba(255,255,255,0.60);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
+  color: var(--fx-text);
+  border-bottom-left-radius: 4px;
+}
+.bubble-support {
+  background: rgba(255,102,53,0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255,102,53,0.30);
   box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
   color: var(--fx-text);
   border-bottom-left-radius: 4px;
