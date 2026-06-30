@@ -38,8 +38,15 @@ final class BookingController
         $limit = isset($params['limit']) ? (int) $params['limit'] : 50;
         $offset = isset($params['offset']) ? (int) $params['offset'] : 0;
         $status = isset($params['status']) ? (string) $params['status'] : null;
-        $bookings = (new BookingModel())->listForUser($user, $limit, $offset, $status);
+        $from = isset($params['from']) && self::isDateParam((string) $params['from']) ? (string) $params['from'] : null;
+        $to = isset($params['to']) && self::isDateParam((string) $params['to']) ? (string) $params['to'] : null;
+        $bookings = (new BookingModel())->listForUser($user, $limit, $offset, $status, $from, $to);
         return ResponseHelper::json($response, $bookings);
+    }
+
+    private static function isDateParam(string $value): bool
+    {
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $value);
     }
 
     public function get(Request $request, Response $response, array $args): Response

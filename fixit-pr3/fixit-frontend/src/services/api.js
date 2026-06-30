@@ -174,10 +174,12 @@ export const getRecommendedProviders = (limit = 20, offset = 0) =>
   searchProviders({ sort: 'recommended', limit, offset })
 // The logged-in provider's own profile (works even while unverified).
 export const getMyProviderProfile = () => get('/me/provider')
-export function getBookings({ limit = 0, offset = 0, status } = {}) {
+export function getBookings({ limit = 0, offset = 0, status, from, to } = {}) {
   const entries = []
   if (limit > 0) entries.push(['limit', limit], ['offset', offset])
   if (status) entries.push(['status', status])
+  if (from) entries.push(['from', from])
+  if (to) entries.push(['to', to])
   return get(`/bookings${queryString(entries)}`)
 }
 // Single enriched booking incl. order-history timestamps + paid_at. Backend
