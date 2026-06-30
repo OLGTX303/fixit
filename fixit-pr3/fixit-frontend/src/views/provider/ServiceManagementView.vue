@@ -102,6 +102,7 @@ const svcForm         = ref({ name: '', sku: '', price: '', description: '', ima
 const svcImagePreview = ref(null)
 const uploadingImage  = ref(false)
 const svcImageInput   = ref(null)
+const serviceError    = ref('')
 
 // Services are a real server catalog (ProviderService table) �?full CRUD with
 // per-service price, photo (R2), description. No more localStorage.
@@ -130,6 +131,7 @@ function openAdd() {
   editingService.value = null
   svcForm.value = { name: '', sku: '', price: '', description: '', image_url: '', active: true }
   svcImagePreview.value = null
+  serviceError.value = ''
   showServiceForm.value = true
 }
 function openEdit(svc) {
@@ -139,6 +141,7 @@ function openEdit(svc) {
     description: svc.description || '', image_url: svc.image_url || '', active: svc.active,
   }
   svcImagePreview.value = svc.image_url || null
+  serviceError.value = ''
   showServiceForm.value = true
 }
 
@@ -146,6 +149,15 @@ function pickSvcImage() { svcImageInput.value?.click() }
 async function onSvcImageSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
+  serviceError.value = ''
+  if (!file.type.startsWith('image/')) {
+    serviceError.value = 'Choose an image file for the service photo.'
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    serviceError.value = 'Service photo must be 5 MB or smaller.'
+    return
+  }
   uploadingImage.value = true
   try {
     const dataUrl = await compressImage(file, 800, 800, 0.8)
@@ -158,7 +170,17 @@ async function onSvcImageSelected(e) {
 // Create / update on the server. A freshly-picked photo (data URL) is uploaded
 // to R2 first, then its URL is stored on the service.
 async function saveService() {
-  if (!svcForm.value.name || !svcForm.value.price || !myProfile.value) return
+  serviceError.value = ''
+  if (!myProfile.value) return
+  const price = Number(svcForm.value.price)
+  if (!svcForm.value.name.trim()) {
+    serviceError.value = 'Service name is required.'
+    return
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    serviceError.value = 'Service price must be greater than RM0.'
+    return
+  }
   uploadingImage.value = true
   try {
     let imageUrl = svcForm.value.image_url || null
@@ -167,10 +189,10 @@ async function saveService() {
     }
     const payload = {
       name: svcForm.value.name,
-      price: parseFloat(svcForm.value.price),
+      price,
       description: svcForm.value.description || null,
       image_url: imageUrl,
-      sku: svcForm.value.sku || genSku(svcForm.value.name),
+      sku: (svcForm.value.sku || genSku(svcForm.value.name)).trim().toUpperCase(),
       is_active: svcForm.value.active !== false,
     }
     if (editingService.value) {
@@ -181,7 +203,7 @@ async function saveService() {
     await loadServices()
     showServiceForm.value = false
   } catch (e) {
-    alert('Could not save service: ' + (e.message || 'failed'))
+    serviceError.value = e.message || 'Could not save service.'
   } finally { uploadingImage.value = false }
 }
 
@@ -214,6 +236,7 @@ const showCouponForm = ref(false)
 const editingCoupon  = ref(null)
 const savingCoupon   = ref(false)
 const cpnForm        = ref({ code: '', discount_type: 'percent', discount_value: '', min_spend: '', expires_at: '', is_active: true })
+const couponError    = ref('')
 
 useModalGuard(showProfileForm)
 useModalGuard(showServiceForm)
@@ -232,6 +255,7 @@ function defaultExpiry() {
 function openAddCoupon() {
   editingCoupon.value = null
   cpnForm.value = { code: '', discount_type: 'percent', discount_value: '', min_spend: '', expires_at: defaultExpiry(), is_active: true }
+  couponError.value = ''
   showCouponForm.value = true
 }
 function openEditCoupon(c) {
@@ -244,17 +268,44 @@ function openEditCoupon(c) {
     expires_at: (c.expires_at || '').slice(0, 10),
     is_active: c.is_active,
   }
+  couponError.value = ''
   showCouponForm.value = true
 }
 async function saveCoupon() {
-  if (!cpnForm.value.code || !cpnForm.value.discount_value) return
+  couponError.value = ''
+  const code = cpnForm.value.code.trim().toUpperCase()
+  const discountValue = Number(cpnForm.value.discount_value)
+  const minSpend = cpnForm.value.min_spend ? Number(cpnForm.value.min_spend) : 0
+  if (!code) {
+    couponError.value = 'Coupon code is required.'
+    return
+  }
+  if (!Number.isFinite(discountValue) || discountValue <= 0) {
+    couponError.value = 'Discount value must be greater than 0.'
+    return
+  }
+  if (cpnForm.value.discount_type === 'percent' && discountValue > 100) {
+    couponError.value = 'Percentage discount cannot exceed 100%.'
+    return
+  }
+  if (!Number.isFinite(minSpend) || minSpend < 0) {
+    couponError.value = 'Minimum order cannot be negative.'
+    return
+  }
+  if (cpnForm.value.expires_at) {
+    const expiry = new Date(`${cpnForm.value.expires_at}T23:59:59`)
+    if (Number.isNaN(expiry.getTime())) {
+      couponError.value = 'Choose a valid expiry date.'
+      return
+    }
+  }
   savingCoupon.value = true
   try {
     const payload = {
-      code: cpnForm.value.code,
+      code,
       discount_type: cpnForm.value.discount_type,
-      discount_value: parseFloat(cpnForm.value.discount_value),
-      min_spend: cpnForm.value.min_spend ? parseFloat(cpnForm.value.min_spend) : 0,
+      discount_value: discountValue,
+      min_spend: minSpend,
       expires_at: cpnForm.value.expires_at,
       is_active: cpnForm.value.is_active,
     }
@@ -263,7 +314,7 @@ async function saveCoupon() {
     await loadCoupons()
     showCouponForm.value = false
   } catch (e) {
-    alert(e.message || 'Could not save coupon')
+    couponError.value = e.message || 'Could not save coupon.'
   } finally { savingCoupon.value = false }
 }
 async function deleteCoupon(c) {
@@ -493,9 +544,12 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
           </div>
           <input ref="svcImageInput" type="file" accept="image/*" style="display:none" @change="onSvcImageSelected" />
         </div>
+        <div v-if="serviceError" class="smv-form-error">{{ serviceError }}</div>
         <div class="smv-modal-footer">
           <button class="smv-modal-cancel" @click="showServiceForm = false">Cancel</button>
-          <button class="smv-modal-save" @click="saveService" :disabled="!svcForm.name || !svcForm.price">Save</button>
+          <button class="smv-modal-save" @click="saveService" :disabled="uploadingImage || !svcForm.name || !svcForm.price">
+            {{ uploadingImage ? 'Saving...' : 'Save' }}
+          </button>
         </div>
       </div>
     </div>
@@ -511,7 +565,8 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
         </div>
         <div class="smv-field-group">
           <label class="smv-field-lbl">Coupon Code *</label>
-          <input class="smv-field-input" v-model="cpnForm.code" placeholder="e.g. SAVE20" style="text-transform:uppercase" />
+          <input class="smv-field-input" v-model="cpnForm.code" placeholder="e.g. SAVE20"
+                 style="text-transform:uppercase" @input="cpnForm.code = cpnForm.code.toUpperCase()" />
         </div>
         <div class="smv-field-row">
           <div class="smv-field-group" style="flex:1">
@@ -536,6 +591,7 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
             <input class="smv-field-input" v-model="cpnForm.expires_at" type="date" />
           </div>
         </div>
+        <div v-if="couponError" class="smv-form-error">{{ couponError }}</div>
         <div class="smv-modal-footer">
           <button class="smv-modal-cancel" @click="showCouponForm = false">Cancel</button>
           <button class="smv-modal-save" @click="saveCoupon" :disabled="savingCoupon || !cpnForm.code || !cpnForm.discount_value">{{ savingCoupon ? 'Saving…' : 'Save' }}</button>
@@ -717,6 +773,11 @@ function compressImage(file, maxW = 1200, maxH = 900, quality = 0.82) {
 }
 .smv-field-input:focus { border-color: rgba(255,102,53,0.45); background: rgba(255,255,255,0.55); }
 .smv-textarea { resize: none; }
+.smv-form-error {
+  margin: -2px 0 12px; padding: 9px 11px; border-radius: 10px;
+  background: rgba(239,68,68,0.10); color: #dc2626;
+  font-size: 12px; font-weight: 700;
+}
 
 .smv-modal-footer { display: flex; gap: 10px; margin-top: 4px; }
 .smv-modal-cancel {
