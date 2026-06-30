@@ -17,6 +17,9 @@ export const useBookingsStore = defineStore('bookings', {
   actions: {
     async load() {
       if (this.loaded) return
+      await this.refresh()
+    },
+    async refresh() {
       this.loading = true
       try {
         this.bookings = await api.getBookings({ limit: 50, offset: 0 })
@@ -40,8 +43,7 @@ export const useBookingsStore = defineStore('bookings', {
       this.bookings = this.bookings.filter(b => b.id !== Number(bookingId))
     },
     async reload() {
-      this.resetCache()
-      await this.load()
+      await this.refresh()
     },
     /** Keep nested customer/provider avatars in sync after profile photo upload. */
     syncUserAvatar(userId, avatarUrl) {

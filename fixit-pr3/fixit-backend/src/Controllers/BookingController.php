@@ -7,6 +7,7 @@ namespace FixIt\Controllers;
 use FixIt\Models\BookingModel;
 use FixIt\Models\CategoryModel;
 use FixIt\Models\CouponModel;
+use FixIt\Models\MessageModel;
 use FixIt\Models\ProviderModel;
 use FixIt\Models\ProviderServiceModel;
 use FixIt\Models\StripePaymentModel;
@@ -141,6 +142,27 @@ final class BookingController
                 return ResponseHelper::error($response, 'Coupon could not be applied — please try again', 409);
             }
         }
+
+        $systemMessage = (new MessageModel())->create(
+            (int) $booking['id'],
+            (int) $booking['customer_id'],
+            [
+                'body' => self::bookingSystemMessage($booking),
+                'is_encrypted' => false,
+                'is_system' => true,
+                'harm_status' => 'clear',
+                'harm_categories' => [],
+            ]
+        );
+        $booking['latest_message'] = [
+            'id' => $systemMessage['id'],
+            'job_id' => $systemMessage['job_id'],
+            'sender_id' => $systemMessage['sender_id'],
+            'body' => $systemMessage['body'],
+            'is_encrypted' => $systemMessage['is_encrypted'],
+            'is_system' => $systemMessage['is_system'],
+            'sent_at' => $systemMessage['sent_at'],
+        ];
 
         return ResponseHelper::json($response, $booking, 201);
     }
@@ -302,6 +324,29 @@ final class BookingController
             }
         }
         return round($subtotal + self::PLATFORM_FEE, 2);
+    }
+
+    /** @param array<string,mixed> $booking */
+    private static function bookingSystemMessage(array $booking): string
+    {
+        $scheduled = !empty($booking['scheduled_at'])
+            ? date('M j, Y g:i A', strtotime(str_replace('T', ' ', (string) $booking['scheduled_at'])))
+            : 'Not scheduled';
+        $total = $booking['total'] !== null
+            ? 'RM ' . number_format((float) $booking['total'], 2)
+            : 'Not estimated';
+
+        return implode("\n", [
+            'Booking created',
+            'Job ID: #' . $booking['id'],
+            'Provider: ' . ($booking['provider']['name'] ?? 'Provider'),
+            'Customer: ' . ($booking['customer']['name'] ?? 'Customer'),
+            'Category: ' . ($booking['category']['name'] ?? 'Service'),
+            'Scheduled: ' . $scheduled,
+            'Address: ' . ($booking['address'] ?: 'Not provided'),
+            'Estimated total: ' . $total,
+            'Status: ' . ucfirst(str_replace('_', ' ', (string) $booking['status'])),
+        ]);
     }
 
     public function delete(Request $request, Response $response, array $args): Response

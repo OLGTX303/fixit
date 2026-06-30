@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import { useAuthStore } from '../../stores/auth'
@@ -13,7 +13,10 @@ import { E2E_ENABLED } from '../../config'
 const props = defineProps({
   bookingId: { type: [Number, String], default: null },
   embedded:  { type: Boolean, default: false },
+  relatedJobs: { type: Array, default: () => [] },
 })
+
+const emit = defineEmits(['select-job'])
 
 // Standalone chat is a focused full-screen view — hide the bottom dock so the
 // compose bar isn't overlapped. Embedded (desktop split panel) keeps the nav.
@@ -34,10 +37,20 @@ const showPinSetup = ref(false)
 const showPinUnlock = ref(false)
 const ready = ref(false)
 const brokenAvatars = ref({})
+let pollTimer = null
+let polling = false
 
 const jobId   = computed(() => Number(props.bookingId || route.params.id))
 const booking = computed(() => bookingsStore.byId(jobId.value))
 const isAdmin = computed(() => auth.role === 'admin')
+const conversationJobs = computed(() => {
+  const jobs = props.relatedJobs?.length ? props.relatedJobs : (booking.value ? [booking.value] : [])
+  return [...jobs].sort((a, b) => {
+    const at = a?.latest_message?.sent_at || a?.scheduled_at || ''
+    const bt = b?.latest_message?.sent_at || b?.scheduled_at || ''
+    return new Date(bt).getTime() - new Date(at).getTime()
+  })
+})
 
 const other = computed(() => {
   const b = booking.value
@@ -121,6 +134,10 @@ onMounted(async () => {
   await initChat()
 })
 
+onUnmounted(() => {
+  stopPolling()
+})
+
 async function onPinReady() {
   showPinSetup.value = false
   showPinUnlock.value = false
@@ -130,16 +147,50 @@ async function onPinReady() {
 async function initChat() {
   try {
     if (E2E_ENABLED && !isAdmin.value) await chatCrypto.ensureJobKey(jobId.value)
-    const raw = await api.getMessagesForJob(jobId.value)
-    messages.value = raw
-    await hydrateBodies(raw)
+    await refreshMessages({ scroll: true })
     ready.value = true
-    scrollToEnd()
+    startPolling()
   } catch (e) {
     if (E2E_ENABLED && !isAdmin.value) {
       chatCrypto.error = e.message
       showPinUnlock.value = true
     }
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  pollTimer = window.setInterval(() => {
+    refreshMessages().catch(() => {
+      // Preserve the current thread on transient polling failures.
+    })
+  }, 3000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    window.clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+async function refreshMessages({ scroll = false } = {}) {
+  if (polling) return
+  polling = true
+  try {
+    const raw = await api.getMessagesForJob(jobId.value)
+    const previousLastId = messages.value.at(-1)?.id
+    const nextLastId = raw.at(-1)?.id
+    const changed = raw.length !== messages.value.length || previousLastId !== nextLastId
+    if (changed) {
+      messages.value = raw
+      await hydrateBodies(raw)
+      if (scroll || nextLastId !== previousLastId) scrollToEnd()
+    } else if (scroll) {
+      scrollToEnd()
+    }
+  } finally {
+    polling = false
   }
 }
 
@@ -158,6 +209,32 @@ async function hydrateBodies(msgs) {
 function bodyText(m) {
   if (m.is_encrypted && !displayBodies.value[m.id]) return null
   return displayBodies.value[m.id] || ''
+}
+
+function selectJob(job) {
+  if (!job || job.id === jobId.value) return
+  emit('select-job', job.id)
+  if (!props.embedded) {
+    router.push({ name: auth.role === 'provider' ? 'pro-chat' : 'chat', params: { id: job.id } })
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return 'Not scheduled'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ')
+  return date.toLocaleString('en-MY', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function money(value) {
+  return value != null ? `RM ${Number(value).toFixed(2)}` : 'Not estimated'
+}
+
+function statusLabel(status) {
+  return String(status || 'unknown').replace(/_/g, ' ')
 }
 
 function scrollToEnd() {
@@ -267,13 +344,54 @@ function timeOf(iso) {
       Customer Service mode — your messages appear in this thread
     </div>
 
+    <div v-if="booking" class="chat-job-context">
+      <div v-if="conversationJobs.length > 1" class="chat-job-tabs" aria-label="Jobs with this person">
+        <button
+          v-for="job in conversationJobs"
+          :key="job.id"
+          type="button"
+          class="chat-job-tab"
+          :class="{ active: job.id === jobId }"
+          @click="selectJob(job)"
+        >
+          #{{ job.id }} · {{ job.category?.name || 'Service' }}
+        </button>
+      </div>
+
+      <div class="chat-job-card">
+        <div class="chat-job-card-head">
+          <div>
+            <div class="chat-job-title">Job #{{ booking.id }}</div>
+            <div class="chat-job-sub">{{ booking.category?.name || 'Service' }}</div>
+          </div>
+          <span class="chat-job-status">{{ statusLabel(booking.status) }}</span>
+        </div>
+        <div class="chat-job-grid">
+          <div><span>Scheduled</span>{{ formatDateTime(booking.scheduled_at) }}</div>
+          <div><span>Address</span>{{ booking.address || 'Not provided' }}</div>
+          <div><span>Total</span>{{ money(booking.total) }}</div>
+          <div><span>Provider</span>{{ booking.provider?.name || 'Provider' }}</div>
+          <div><span>Customer</span>{{ booking.customer?.name || 'Customer' }}</div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="!ready" class="chat-loading">
       {{ E2E_ENABLED && !isAdmin ? 'Unlock with PIN to view messages…' : 'Loading messages…' }}
     </div>
 
     <div v-else ref="listEl" class="chat-list">
       <div v-for="m in messages" :key="m.id" class="chat-row"
-           :class="isOutgoing(m) ? 'outgoing' : 'incoming'">
+           :class="[m.is_system ? 'system' : (isOutgoing(m) ? 'outgoing' : 'incoming')]">
+        <template v-if="m.is_system">
+          <div class="chat-system-card">
+            <div class="chat-system-title">Booking details</div>
+            <div class="chat-system-body">{{ bodyText(m) }}</div>
+            <div class="chat-meta">{{ timeOf(m.sent_at) }}</div>
+          </div>
+        </template>
+
+        <template v-else>
         <template v-if="isAdmin && !isOutgoing(m)">
           <img v-if="showMsgAvatar(m)" :src="avatarFor(m)" :alt="senderLabel(m)"
                class="chat-msg-avatar" @error="onAvatarError(`m${m.id}`)" />
@@ -301,6 +419,7 @@ function timeOf(iso) {
           <div v-else class="chat-msg-avatar chat-msg-fallback outgoing">
             {{ initials(senderLabel(m)) }}
           </div>
+        </template>
         </template>
       </div>
     </div>
@@ -390,6 +509,75 @@ function timeOf(iso) {
   border-bottom: 0.5px solid rgba(255,255,255,0.28);
 }
 
+.chat-job-context {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.18);
+  border-bottom: 0.5px solid rgba(255,255,255,0.28);
+}
+.chat-job-tabs {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+}
+.chat-job-tab {
+  flex: 0 0 auto;
+  border: 0.5px solid rgba(255,255,255,0.58);
+  background: rgba(255,255,255,0.36);
+  color: var(--fx-muted);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chat-job-tab.active {
+  background: rgba(255,102,53,0.12);
+  color: var(--fx-accent);
+  border-color: rgba(255,102,53,0.28);
+}
+.chat-job-card {
+  border: 0.5px solid rgba(255,255,255,0.62);
+  background: rgba(255,255,255,0.42);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.04);
+}
+.chat-job-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  margin-bottom: 8px;
+}
+.chat-job-title { font-size: 13px; font-weight: 800; color: var(--fx-text); }
+.chat-job-sub { font-size: 11px; color: var(--fx-muted); margin-top: 1px; }
+.chat-job-status {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255,102,53,0.10);
+  color: var(--fx-accent);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.chat-job-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+}
+.chat-job-grid div {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--fx-text);
+  overflow-wrap: anywhere;
+}
+.chat-job-grid span {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fx-muted);
+  margin-bottom: 1px;
+}
+:global(body.fx-mobile) .chat-job-grid { grid-template-columns: 1fr; }
+
 .chat-loading {
   flex: 1; display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: var(--fx-muted);
@@ -405,6 +593,7 @@ function timeOf(iso) {
 }
 .chat-row.incoming { justify-content: flex-start; }
 .chat-row.outgoing { justify-content: flex-end; }
+.chat-row.system { justify-content: center; }
 
 .chat-msg-avatar {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
@@ -434,6 +623,7 @@ function timeOf(iso) {
 .chat-bubble {
   padding: 10px 14px; border-radius: 18px;
   font-size: 13px; line-height: 1.55;
+  white-space: pre-wrap;
 }
 .bubble-in {
   background: rgba(255,255,255,0.50);
@@ -451,6 +641,27 @@ function timeOf(iso) {
   border-bottom-right-radius: 4px;
 }
 .chat-encrypted { color: var(--fx-muted); font-style: italic; }
+
+.chat-system-card {
+  max-width: min(520px, 92%);
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.58);
+  border: 0.5px solid rgba(255,255,255,0.68);
+  color: var(--fx-text);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
+}
+.chat-system-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--fx-accent);
+  margin-bottom: 4px;
+}
+.chat-system-body {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.5;
+}
 
 .chat-meta {
   font-size: 10px; color: var(--fx-muted-soft); margin-top: 3px;
