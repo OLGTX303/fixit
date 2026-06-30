@@ -201,7 +201,9 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);
-            $secure->get('/bookings/{id}', [$bookings, 'get']);
+            // Order details ride the per-interaction encrypted channel (same as payments).
+            $secure->get('/bookings/{id}', [$bookings, 'get'])
+                ->add(new SecureChannelMiddleware());
             $secure->post('/bookings', [$bookings, 'create'])
                 ->add(new RoleGuard(['customer']))
                 ->add(new SecureChannelMiddleware());
@@ -215,8 +217,12 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer']));
             $secure->get('/providers/{id}/reviews', [$reviews, 'forProvider']);
 
-            $secure->get('/jobs/{id}/messages', [$messages, 'list']);
-            $secure->post('/jobs/{id}/messages', [$messages, 'create']);
+            // Chat transport also rides the encrypted channel (in addition to the
+            // app-layer E2E ciphertext), matching the payment endpoints.
+            $secure->get('/jobs/{id}/messages', [$messages, 'list'])
+                ->add(new SecureChannelMiddleware());
+            $secure->post('/jobs/{id}/messages', [$messages, 'create'])
+                ->add(new SecureChannelMiddleware());
         })->add(new JwtAuth());
     });
 

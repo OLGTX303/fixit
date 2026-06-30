@@ -13,6 +13,9 @@ const router = useRouter()
 const activeTab = ref('all')
 const cancellingId = ref(null)
 const confirmId = ref(null)
+const selectedRange = ref('all')
+const customFrom = ref('')
+const customTo = ref('')
 useModalGuard(confirmId)
 
 const TABS = [
@@ -29,15 +32,75 @@ const statusParam = computed(() => {
   return activeTab.value
 })
 
-const { items, loading, done, sentinel, reset } = useInfiniteList(
-  (offset, size) => api.getBookings({ limit: size, offset, status: statusParam.value }), 20)
+const RANGE_PRESETS = [
+  { key: 'all', label: 'All dates' },
+  { key: 'today', label: 'Today' },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: '90d', label: 'Last 90 days' },
+  { key: '1y', label: 'Last 1 year' },
+]
 
-watch(activeTab, reset)
+function dateKey(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function daysAgo(days) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - days)
+  return dateKey(d)
+}
+
+function rangeForPreset(key) {
+  const today = daysAgo(0)
+  if (key === 'today') return { from: today, to: today }
+  if (key === 'yesterday') {
+    const yesterday = daysAgo(1)
+    return { from: yesterday, to: yesterday }
+  }
+  if (key === '7d') return { from: daysAgo(6), to: today }
+  if (key === '30d') return { from: daysAgo(29), to: today }
+  if (key === '90d') return { from: daysAgo(89), to: today }
+  if (key === '1y') return { from: daysAgo(364), to: today }
+  return { from: '', to: '' }
+}
+
+function selectRange(key) {
+  selectedRange.value = key
+  const range = rangeForPreset(key)
+  customFrom.value = range.from
+  customTo.value = range.to
+}
+
+function markCustomRange() {
+  selectedRange.value = 'custom'
+}
+
+const dateRange = computed(() => {
+  let from = customFrom.value
+  let to = customTo.value
+  if (from && to && from > to) [from, to] = [to, from]
+  return { from, to }
+})
+
+const { items, loading, done, sentinel, reset } = useInfiniteList(
+  (offset, size) => api.getBookings({
+    limit: size,
+    offset,
+    status: statusParam.value,
+    from: dateRange.value.from,
+    to: dateRange.value.to,
+  }), 20)
+
+watch([activeTab, dateRange], reset)
 
 const filtered = computed(() => {
   const all = items.value
-  if (activeTab.value === 'rate') return all.filter(b => b.status === 'completed')
-  return all
+  const visible = activeTab.value === 'rate' ? all.filter(b => b.status === 'completed') : all
+  return [...visible].sort((a, b) => bookingTime(b) - bookingTime(a) || Number(b.id) - Number(a.id))
 })
 
 const counts = computed(() => ({
@@ -59,6 +122,10 @@ const STATUS_CFG = {
 }
 
 function badge(s) { return STATUS_CFG[s] || STATUS_CFG.requested }
+function bookingTime(b) {
+  const ts = Date.parse(b?.scheduled_at || '')
+  return Number.isNaN(ts) ? 0 : ts
+}
 function fmtDate(d) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -104,6 +171,33 @@ async function doCancel(b) {
         <span v-if="counts[t.key]" class="jt-tab-count">{{ counts[t.key] }}</span>
       </button>
     </div>
+
+    <section class="jt-range">
+      <div class="jt-range-presets" aria-label="Date range">
+        <button
+          v-for="range in RANGE_PRESETS"
+          :key="range.key"
+          class="jt-range-chip"
+          :class="{ active: selectedRange === range.key }"
+          type="button"
+          @click="selectRange(range.key)"
+        >
+          {{ range.label }}
+        </button>
+      </div>
+
+      <div class="jt-custom-range">
+        <label class="jt-date-field">
+          <span>From</span>
+          <input v-model="customFrom" type="date" @input="markCustomRange">
+        </label>
+        <span class="jt-date-dash">-</span>
+        <label class="jt-date-field">
+          <span>To</span>
+          <input v-model="customTo" type="date" @input="markCustomRange">
+        </label>
+      </div>
+    </section>
 
     <div v-if="loading && !filtered.length" class="jt-empty">
       <span class="material-symbols-outlined jt-empty-icon">hourglass_empty</span>
@@ -214,6 +308,45 @@ async function doCancel(b) {
 .jt-tab-count {
   font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 999px;
   background: rgba(255,102,53,0.12); color: var(--fx-accent);
+}
+.jt-range {
+  padding: 12px 16px 2px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.jt-range-presets {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px;
+  scrollbar-width: none;
+}
+.jt-range-presets::-webkit-scrollbar { display: none; }
+.jt-range-chip {
+  flex-shrink: 0; border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
+  background: rgba(255,255,255,0.68); color: var(--fx-muted);
+  padding: 8px 12px; font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; white-space: nowrap; transition: background .18s, color .18s, border-color .18s;
+}
+.jt-range-chip.active {
+  color: var(--fx-accent); background: rgba(255,102,53,0.12); border-color: rgba(255,102,53,0.28);
+}
+.jt-custom-range {
+  display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 8px; align-items: end; padding-bottom: 10px;
+}
+.jt-date-field {
+  min-width: 0; display: flex; flex-direction: column; gap: 5px;
+  color: var(--fx-muted); font-size: 11px; font-weight: 700;
+}
+.jt-date-field input {
+  min-width: 0; width: 100%; height: 38px; border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.75);
+  color: var(--fx-text); padding: 0 10px; font: inherit; font-size: 13px; font-weight: 600;
+}
+.jt-date-field input:focus {
+  outline: none; border-color: rgba(255,102,53,0.55);
+  box-shadow: 0 0 0 3px rgba(255,102,53,0.12);
+}
+.jt-date-dash {
+  height: 38px; display: flex; align-items: center; color: var(--fx-muted);
+  font-weight: 800;
 }
 .jt-empty {
   display: flex; flex-direction: column; align-items: center;

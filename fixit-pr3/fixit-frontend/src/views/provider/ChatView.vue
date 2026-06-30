@@ -76,6 +76,18 @@ function isCustomerMsg(m) {
   return m.sender_id === booking.value?.customer_id
 }
 
+function isProviderMsg(m) {
+  return m.sender_id === providerUserId.value
+}
+
+// A message that didn't come from the customer or the provider on this job is
+// from an admin/CS agent — true for both the admin's own outbound messages
+// and, from the customer/provider's point of view, any CS reply they receive.
+function isSupportMsg(m) {
+  if (!booking.value || m.is_system) return false
+  return !isCustomerMsg(m) && !isProviderMsg(m)
+}
+
 function isMine(m) {
   return m.sender_id === auth.user?.id
 }
@@ -90,7 +102,8 @@ function senderLabel(m) {
   if (!b) return 'User'
   if (m.sender_id === auth.user?.id && isAdmin.value) return 'Customer Service'
   if (isCustomerMsg(m)) return b.customer?.name || 'Customer'
-  return b.provider?.name || 'Provider'
+  if (isProviderMsg(m)) return b.provider?.name || 'Provider'
+  return 'Customer Service'
 }
 
 function avatarFor(m) {
@@ -281,6 +294,21 @@ async function send() {
 function timeOf(iso) {
   return new Date(iso).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
 }
+
+const quickReplies = [
+  'Hi, thanks for reaching out — how can I help?',
+  'Could you share more details about the issue?',
+  'I\'m checking this for you now, one moment please.',
+  'This has been escalated to the relevant team.',
+  'Is there anything else I can help with?',
+  'Thank you for your patience, this is now resolved.',
+]
+
+async function sendQuick(text) {
+  if (!ready.value) return
+  draft.value = text
+  await send()
+}
 </script>
 
 <template>
@@ -400,7 +428,11 @@ function timeOf(iso) {
 
         <div class="chat-col">
           <div v-if="isAdmin" class="chat-sender">{{ senderLabel(m) }}</div>
-          <div class="chat-bubble" :class="isOutgoing(m) ? 'bubble-out' : 'bubble-in'">
+          <div v-else-if="isSupportMsg(m)" class="chat-sender chat-sender-support">
+            <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">support_agent</span>
+            Customer Service
+          </div>
+          <div class="chat-bubble" :class="isOutgoing(m) ? 'bubble-out' : (isSupportMsg(m) ? 'bubble-support' : 'bubble-in')">
             <template v-if="bodyText(m) !== null">{{ bodyText(m) }}</template>
             <span v-else class="chat-encrypted">🔒 Encrypted message</span>
           </div>
@@ -425,6 +457,17 @@ function timeOf(iso) {
     </div>
 
     <div v-if="harmWarning" class="chat-harm-warn">{{ harmWarning }}</div>
+
+    <div v-if="isAdmin && ready" class="chat-quick-bar">
+      <button
+        v-for="(q, i) in quickReplies" :key="i"
+        type="button"
+        class="chat-quick-chip"
+        @click="sendQuick(q)"
+      >
+        {{ q }}
+      </button>
+    </div>
 
     <form v-if="ready" class="chat-compose" @submit.prevent="send">
       <div class="fx-input chat-input-wrap">
@@ -619,6 +662,10 @@ function timeOf(iso) {
 .chat-sender {
   font-size: 11px; color: var(--fx-muted); margin-bottom: 3px;
 }
+.chat-sender-support {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-weight: 700; color: var(--fx-accent);
+}
 
 .chat-bubble {
   padding: 10px 14px; border-radius: 18px;
@@ -630,6 +677,15 @@ function timeOf(iso) {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 0.5px solid rgba(255,255,255,0.60);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
+  color: var(--fx-text);
+  border-bottom-left-radius: 4px;
+}
+.bubble-support {
+  background: rgba(255,102,53,0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255,102,53,0.30);
   box-shadow: inset 0 1px 1px rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.05);
   color: var(--fx-text);
   border-bottom-left-radius: 4px;
@@ -671,6 +727,26 @@ function timeOf(iso) {
 .chat-harm-warn {
   padding: 4px 16px; font-size: 12px; color: var(--fx-warn); flex-shrink: 0;
 }
+
+.chat-quick-bar {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 16px 0; flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-quick-chip {
+  flex: 0 0 auto; max-width: 240px;
+  border: 1.5px solid rgba(255,102,53,0.30);
+  background: rgba(255,102,53,0.08);
+  color: var(--fx-accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.chat-quick-chip:hover  { background: rgba(255,102,53,0.16); }
+.chat-quick-chip:active { transform: scale(0.96); }
 
 .chat-compose {
   display: flex; gap: 8px; align-items: center;
