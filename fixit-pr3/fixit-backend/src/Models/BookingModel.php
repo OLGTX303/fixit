@@ -149,7 +149,21 @@ final class BookingModel
 
     public function updateStatus(int $id, string $status, ?string $expectedCurrent = null): ?array
     {
-        $sql = 'UPDATE Job SET status = :status WHERE id = :id';
+        // Stamp the per-status timestamp the first time a booking reaches it.
+        // COALESCE keeps the original time if the status is re-applied. The
+        // column name comes from this fixed whitelist, so it is safe to inline.
+        $stampCols = [
+            'accepted'    => 'accepted_at',
+            'in_progress' => 'in_progress_at',
+            'completed'   => 'completed_at',
+            'cancelled'   => 'cancelled_at',
+        ];
+        $sql = 'UPDATE Job SET status = :status';
+        if (isset($stampCols[$status])) {
+            $col = $stampCols[$status];
+            $sql .= ", {$col} = COALESCE({$col}, NOW())";
+        }
+        $sql .= ' WHERE id = :id';
         $params = ['id' => $id, 'status' => $status];
         if ($expectedCurrent !== null) {
             $sql .= ' AND status = :expected';
@@ -293,6 +307,13 @@ final class BookingModel
             'notes'               => $row['notes'],
             'recurrence_type'     => $row['recurrence_type'] ?? 'none',
             'recurrence_end_date' => $row['recurrence_end_date'] ?? null,
+            // Order-history timestamps (null when the column isn't selected,
+            // e.g. the list query, or the status hasn't been reached yet).
+            'created_at'          => self::ts($row, 'created_at'),
+            'accepted_at'         => self::ts($row, 'accepted_at'),
+            'in_progress_at'      => self::ts($row, 'in_progress_at'),
+            'completed_at'        => self::ts($row, 'completed_at'),
+            'cancelled_at'        => self::ts($row, 'cancelled_at'),
             'customer'            => $customer,
             'provider'            => $provider,
             'category'            => $category,
@@ -317,5 +338,13 @@ final class BookingModel
         }
         unset($job);
         return $jobs;
+    }
+
+    /** Format a nullable DATETIME row field as an ISO-ish 'YYYY-MM-DDTHH:MM:SS' string. */
+    private static function ts(array $row, string $key): ?string
+    {
+        return isset($row[$key]) && $row[$key] !== null
+            ? str_replace(' ', 'T', (string) $row[$key])
+            : null;
     }
 }

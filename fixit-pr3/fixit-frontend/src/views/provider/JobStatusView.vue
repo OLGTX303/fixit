@@ -48,6 +48,10 @@ function complete() {
         <div style="font-size:12px;color:var(--fx-muted)">{{ booking.category?.name }} · {{ booking.address }}</div>
       </div>
       <button class="btn btn-light rounded-circle" style="width:38px;height:38px;padding:0"
+              @click="router.push({ name: 'order-detail', params: { id: booking.id } })" title="Order details">
+        <span class="material-symbols-outlined" style="font-size:18px;color:var(--fx-muted)">receipt_long</span>
+      </button>
+      <button class="btn btn-light rounded-circle" style="width:38px;height:38px;padding:0"
               @click="router.push({ name: 'pro-chat', params: { id: booking.id } })">
         <AppIcon name="chat" :size="18" style="color:var(--fx-blue)" />
       </button>

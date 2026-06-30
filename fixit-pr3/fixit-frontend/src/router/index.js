@@ -18,6 +18,9 @@ const routes = [
   { path: '/account/email', name: 'account-email', component: () => import('../views/EmailEditView.vue') },
   { path: '/account/billing', name: 'account-billing', component: () => import('../views/BillingView.vue') },
 
+  // Order history detail — shared by customer, provider, and admin (backend authorizes).
+  { path: '/orders/:id', name: 'order-detail', component: () => import('../views/OrderDetailView.vue') },
+
   // Customer
   { path: '/home', name: 'home', component: () => import('../views/customer/HomeView.vue'), meta: { role: 'customer' } },
   { path: '/search', name: 'search', component: () => import('../views/customer/SearchView.vue'), meta: { role: 'customer' } },

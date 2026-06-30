@@ -50,6 +50,12 @@ final class BookingController
         if (!$booking || !$model->userCanAccess($user, $booking)) {
             return ResponseHelper::error($response, $booking ? 'Forbidden' : 'Booking not found', $booking ? 403 : 404);
         }
+        // Payment time for the order-history timeline — comes from StripePayment,
+        // not duplicated on Job. Single-booking detail only, so no N+1 on lists.
+        $payment = (new StripePaymentModel())->findSucceededByBooking((int) $args['id']);
+        $booking['paid_at'] = $payment && !empty($payment['created_at'])
+            ? str_replace(' ', 'T', (string) $payment['created_at'])
+            : null;
         return ResponseHelper::json($response, $booking);
     }
 
