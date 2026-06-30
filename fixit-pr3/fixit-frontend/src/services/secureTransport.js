@@ -150,27 +150,41 @@ export async function secureRequest(method, path, body) {
     method, path: fullPath, body_hash: await sha256hex(bodyB64),
   }))
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: authHeaders({
-      'Content-Type': 'application/octet-stream',
-      'X-Sec-Session': s.id, 'X-Sec-Counter': String(counter), 'X-Sec-Nonce': nonce,
-      'X-Sec-Ts': ts, 'X-Sec-Sign': sign,
-    }),
-    body: bodyB64,
+  // GET/HEAD cannot carry a fetch body — send the encrypted payload in a header
+  // instead (the middleware reads X-Sec-Body when present). Writes keep the body.
+  const noBody = method === 'GET' || method === 'HEAD'
+  const headers = authHeaders({
+    'X-Sec-Session': s.id, 'X-Sec-Counter': String(counter), 'X-Sec-Nonce': nonce,
+    'X-Sec-Ts': ts, 'X-Sec-Sign': sign,
   })
+  if (noBody) {
+    headers['X-Sec-Body'] = bodyB64
+  } else {
+    headers['Content-Type'] = 'application/octet-stream'
+  }
 
-  const text = await res.text()
-  const encryptedResp = res.headers.get('X-Sec-Enc') === '1'
-  let data = null
-  let respPlain = text
-  if (encryptedResp) {
-    const respKey = await hkdf(s.master, s.salt, `fixit/v2/response/${counter}/${nonce}`)
-    const aadResp = `fixit/v2|response|${s.id}|${counter}|${nonce}|${ts}|${extra}`
-    respPlain = await aesDecrypt(respKey, unb64(text), aadResp)
-    data = respPlain ? JSON.parse(respPlain) : null
-  } else if (text) {
-    try { data = JSON.parse(text) } catch { data = { error: text } }
+  let res, text = '', respPlain = '', encryptedResp = false, data = null
+  try {
+    res = await fetch(`${BASE}${path}`, { method, headers, body: noBody ? undefined : bodyB64 })
+    text = await res.text()
+    respPlain = text
+    encryptedResp = res.headers.get('X-Sec-Enc') === '1'
+    if (encryptedResp) {
+      const respKey = await hkdf(s.master, s.salt, `fixit/v2/response/${counter}/${nonce}`)
+      const aadResp = `fixit/v2|response|${s.id}|${counter}|${nonce}|${ts}|${extra}`
+      respPlain = await aesDecrypt(respKey, unb64(text), aadResp)
+      data = respPlain ? JSON.parse(respPlain) : null
+    } else if (text) {
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+    }
+  } catch (e) {
+    // Surface the attempt in the debug capsule even when it fails to decrypt/parse.
+    pushDebug({
+      method, path: fullPath, encrypted: encryptedResp,
+      encBefore: JSON.stringify(body ?? {}), encAfter: bodyB64,
+      decBefore: text, decAfter: `⚠️ ${e.message || e}`,
+    })
+    throw e
   }
 
   pushDebug({

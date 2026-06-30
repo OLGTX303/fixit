@@ -56,7 +56,10 @@ final class SecureChannelMiddleware implements MiddlewareInterface
         // 3) Signature over the length-prefixed canonical string (§2).
         $method = $request->getMethod();
         $path = $request->getUri()->getPath();
-        $bodyB64 = (string) $request->getBody();
+        // GET/HEAD have no request body — the client puts the encrypted payload
+        // in the X-Sec-Body header instead. Prefer it when present.
+        $headerBody = $request->getHeaderLine('X-Sec-Body');
+        $bodyB64 = $headerBody !== '' ? $headerBody : (string) $request->getBody();
         $signedPairs = [
             'session' => $sessionId, 'counter' => $counter, 'nonce' => $nonce, 'ts' => $ts,
             'method' => $method, 'path' => $path, 'body_hash' => hash('sha256', $bodyB64),
