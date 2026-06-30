@@ -37,19 +37,24 @@ function fmt(iso) {
 }
 const fmtRM = (n) => `RM ${Number(n || 0).toFixed(2)}`
 
-// Order-history timeline. Cancelled is shown only when it actually happened.
+// Order-history timeline. "reached" comes from the status rank so a completed
+// order never shows an earlier step as pending, even if its timestamp is null;
+// the timestamp is shown when present. Cancelled appears only when it happened.
+const STATUS_RANK = { requested: 0, accepted: 1, in_progress: 2, completed: 3, reviewed: 4 }
 const timeline = computed(() => {
   const b = booking.value
   if (!b) return []
+  const rank = STATUS_RANK[b.status] ?? 0
+  const cancelled = b.status === 'cancelled' || !!b.cancelled_at
   const steps = [
-    { key: 'submitted', label: 'Order submitted', sub: 'Pending acceptance', icon: 'receipt_long', at: b.created_at },
-    { key: 'paid',      label: 'Payment received', sub: 'Stripe (test mode)', icon: 'payments',     at: b.paid_at },
-    { key: 'accepted',  label: 'Provider accepted', sub: 'Provider confirmed', icon: 'handshake',   at: b.accepted_at },
-    { key: 'progress',  label: 'Work in progress',  sub: 'Service started',    icon: 'build',        at: b.in_progress_at },
-    { key: 'completed', label: 'Job completed',      sub: 'Service finished',   icon: 'check_circle', at: b.completed_at },
+    { key: 'submitted', label: 'Order submitted',  icon: 'receipt_long', at: b.created_at,     reached: true },
+    { key: 'paid',      label: 'Payment received',  icon: 'payments',     at: b.paid_at,        reached: !!b.paid_at },
+    { key: 'accepted',  label: 'Provider accepted', icon: 'handshake',    at: b.accepted_at,    reached: rank >= 1 },
+    { key: 'progress',  label: 'Work in progress',  icon: 'build',        at: b.in_progress_at, reached: rank >= 2 },
+    { key: 'completed', label: 'Job completed',     icon: 'check_circle', at: b.completed_at,   reached: rank >= 3 },
   ]
-  if (b.cancelled_at) {
-    steps.push({ key: 'cancelled', label: 'Order cancelled', sub: 'Cancelled by customer/admin', icon: 'cancel', at: b.cancelled_at })
+  if (cancelled) {
+    steps.push({ key: 'cancelled', label: 'Order cancelled', icon: 'cancel', at: b.cancelled_at, reached: true })
   }
   return steps
 })
@@ -131,14 +136,14 @@ const subtotal = computed(() => {
         <div class="od-steps">
           <div v-for="(s, i) in timeline" :key="s.key" class="od-step">
             <div class="od-step-left">
-              <div class="od-step-icon" :class="{ done: !!s.at }">
+              <div class="od-step-icon" :class="{ done: s.reached }">
                 <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">{{ s.icon }}</span>
               </div>
-              <div v-if="i < timeline.length - 1" class="od-step-line" :class="{ done: !!s.at }"></div>
+              <div v-if="i < timeline.length - 1" class="od-step-line" :class="{ done: s.reached }"></div>
             </div>
             <div class="od-step-body">
-              <span class="od-step-label" :class="{ done: !!s.at }">{{ s.label }}</span>
-              <span class="od-step-time">{{ fmt(s.at) || s.sub + ' · pending' }}</span>
+              <span class="od-step-label" :class="{ done: s.reached }">{{ s.label }}</span>
+              <span class="od-step-time">{{ fmt(s.at) || (s.reached ? 'Done' : 'Pending') }}</span>
             </div>
           </div>
         </div>
