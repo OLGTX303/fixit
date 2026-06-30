@@ -281,6 +281,21 @@ async function send() {
 function timeOf(iso) {
   return new Date(iso).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
 }
+
+const quickReplies = [
+  'Hi, thanks for reaching out — how can I help?',
+  'Could you share more details about the issue?',
+  'I\'m checking this for you now, one moment please.',
+  'This has been escalated to the relevant team.',
+  'Is there anything else I can help with?',
+  'Thank you for your patience, this is now resolved.',
+]
+
+async function sendQuick(text) {
+  if (!ready.value) return
+  draft.value = text
+  await send()
+}
 </script>
 
 <template>
@@ -425,6 +440,17 @@ function timeOf(iso) {
     </div>
 
     <div v-if="harmWarning" class="chat-harm-warn">{{ harmWarning }}</div>
+
+    <div v-if="isAdmin && ready" class="chat-quick-bar">
+      <button
+        v-for="(q, i) in quickReplies" :key="i"
+        type="button"
+        class="chat-quick-chip"
+        @click="sendQuick(q)"
+      >
+        {{ q }}
+      </button>
+    </div>
 
     <form v-if="ready" class="chat-compose" @submit.prevent="send">
       <div class="fx-input chat-input-wrap">
@@ -671,6 +697,26 @@ function timeOf(iso) {
 .chat-harm-warn {
   padding: 4px 16px; font-size: 12px; color: var(--fx-warn); flex-shrink: 0;
 }
+
+.chat-quick-bar {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 16px 0; flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-quick-chip {
+  flex: 0 0 auto; max-width: 240px;
+  border: 1.5px solid rgba(255,102,53,0.30);
+  background: rgba(255,102,53,0.08);
+  color: var(--fx-accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.chat-quick-chip:hover  { background: rgba(255,102,53,0.16); }
+.chat-quick-chip:active { transform: scale(0.96); }
 
 .chat-compose {
   display: flex; gap: 8px; align-items: center;
