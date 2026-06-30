@@ -108,8 +108,13 @@ final class WalletModel
         return true;
     }
 
-    /** Refund the wallet portion of a cancelled booking. Idempotent. */
-    public function refundBookingPayment(int $userId, int $bookingId, string $currency = 'myr'): bool
+    /** Refund a cancelled booking into the customer's wallet. Idempotent. */
+    public function refundBookingPayment(
+        int $userId,
+        int $bookingId,
+        ?int $amountCents = null,
+        string $currency = 'myr'
+    ): bool
     {
         $ref = 'booking_pay_' . $bookingId;
         $pdo = Connection::get();
@@ -120,11 +125,11 @@ final class WalletModel
         );
         $stmt->execute(['uid' => $userId, 'ref' => $ref]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$row) {
+        if (!$row && $amountCents === null) {
             return false;
         }
-        $debited = abs((int) $row['amount_cents']);
-        if ($debited <= 0) {
+        $refundCents = $amountCents !== null ? abs($amountCents) : abs((int) $row['amount_cents']);
+        if ($refundCents <= 0) {
             return false;
         }
 
@@ -141,7 +146,7 @@ final class WalletModel
         $this->add(
             $userId,
             'booking_refund',
-            $debited,
+            $refundCents,
             $currency,
             $refundRef,
             'Booking #' . $bookingId . ' refund (wallet)'
