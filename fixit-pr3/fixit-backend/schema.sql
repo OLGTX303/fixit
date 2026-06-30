@@ -21,7 +21,8 @@ CREATE TABLE User (
   stripe_test_payment_method_created_at DATETIME NULL,
   terms_accepted_at DATETIME NULL,
   privacy_accepted_at DATETIME NULL,
-  legal_policy_version VARCHAR(20) NULL
+  legal_policy_version VARCHAR(20) NULL,
+  is_blocked TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 
 CREATE TABLE ServiceCategory (
