@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
 
+const router = useRouter()
 const bookingsStore  = useBookingsStore()
 const users       = ref([])
 const userTotal   = ref(0)
@@ -318,13 +320,15 @@ const label = s => s.replace('_', ' ')
               </span>
             </div>
             <div class="crm-blist">
-            <div v-for="b in filtered" :key="b.id" class="crm-brow">
+            <div v-for="b in filtered" :key="b.id" class="crm-brow"
+                 role="button" @click="router.push({ name: 'order-detail', params: { id: b.id } })">
               <div class="crm-bdot" :style="{ background:STATUS_COLOR[b.status] }"/>
               <div class="crm-binfo">
                 <span class="crm-bname">{{ b.customer?.name||'—' }}</span>
                 <span class="crm-bcat"> · {{ b.category?.name }}</span>
               </div>
               <span class="crm-btotal">RM {{ b.total }}</span>
+              <span class="material-symbols-outlined" style="font-size:16px;color:var(--fx-muted);margin-left:4px">chevron_right</span>
             </div>
             <div v-if="!filtered.length" class="crm-empty">No bookings</div>
             </div>
@@ -504,7 +508,8 @@ const label = s => s.replace('_', ' ')
 .crm-chip.active { background: var(--fx-accent); border-color: transparent; color: #fff; }
 
 /* Booking rows */
-.crm-brow  { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid rgba(255,255,255,0.30); }
+.crm-brow  { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid rgba(255,255,255,0.30); cursor: pointer; }
+.crm-brow:hover { opacity: 0.7; }
 .crm-brow:last-child { border-bottom: none; }
 .crm-bdot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .crm-binfo { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

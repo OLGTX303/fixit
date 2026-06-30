@@ -203,6 +203,9 @@ function stepActive(key) { return booking.value?.status === key }
         <span class="material-symbols-outlined">arrow_back_ios</span>
       </button>
       <span class="jd-topbar-title">Job Tracker</span>
+      <button class="jd-chat-btn" @click="router.push({ name: 'order-detail', params: { id: route.params.id } })" title="Order details">
+        <span class="material-symbols-outlined">receipt_long</span>
+      </button>
       <button class="jd-chat-btn" @click="router.push({ name: 'chat', params: { id: route.params.id } })">
         <span class="material-symbols-outlined">chat</span>
       </button>

@@ -13,10 +13,14 @@ final class BootValidator
             throw new \RuntimeException('JWT_SECRET must be at least 32 characters');
         }
 
-        foreach (['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
+        foreach (['DB_HOST', 'DB_NAME', 'DB_USER'] as $key) {
             if (empty($_ENV[$key])) {
                 throw new \RuntimeException("Missing required environment variable: {$key}");
             }
+        }
+
+        if (!array_key_exists('DB_PASS', $_ENV)) {
+            throw new \RuntimeException('Missing required environment variable: DB_PASS');
         }
 
         if (empty($_ENV['CORS_ORIGIN'])) {
