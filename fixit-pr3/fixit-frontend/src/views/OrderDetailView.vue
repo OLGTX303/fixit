@@ -48,7 +48,7 @@ const timeline = computed(() => {
   const cancelled = b.status === 'cancelled' || !!b.cancelled_at
   const steps = [
     { key: 'submitted', label: 'Order submitted',  icon: 'receipt_long', at: b.created_at,     reached: true },
-    { key: 'paid',      label: 'Payment received',  icon: 'payments',     at: b.paid_at,        reached: !!b.paid_at },
+    { key: 'paid',      label: 'Payment received',  icon: 'payments',     at: b.paid_at,        reached: !!b.paid_at || rank >= 3 },
     { key: 'accepted',  label: 'Provider accepted', icon: 'handshake',    at: b.accepted_at,    reached: rank >= 1 },
     { key: 'progress',  label: 'Work in progress',  icon: 'build',        at: b.in_progress_at, reached: rank >= 2 },
     { key: 'completed', label: 'Job completed',     icon: 'check_circle', at: b.completed_at,   reached: rank >= 3 },
