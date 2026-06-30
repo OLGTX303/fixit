@@ -1,10 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import * as api from '../../services/api'
 
-const router = useRouter()
 const bookingsStore  = useBookingsStore()
 const users       = ref([])
 const userTotal   = ref(0)
@@ -320,15 +318,13 @@ const label = s => s.replace('_', ' ')
               </span>
             </div>
             <div class="crm-blist">
-            <div v-for="b in filtered" :key="b.id" class="crm-brow"
-                 role="button" @click="router.push({ name: 'order-detail', params: { id: b.id } })">
+            <div v-for="b in filtered" :key="b.id" class="crm-brow">
               <div class="crm-bdot" :style="{ background:STATUS_COLOR[b.status] }"/>
               <div class="crm-binfo">
                 <span class="crm-bname">{{ b.customer?.name||'—' }}</span>
                 <span class="crm-bcat"> · {{ b.category?.name }}</span>
               </div>
               <span class="crm-btotal">RM {{ b.total }}</span>
-              <span class="material-symbols-outlined" style="font-size:16px;color:var(--fx-muted);margin-left:4px">chevron_right</span>
             </div>
             <div v-if="!filtered.length" class="crm-empty">No bookings</div>
             </div>
@@ -428,20 +424,20 @@ const label = s => s.replace('_', ' ')
   grid-column: 1 / -1;
   padding: 18px 20px 12px;
   background:
-    radial-gradient(ellipse 70% 55% at 8% 12%, rgba(255,200,160,0.38) 0%, transparent 58%),
-    radial-gradient(ellipse 45% 40% at 92% 82%, rgba(255,100,60,0.22) 0%, transparent 55%),
-    rgba(255,102,53,0.20);
+    radial-gradient(ellipse 70% 55% at 8% 12%, rgba(255,170,120,0.35) 0%, transparent 58%),
+    radial-gradient(ellipse 45% 40% at 92% 82%, rgba(120,30,10,0.30) 0%, transparent 55%),
+    linear-gradient(135deg, #FF6635 0%, #D6431C 100%);
   border-color: rgba(255,160,120,0.45);
   box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.70),
-    0 8px 32px rgba(255,102,53,0.20),
-    0 2px 8px rgba(255,102,53,0.12);
+    inset 0 1.5px 0 rgba(255,255,255,0.45),
+    0 8px 32px rgba(255,102,53,0.25),
+    0 2px 8px rgba(255,102,53,0.15);
 }
 @media (min-width: 760px) { .crm-hero { grid-column: 1 / 2; } }
 
-.crm-hero-eyebrow { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(255,255,255,0.75); margin-bottom: 8px; }
-.crm-hero-val     { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: -0.03em; line-height: 1; text-shadow: 0 2px 12px rgba(180,60,0,0.30); }
-.crm-hero-hint    { font-size: 10px; color: rgba(255,255,255,0.60); margin-top: 5px; margin-bottom: 10px; }
+.crm-hero-eyebrow { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(255,255,255,0.92); margin-bottom: 8px; }
+.crm-hero-val     { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: -0.03em; line-height: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+.crm-hero-hint    { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 5px; margin-bottom: 10px; }
 .crm-hero-spark   { width: 100%; height: 50px; display: block; }
 
 /* Metric cards */
@@ -508,8 +504,7 @@ const label = s => s.replace('_', ' ')
 .crm-chip.active { background: var(--fx-accent); border-color: transparent; color: #fff; }
 
 /* Booking rows */
-.crm-brow  { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid rgba(255,255,255,0.30); cursor: pointer; }
-.crm-brow:hover { opacity: 0.7; }
+.crm-brow  { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid rgba(255,255,255,0.30); }
 .crm-brow:last-child { border-bottom: none; }
 .crm-bdot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .crm-binfo { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
