@@ -96,7 +96,8 @@ final class BookingModel
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
 
-        return array_map(fn ($row) => $this->mapJoinedRow($row, $this->categories->byId()), $rows);
+        $jobs = array_map(fn ($row) => $this->mapJoinedRow($row, $this->categories->byId()), $rows);
+        return $this->attachMessageSummaries($jobs);
     }
 
     public function findEnriched(int $id): ?array
@@ -296,5 +297,25 @@ final class BookingModel
             'provider'            => $provider,
             'category'            => $category,
         ];
+    }
+
+    /** @param list<array<string,mixed>> $jobs @return list<array<string,mixed>> */
+    private function attachMessageSummaries(array $jobs): array
+    {
+        $latestByJob = (new MessageModel())->latestForJobs(array_column($jobs, 'id'));
+        foreach ($jobs as &$job) {
+            $latest = $latestByJob[(int) $job['id']] ?? null;
+            $job['latest_message'] = $latest ? [
+                'id' => $latest['id'],
+                'job_id' => $latest['job_id'],
+                'sender_id' => $latest['sender_id'],
+                'body' => $latest['is_encrypted'] ? null : $latest['body'],
+                'is_encrypted' => $latest['is_encrypted'],
+                'is_system' => $latest['is_system'],
+                'sent_at' => $latest['sent_at'],
+            ] : null;
+        }
+        unset($job);
+        return $jobs;
     }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookingsStore } from '../../stores/bookings'
 import { useAuthStore } from '../../stores/auth'
@@ -13,14 +13,30 @@ const auth = useAuthStore()
 const providersStore = useProvidersStore()
 
 const selectedId = ref(null)
+const selectedGroupKey = ref(null)
 const brokenAvatars = ref({})
+let pollTimer = null
+let polling = false
 
 onMounted(async () => {
   await Promise.all([bookingsStore.reload(), providersStore.load()])
+  pollTimer = window.setInterval(refreshConversations, 3000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) window.clearInterval(pollTimer)
 })
 
 const profile = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
 const myJobs  = computed(() => profile.value ? bookingsStore.forProvider(profile.value.id) : [])
+const conversations = computed(() => groupByPerson(myJobs.value, 'customer'))
+
+watch(conversations, (list) => {
+  if (!isDesktop.value || !list.length) return
+  if (!selectedGroupKey.value || !list.some((c) => c.key === selectedGroupKey.value)) {
+    select(list[0])
+  }
+}, { immediate: true })
 
 const STATUS = {
   inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
@@ -29,23 +45,83 @@ const STATUS = {
   in_progress: { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'In Progress' },
   completed:   { c: 'var(--fx-success)', bg: 'var(--fx-success-soft)', label: 'Completed' },
   reviewed:    { c: 'var(--fx-muted)',   bg: 'rgba(255,255,255,0.18)', label: 'Reviewed' },
+  cancelled:   { c: 'var(--fx-muted)',   bg: 'rgba(255,255,255,0.18)', label: 'Cancelled' },
 }
 
 function initials(name) {
   return (name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-function showAvatar(b) {
-  return b.customer?.avatar_url && !brokenAvatars.value[b.id]
+function showAvatar(c) {
+  return c.person?.avatar_url && !brokenAvatars.value[c.key]
 }
 
-function onAvatarError(bookingId) {
-  brokenAvatars.value[bookingId] = true
+function onAvatarError(key) {
+  brokenAvatars.value[key] = true
 }
 
-function select(b) {
-  if (isDesktop.value) { selectedId.value = b.id }
-  else { router.push({ name: 'pro-chat', params: { id: b.id } }) }
+function messagePreview(job) {
+  const m = job?.latest_message
+  if (!m) return 'No messages yet'
+  if (m.is_system) return 'Booking details'
+  if (m.is_encrypted) return 'Encrypted message'
+  return m.body || 'Message'
+}
+
+function activityTime(job) {
+  return job?.latest_message?.sent_at || job?.scheduled_at || ''
+}
+
+function groupByPerson(jobs, mode) {
+  const groups = new Map()
+  for (const job of jobs) {
+    const person = mode === 'provider' ? job.provider : job.customer
+    const personId = mode === 'provider' ? job.provider_id : job.customer_id
+    const key = `${mode}-${personId}`
+    const current = groups.get(key) || { key, person, jobs: [] }
+    current.jobs.push(job)
+    groups.set(key, current)
+  }
+
+  return [...groups.values()].map((group) => {
+    const sortedJobs = [...group.jobs].sort((a, b) =>
+      new Date(activityTime(b)).getTime() - new Date(activityTime(a)).getTime())
+    const latestJob = sortedJobs[0]
+    return {
+      ...group,
+      jobs: sortedJobs,
+      latestJob,
+      latestCategory: latestJob?.category?.name || 'Service',
+      latestStatus: latestJob?.status,
+      latestPreview: messagePreview(latestJob),
+      latestAt: activityTime(latestJob),
+    }
+  }).sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime())
+}
+
+async function refreshConversations() {
+  if (polling) return
+  polling = true
+  try {
+    await bookingsStore.reload()
+  } catch {
+    // Keep the visible list if a poll fails; the next interval retries.
+  } finally {
+    polling = false
+  }
+}
+
+function select(c) {
+  selectedGroupKey.value = c.key
+  if (isDesktop.value) { selectedId.value = c.latestJob.id }
+  else { router.push({ name: 'pro-chat', params: { id: c.latestJob.id } }) }
+}
+
+const selectedConversation = computed(() =>
+  conversations.value.find((c) => c.key === selectedGroupKey.value) || null)
+
+function selectJob(jobId) {
+  selectedId.value = Number(jobId)
 }
 </script>
 
@@ -56,27 +132,28 @@ function select(b) {
     <div class="msg-panel-left">
       <div class="msg-panel-header">
         <span class="msg-panel-title">Messages</span>
-        <span class="msg-panel-sub">{{ myJobs.length }} conversation{{ myJobs.length !== 1 ? 's' : '' }}</span>
+        <span class="msg-panel-sub">{{ conversations.length }} conversation{{ conversations.length !== 1 ? 's' : '' }}</span>
       </div>
 
       <div class="msg-conv-list">
-        <button v-for="b in myJobs" :key="b.id"
-                class="msg-conv-row" :class="{ active: selectedId === b.id }"
-                @click="select(b)">
-          <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
-               class="msg-conv-avatar msg-conv-avatar-img" @error="onAvatarError(b.id)" />
-          <div v-else class="msg-conv-avatar">{{ initials(b.customer?.name) }}</div>
+        <button v-for="c in conversations" :key="c.key"
+                class="msg-conv-row" :class="{ active: selectedGroupKey === c.key }"
+                @click="select(c)">
+          <img v-if="showAvatar(c)" :src="c.person.avatar_url" :alt="c.person?.name"
+               class="msg-conv-avatar msg-conv-avatar-img" @error="onAvatarError(c.key)" />
+          <div v-else class="msg-conv-avatar">{{ initials(c.person?.name) }}</div>
           <div class="msg-conv-body">
-            <div class="msg-conv-name">{{ b.customer?.name || 'Customer' }}</div>
-            <div class="msg-conv-sub">{{ b.category?.name || 'Service' }} · Job #{{ b.id }}</div>
+            <div class="msg-conv-name">{{ c.person?.name || 'Customer' }}</div>
+            <div class="msg-conv-sub">{{ c.latestCategory }} · {{ c.jobs.length }} job{{ c.jobs.length !== 1 ? 's' : '' }}</div>
+            <div class="msg-conv-preview">{{ c.latestPreview }}</div>
           </div>
           <span class="fx-badge msg-conv-badge"
-                :style="{ color: STATUS[b.status]?.c, background: STATUS[b.status]?.bg }">
-            {{ STATUS[b.status]?.label || b.status }}
+                :style="{ color: STATUS[c.latestStatus]?.c, background: STATUS[c.latestStatus]?.bg }">
+            {{ STATUS[c.latestStatus]?.label || c.latestStatus }}
           </span>
         </button>
 
-        <div v-if="!myJobs.length" class="msg-empty-list">
+        <div v-if="!conversations.length" class="msg-empty-list">
           <span class="material-symbols-outlined" style="font-size:40px;color:var(--fx-muted-soft)">chat_bubble</span>
           <p>No conversations yet</p>
           <button class="msg-find-btn" @click="router.push({ name: 'pro-requests' })">View requests</button>
@@ -85,7 +162,14 @@ function select(b) {
     </div>
 
     <div class="msg-panel-right">
-      <ChatView v-if="selectedId" :key="selectedId" :booking-id="selectedId" :embedded="true" />
+      <ChatView
+        v-if="selectedId"
+        :key="selectedId"
+        :booking-id="selectedId"
+        :embedded="true"
+        :related-jobs="selectedConversation?.jobs || []"
+        @select-job="selectJob"
+      />
       <div v-else class="msg-chat-empty">
         <span class="material-symbols-outlined" style="font-size:56px;color:var(--fx-muted-soft)">forum</span>
         <p>Select a conversation to start chatting</p>
@@ -101,26 +185,27 @@ function select(b) {
       <p style="font-size:14px;color:var(--fx-muted);margin:0">Conversations with your customers</p>
     </div>
     <div class="d-flex flex-column gap-2">
-      <button v-for="b in myJobs" :key="b.id"
-              class="conv-row fx-card d-flex align-items-center gap-3" @click="select(b)">
-        <img v-if="showAvatar(b)" :src="b.customer.avatar_url" :alt="b.customer?.name"
+      <button v-for="c in conversations" :key="c.key"
+              class="conv-row fx-card d-flex align-items-center gap-3" @click="select(c)">
+        <img v-if="showAvatar(c)" :src="c.person.avatar_url" :alt="c.person?.name"
              class="msg-conv-avatar msg-conv-avatar-img" style="width:48px;height:48px"
-             @error="onAvatarError(b.id)" />
+             @error="onAvatarError(c.key)" />
         <div v-else class="fx-avatar" style="width:48px;height:48px;font-size:16px;font-weight:800;flex-shrink:0">
-          {{ initials(b.customer?.name) }}
+          {{ initials(c.person?.name) }}
         </div>
         <div class="flex-grow-1" style="min-width:0;text-align:left">
-          <div class="fw-semibold" style="font-size:15px;margin-bottom:3px">{{ b.customer?.name || 'Customer' }}</div>
-          <div style="font-size:12px;color:var(--fx-muted)">{{ b.category?.name || 'Service' }} · Job #{{ b.id }}</div>
+          <div class="fw-semibold" style="font-size:15px;margin-bottom:3px">{{ c.person?.name || 'Customer' }}</div>
+          <div style="font-size:12px;color:var(--fx-muted)">{{ c.latestCategory }} · {{ c.jobs.length }} job{{ c.jobs.length !== 1 ? 's' : '' }}</div>
+          <div class="msg-conv-preview">{{ c.latestPreview }}</div>
         </div>
         <div class="d-flex flex-column align-items-end gap-2" style="flex-shrink:0">
-          <span class="fx-badge" :style="{ color: STATUS[b.status]?.c, background: STATUS[b.status]?.bg }">
-            {{ STATUS[b.status]?.label || b.status }}
+          <span class="fx-badge" :style="{ color: STATUS[c.latestStatus]?.c, background: STATUS[c.latestStatus]?.bg }">
+            {{ STATUS[c.latestStatus]?.label || c.latestStatus }}
           </span>
           <span class="material-symbols-outlined" style="font-size:18px;color:var(--fx-muted-soft)">chevron_right</span>
         </div>
       </button>
-      <div v-if="!myJobs.length" class="fx-card text-center py-5">
+      <div v-if="!conversations.length" class="fx-card text-center py-5">
         <span class="material-symbols-outlined" style="font-size:44px;color:var(--fx-muted-soft);display:block;margin-bottom:12px">chat</span>
         <div class="fw-semibold" style="font-size:15px;margin-bottom:4px">No conversations yet</div>
         <div style="font-size:13px;color:var(--fx-muted)">Accept a booking to start chatting</div>
@@ -178,6 +263,7 @@ function select(b) {
 .msg-conv-body { flex: 1; min-width: 0; }
 .msg-conv-name { font-size: 14px; font-weight: 600; color: var(--fx-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .msg-conv-sub  { font-size: 12px; color: var(--fx-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-conv-preview { font-size: 11px; color: var(--fx-muted-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .msg-conv-badge { font-size: 10px; flex-shrink: 0; }
 
 .msg-empty-list { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 10px; text-align: center; }
