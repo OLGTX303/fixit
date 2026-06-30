@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FixIt\Controllers;
 
+use FixIt\Models\WalletModel;
 use FixIt\Services\StripeService;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
@@ -23,16 +24,25 @@ final class WalletController
     public function get(Request $request, Response $response): Response
     {
         $user = $request->getAttribute('user');
+        $params = $request->getQueryParams();
+        $from = isset($params['from']) && self::isDateParam((string) $params['from']) ? (string) $params['from'] : null;
+        $to = isset($params['to']) && self::isDateParam((string) $params['to']) ? (string) $params['to'] : null;
         if (!StripeService::isConfigured()) {
+            $wallet = new WalletModel();
             return ResponseHelper::json($response, [
-                'balance_cents' => 0,
+                'balance_cents' => $wallet->balanceCents((int) $user['id']),
                 'currency' => 'myr',
-                'transactions' => [],
+                'transactions' => $wallet->list((int) $user['id'], 50, $from, $to),
                 'mode' => 'test',
                 'configured' => false,
             ]);
         }
-        return ResponseHelper::json($response, $this->service()->getWallet((int) $user['id']));
+        return ResponseHelper::json($response, $this->service()->getWallet((int) $user['id'], $from, $to));
+    }
+
+    private static function isDateParam(string $value): bool
+    {
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $value);
     }
 
     public function topUp(Request $request, Response $response): Response

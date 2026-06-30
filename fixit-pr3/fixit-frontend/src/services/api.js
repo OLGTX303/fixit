@@ -305,7 +305,9 @@ export const payBooking = (payload) => post('/payments/booking/pay', payload)
 export const removeStripeSavedPaymentMethod = () => del('/payments/stripe/saved-payment-method')
 
 // ── Wallet (real ledger; top-up charges card, withdraw refunds) ──────────────
-export const getWallet = () => get('/wallet')
+export function getWallet({ from, to } = {}) {
+  return get(`/wallet${queryString([['from', from], ['to', to]])}`)
+}
 export const walletTopUp = (amountCents) => post('/wallet/topup', { amount_cents: amountCents })
 export const walletWithdraw = (amountCents) => post('/wallet/withdraw', { amount_cents: amountCents })
 

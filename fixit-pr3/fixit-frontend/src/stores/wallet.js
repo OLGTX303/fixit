@@ -17,8 +17,8 @@ export const useWalletStore = defineStore('wallet', {
       this.balanceCents = data.balance_cents ?? this.balanceCents
       if (Array.isArray(data.transactions)) this.transactions = data.transactions
     },
-    async load() {
-      const data = await api.getWallet()
+    async load(opts = {}) {
+      const data = await api.getWallet(opts)
       this.apply(data)
       this.loaded = true
       return data
