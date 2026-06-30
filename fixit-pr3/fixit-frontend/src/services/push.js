@@ -1,79 +1,115 @@
-// Chat push notifications. Two backends behind one initPush():
-//   - Native (Capacitor/Android): FCM via @capacitor/push-notifications.
-//   - Browser: Web Push via the service worker + VAPID.
-// Both register the device token with the API; the server sends on new messages.
-// Safe to call when unconfigured (no VAPID key / plugin) — it no-ops.
+// Direct chat notifications — no FCM, no server push, no device tokens.
+// The client polls its own booking list (which already carries latest_message)
+// and, when a newer incoming message appears, fires a notification locally:
+//   - Browser: Web Notifications API.
+//   - Native (Android): @capacitor/local-notifications.
+// The sender's avatar is used as the notification icon.
+//
+// Trade-off vs FCM: only fires while the app/tab is alive (the poll runs).
+// True closed-app push needs a push service — intentionally out of scope here.
 
 import { Capacitor } from '@capacitor/core'
 import * as api from './api'
 import router from '../router'
 
-let started = false
+const POLL_MS = 15000
+let timer = null
+let primed = false
+let lastSeen = {}      // jobId -> last notified sent_at (ms)
+let localNotif = null  // Capacitor LocalNotifications, lazily loaded on native
+let notifId = 1
 
 export async function initPush() {
-  if (started) return
-  started = true
   try {
     if (Capacitor.isNativePlatform()) {
-      await initNativePush()
-    } else {
-      await initWebPush()
+      const mod = await import('@capacitor/local-notifications')
+      localNotif = mod.LocalNotifications
+      await localNotif.requestPermissions()
+      localNotif.addListener('localNotificationActionPerformed', (e) => {
+        openChat(e?.notification?.extra?.job_id)
+      })
+    } else if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission()
     }
-  } catch (e) {
-    console.warn('[push] init failed', e)
-    started = false
+  } catch { /* permission denied / plugin missing — degrade silently */ }
+
+  start()
+}
+
+export function stopPush() {
+  if (timer) { clearInterval(timer); timer = null }
+  primed = false
+  lastSeen = {}
+}
+
+function start() {
+  if (timer) return
+  poll()
+  timer = setInterval(poll, POLL_MS)
+}
+
+async function poll() {
+  const me = api.getStoredUser()
+  if (!me) return
+  let bookings
+  try {
+    bookings = await api.getBookings({ limit: 50 })
+  } catch {
+    return
+  }
+
+  for (const b of bookings) {
+    const lm = b.latest_message
+    if (!lm || !lm.sent_at) continue
+    const t = new Date(lm.sent_at).getTime()
+    if (!(t > (lastSeen[b.id] || 0))) continue
+    lastSeen[b.id] = t
+    // First pass only seeds the baseline so we don't notify for old history.
+    if (primed && lm.sender_id !== me.id && !lm.is_system && !viewingChat(b.id)) {
+      notify(b, lm)
+    }
+  }
+  primed = true
+}
+
+function viewingChat(jobId) {
+  const r = router.currentRoute.value
+  return ['chat', 'pro-chat', 'admin-chat'].includes(r.name) && Number(r.params.id) === Number(jobId)
+}
+
+function senderOf(b, lm) {
+  if (lm.sender_id === b.customer?.id) return { name: b.customer?.name, avatar: b.customer?.avatar_url }
+  if (lm.sender_id === b.provider?.user_id) return { name: b.provider?.name, avatar: b.provider?.avatar_url }
+  return { name: 'Customer Service', avatar: null }
+}
+
+function notify(b, lm) {
+  const s = senderOf(b, lm)
+  const title = s.name || 'New message'
+  const body = lm.is_encrypted ? 'Sent you an encrypted message' : (lm.body || 'New message')
+  const icon = s.avatar || '/favicon.svg'
+
+  if (localNotif) {
+    localNotif.schedule({
+      notifications: [{
+        id: notifId++,
+        title,
+        body,
+        largeIcon: s.avatar || undefined,
+        smallIcon: 'ic_stat_icon',
+        extra: { job_id: b.id },
+      }],
+    }).catch(() => {})
+    return
+  }
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, icon, tag: `chat-${b.id}` })
+    n.onclick = () => { window.focus(); openChat(b.id); n.close() }
   }
 }
 
-// ── Native (Android / iOS) ────────────────────────────────────────────────────
-async function initNativePush() {
-  // @vite-ignore so the web build doesn't require the native-only plugin.
-  const { PushNotifications } = await import(/* @vite-ignore */ '@capacitor/push-notifications')
-
-  const perm = await PushNotifications.requestPermissions()
-  if (perm.receive !== 'granted') return
-
-  PushNotifications.addListener('registration', (token) => {
-    api.subscribePush({ platform: 'android', fcm_token: token.value }).catch(() => {})
-  })
-  PushNotifications.addListener('registrationError', (err) => console.warn('[push] fcm reg error', err))
-  PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-    const jobId = action?.notification?.data?.job_id
-    if (jobId) router.push({ name: 'chat', params: { id: jobId } }).catch(() => {})
-  })
-
-  await PushNotifications.register()
-}
-
-// ── Browser (Web Push) ────────────────────────────────────────────────────────
-async function initWebPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return
-
-  const { public_key: vapid } = await api.getVapidPublicKey().catch(() => ({ public_key: '' }))
-  if (!vapid) return // server has no VAPID key configured yet
-
-  const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return
-
-  const reg = await navigator.serviceWorker.register('/sw.js')
-  const sub = await reg.pushManager.getSubscription()
-    || await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapid),
-    })
-
-  const json = sub.toJSON()
-  await api.subscribePush({
-    platform: 'web',
-    endpoint: json.endpoint,
-    p256dh: json.keys?.p256dh,
-    auth: json.keys?.auth,
-  })
-}
-
-function urlBase64ToUint8Array(base64) {
-  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
-  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(b64)
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
+function openChat(jobId) {
+  if (!jobId) return
+  router.push({ name: 'chat', params: { id: jobId } }).catch(() => {})
 }
