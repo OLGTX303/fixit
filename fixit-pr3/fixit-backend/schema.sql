@@ -65,6 +65,46 @@ CREATE TABLE ProviderCategory (
   CONSTRAINT fk_pc_category FOREIGN KEY (category_id) REFERENCES ServiceCategory(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE ProviderService (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  provider_id INT NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  description VARCHAR(500) NULL,
+  image_url VARCHAR(512) NULL,
+  sku VARCHAR(40) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_psvc_provider FOREIGN KEY (provider_id) REFERENCES ProviderProfile(id) ON DELETE CASCADE,
+  INDEX idx_psvc_provider (provider_id, sort_order, id)
+) ENGINE=InnoDB;
+
+CREATE TABLE Coupon (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(40) NOT NULL,
+  scope ENUM('system','provider') NOT NULL,
+  provider_id INT NULL,
+  discount_type ENUM('percent','fixed') NOT NULL,
+  discount_value DECIMAL(10,2) NOT NULL,
+  min_spend DECIMAL(10,2) NOT NULL DEFAULT 0,
+  max_discount DECIMAL(10,2) NULL,
+  usage_limit INT NULL,
+  used_count INT NOT NULL DEFAULT 0,
+  per_user_limit INT NOT NULL DEFAULT 1,
+  starts_at DATETIME NOT NULL,
+  expires_at DATETIME NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_coupon_code (code),
+  INDEX idx_coupon_scope_provider (scope, provider_id, is_active),
+  INDEX idx_coupon_active_dates (is_active, starts_at, expires_at),
+  CONSTRAINT fk_coupon_provider FOREIGN KEY (provider_id) REFERENCES ProviderProfile(id) ON DELETE CASCADE,
+  CONSTRAINT fk_coupon_created_by FOREIGN KEY (created_by) REFERENCES User(id)
+) ENGINE=InnoDB;
+
 CREATE TABLE Job (
   id INT AUTO_INCREMENT PRIMARY KEY,
   customer_id INT NOT NULL,
@@ -74,10 +114,27 @@ CREATE TABLE Job (
   scheduled_at DATETIME NOT NULL,
   address VARCHAR(255) NOT NULL,
   total DECIMAL(10,2) NULL,
+  coupon_id INT NULL,
+  discount_amount DECIMAL(10,2) NULL DEFAULT NULL,
   notes TEXT NULL,
   CONSTRAINT fk_job_customer FOREIGN KEY (customer_id) REFERENCES User(id),
   CONSTRAINT fk_job_provider FOREIGN KEY (provider_id) REFERENCES ProviderProfile(id),
-  CONSTRAINT fk_job_category FOREIGN KEY (category_id) REFERENCES ServiceCategory(id)
+  CONSTRAINT fk_job_category FOREIGN KEY (category_id) REFERENCES ServiceCategory(id),
+  CONSTRAINT fk_job_coupon FOREIGN KEY (coupon_id) REFERENCES Coupon(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE CouponRedemption (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  coupon_id INT NOT NULL,
+  user_id INT NOT NULL,
+  booking_id INT NOT NULL,
+  amount_discounted DECIMAL(10,2) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_coupon_booking (coupon_id, booking_id),
+  INDEX idx_redemption_user (user_id, coupon_id),
+  CONSTRAINT fk_redemption_coupon FOREIGN KEY (coupon_id) REFERENCES Coupon(id),
+  CONSTRAINT fk_redemption_user FOREIGN KEY (user_id) REFERENCES User(id),
+  CONSTRAINT fk_redemption_booking FOREIGN KEY (booking_id) REFERENCES Job(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE Review (
@@ -97,6 +154,7 @@ CREATE TABLE Message (
   ciphertext TEXT NULL,
   iv VARCHAR(48) NULL,
   is_encrypted TINYINT(1) NOT NULL DEFAULT 0,
+  is_system TINYINT(1) NOT NULL DEFAULT 0,
   harm_status ENUM('clear','flagged','blocked') NOT NULL DEFAULT 'clear',
   harm_categories JSON NULL,
   content_hash VARCHAR(64) NULL,
