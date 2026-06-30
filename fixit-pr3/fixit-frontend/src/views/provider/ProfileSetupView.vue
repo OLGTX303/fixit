@@ -35,23 +35,47 @@ const availSlots = ref([
 ])
 const savingAvail = ref(false)
 const availSaved  = ref(false)
+const availError  = ref('')
 
 function isDayActive(dow) { return availSlots.value.some(s => s.day_of_week === dow) }
 function toggleDay(dow) {
+  availError.value = ''
   const i = availSlots.value.findIndex(s => s.day_of_week === dow)
   if (i === -1) availSlots.value.push({ day_of_week: dow, start_time: '09:00', end_time: '17:00', auto_confirm: true })
   else availSlots.value.splice(i, 1)
 }
 function slotFor(dow) { return availSlots.value.find(s => s.day_of_week === dow) }
+function validateAvailabilitySlots() {
+  if (!availSlots.value.length) return 'Select at least one available day.'
+  for (const slot of availSlots.value) {
+    const day = DAYS[slot.day_of_week] || 'Selected day'
+    if (!slot.start_time || !slot.end_time) return `${day} needs both start and end time.`
+    if (slot.end_time <= slot.start_time) return `${day} end time must be after start time.`
+  }
+  return ''
+}
 
 async function saveAvailability() {
   if (!myProfile.value) return
+  availError.value = validateAvailabilitySlots()
+  if (availError.value) return
   savingAvail.value = true
   try {
-    await api.saveProviderAvailability(myProfile.value.id, availSlots.value)
+    const cleanSlots = [...availSlots.value]
+      .sort((a, b) => a.day_of_week - b.day_of_week)
+      .map(s => ({
+        day_of_week: Number(s.day_of_week),
+        start_time: s.start_time,
+        end_time: s.end_time,
+        auto_confirm: !!s.auto_confirm,
+      }))
+    await api.saveProviderAvailability(myProfile.value.id, cleanSlots)
+    availSlots.value = cleanSlots
     availSaved.value = true
     setTimeout(() => (availSaved.value = false), 2000)
-  } catch { /* ignore */ } finally { savingAvail.value = false }
+  } catch (err) {
+    availError.value = err.message || 'Could not save schedule. Please try again.'
+  } finally { savingAvail.value = false }
 }
 
 const myProfile = computed(() =>
@@ -315,17 +339,18 @@ async function save() {
           <div v-if="isDayActive(dow)" class="psp-avail-card">
             <div class="psp-avail-day-label">{{ day }}</div>
             <div class="psp-avail-times">
-              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).start_time" />
+              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).start_time" @change="availError = ''" />
               <span style="color:var(--fx-muted);font-size:13px;padding:0 4px">—</span>
-              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).end_time" />
+              <input class="fx-input psp-avail-time" type="time" v-model="slotFor(dow).end_time" @change="availError = ''" />
             </div>
             <label class="psp-avail-auto">
-              <input type="checkbox" v-model="slotFor(dow).auto_confirm" />
+              <input type="checkbox" v-model="slotFor(dow).auto_confirm" @change="availError = ''" />
               <span style="font-size:11px;color:var(--fx-muted)">Auto-accept</span>
             </label>
           </div>
         </div>
       </div>
+      <div v-if="availError" class="psp-form-error">{{ availError }}</div>
 
       <button class="btn btn-primary w-100 mt-4" :disabled="savingAvail || !myProfile" @click="saveAvailability">
         {{ savingAvail ? 'Saving…' : availSaved ? '✓ Saved' : 'Save Schedule' }}
@@ -489,4 +514,9 @@ async function save() {
 .psp-avail-day  { width: 34px; font-size: 12px; font-weight: 600; color: var(--fx-muted); flex-shrink: 0; }
 .psp-avail-time { flex: 1; min-width: 0; padding: 6px 10px; font-size: 13px; }
 .psp-avail-auto { display: flex; align-items: center; gap: 4px; flex-shrink: 0; cursor: pointer; }
+.psp-form-error {
+  margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(239,68,68,0.10); color: #dc2626;
+  font-size: 12px; font-weight: 700;
+}
 </style>
