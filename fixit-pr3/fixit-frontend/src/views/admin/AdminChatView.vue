@@ -174,10 +174,10 @@ function select(b) {
 </template>
 
 <style scoped>
-.msg-split { display: flex; height: calc(100vh - 0px); overflow: hidden; }
+.msg-split { display: flex; height: 100vh; max-height: 100vh; overflow: hidden; }
 
 .msg-panel-left {
-  width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  width: 300px; flex-shrink: 0; min-height: 0; display: flex; flex-direction: column;
   background:
     radial-gradient(ellipse 60% 40% at 10% 5%, rgba(255,255,255,0.32) 0%, transparent 65%),
     rgba(255,255,255,0.08);
@@ -219,7 +219,7 @@ function select(b) {
 }
 .msg-filter-chip.active .msg-filter-count { background: rgba(255,255,255,0.30); }
 
-.msg-conv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.msg-conv-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 0; }
 
 .msg-conv-row {
   width: 100%; display: flex; align-items: center; gap: 12px;
@@ -255,7 +255,7 @@ function select(b) {
 .msg-empty-list { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 10px; text-align: center; }
 .msg-empty-list p { font-size: 13px; color: var(--fx-muted); margin: 0; }
 
-.msg-panel-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msg-panel-right { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .msg-chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--fx-muted); font-size: 14px; }
 
 .conv-row {
