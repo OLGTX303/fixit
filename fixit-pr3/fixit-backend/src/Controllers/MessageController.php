@@ -7,6 +7,7 @@ namespace FixIt\Controllers;
 use FixIt\Models\BookingModel;
 use FixIt\Models\HarmReviewModel;
 use FixIt\Models\MessageModel;
+use FixIt\Services\PushService;
 use FixIt\Support\ResponseHelper;
 use FixIt\Support\Validator;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -95,7 +96,53 @@ final class MessageController
             );
         }
 
+        $this->notifyRecipients($jobId, (int) $user['id'], $isEncrypted, $payload['body']);
+
         return ResponseHelper::json($response, $message, 201);
+    }
+
+    /**
+     * Push a chat notification to the other party (or both, for an admin sender).
+     * Encrypted bodies are never leaked — recipients get a generic preview.
+     * Best-effort: any failure is swallowed so it can't break message creation.
+     */
+    private function notifyRecipients(int $jobId, int $senderId, bool $isEncrypted, ?string $body): void
+    {
+        try {
+            $booking = $this->bookings->findEnriched($jobId);
+            if (!$booking) {
+                return;
+            }
+            $customerId = (int) ($booking['customer']['id'] ?? 0);
+            $providerUserId = (int) ($booking['provider']['user_id'] ?? 0);
+
+            $senderName = $senderId === $customerId
+                ? (string) ($booking['customer']['name'] ?? 'Customer')
+                : ($senderId === $providerUserId
+                    ? (string) ($booking['provider']['name'] ?? 'Provider')
+                    : 'Customer Service');
+
+            $recipients = array_unique(array_filter(
+                [$customerId, $providerUserId],
+                fn ($id) => $id > 0 && $id !== $senderId
+            ));
+            if (!$recipients) {
+                return;
+            }
+
+            $preview = $isEncrypted
+                ? 'Sent you an encrypted message'
+                : mb_substr((string) $body, 0, 80);
+            $push = new PushService();
+            foreach ($recipients as $rid) {
+                $push->sendToUser((int) $rid, $senderName, $preview, [
+                    'type' => 'chat',
+                    'job_id' => (string) $jobId,
+                ]);
+            }
+        } catch (\Throwable) {
+            /* notifications are best-effort */
+        }
     }
 
     /** @param array<string,mixed> $user */

@@ -121,6 +121,10 @@ const SENSITIVE = [
   { m: 'POST', re: /^\/bookings$/ },
   { m: 'PATCH', re: /^\/bookings\/\d+\/status$/ },
   { m: 'DELETE', re: /^\/bookings\/\d+$/ },
+  // Order details + chat ride the encrypted channel too.
+  { m: 'GET', re: /^\/bookings\/\d+$/ },
+  { m: 'GET', re: /^\/jobs\/\d+\/messages$/ },
+  { m: 'POST', re: /^\/jobs\/\d+\/messages$/ },
 ]
 
 export function isSensitive(method, path) {

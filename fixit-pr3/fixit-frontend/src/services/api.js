@@ -183,6 +183,11 @@ export function getBookings({ limit = 0, offset = 0, status } = {}) {
 // Single enriched booking incl. order-history timestamps + paid_at. Backend
 // authorizes per role, so customer / provider / admin all use this same call.
 export const getBooking = (id) => get(`/bookings/${id}`)
+
+// ── Push notifications (chat) ─────────────────────────────────────────────────
+export const getVapidPublicKey = () => get('/push/vapid-public-key')
+export const subscribePush = (payload) => post('/me/push/subscribe', payload)
+export const unsubscribePush = (payload) => request('DELETE', '/me/push/subscribe', payload)
 export const getReviews = ({ limit = 25, offset = 0 } = {}) =>
   get(`/admin/reviews?limit=${limit}&offset=${offset}`)
 export const getStripeStats = () => get('/admin/stripe/stats')

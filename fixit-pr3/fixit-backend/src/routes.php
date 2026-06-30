@@ -17,6 +17,7 @@ use FixIt\Controllers\ProviderController;
 use FixIt\Controllers\ProviderServiceController;
 use FixIt\Controllers\ReviewController;
 use FixIt\Controllers\SecureController;
+use FixIt\Controllers\PushController;
 use FixIt\Controllers\StripePaymentController;
 use FixIt\Controllers\UserController;
 use FixIt\Controllers\WalletController;
@@ -46,10 +47,11 @@ return function (App $app): void {
     $favorites = new FavoriteController();
     $coupons = new CouponController();
     $history = new HistoryController();
+    $push = new PushController();
     $rateLimit = new RateLimitMiddleware();
 
     $app->group('/api', function (RouteCollectorProxy $group) use (
-        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices, $favorites, $coupons, $history
+        $auth, $categories, $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $rateLimit, $availability, $wallet, $providerServices, $favorites, $coupons, $history, $push
     ) {
         // Stripe webhook �?no JWT; verified via Stripe-Signature
         $group->post('/payments/stripe/webhook', [$stripe, 'webhook']);
@@ -69,7 +71,7 @@ return function (App $app): void {
         $group->get('/images/{key:.+}', [$users, 'serveImage']);
 
         $group->group('', function (RouteCollectorProxy $secure) use (
-            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites, $coupons, $history, $rateLimit
+            $providers, $admin, $bookings, $reviews, $messages, $crypto, $kyc, $stripe, $users, $availability, $wallet, $providerServices, $favorites, $coupons, $history, $rateLimit, $push
         ) {
             $secure->post('/providers/{id}/services', [$providerServices, 'create'])
                 ->add(new RoleGuard(['provider', 'admin']));
@@ -201,7 +203,9 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);
-            $secure->get('/bookings/{id}', [$bookings, 'get']);
+            // Order details ride the per-interaction encrypted channel (same as payments).
+            $secure->get('/bookings/{id}', [$bookings, 'get'])
+                ->add(new SecureChannelMiddleware());
             $secure->post('/bookings', [$bookings, 'create'])
                 ->add(new RoleGuard(['customer']))
                 ->add(new SecureChannelMiddleware());
@@ -215,8 +219,17 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer']));
             $secure->get('/providers/{id}/reviews', [$reviews, 'forProvider']);
 
-            $secure->get('/jobs/{id}/messages', [$messages, 'list']);
-            $secure->post('/jobs/{id}/messages', [$messages, 'create']);
+            // Chat transport also rides the encrypted channel (in addition to the
+            // app-layer E2E ciphertext), matching the payment endpoints.
+            $secure->get('/jobs/{id}/messages', [$messages, 'list'])
+                ->add(new SecureChannelMiddleware());
+            $secure->post('/jobs/{id}/messages', [$messages, 'create'])
+                ->add(new SecureChannelMiddleware());
+
+            // Chat push notifications (FCM / Web Push) — register a device target.
+            $secure->get('/push/vapid-public-key', [$push, 'vapidPublicKey']);
+            $secure->post('/me/push/subscribe', [$push, 'subscribe']);
+            $secure->delete('/me/push/subscribe', [$push, 'unsubscribe']);
         })->add(new JwtAuth());
     });
 
