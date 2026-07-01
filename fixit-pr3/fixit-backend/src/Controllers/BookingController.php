@@ -44,6 +44,15 @@ final class BookingController
         return ResponseHelper::json($response, $bookings);
     }
 
+    public function counts(Request $request, Response $response): Response
+    {
+        $user = $request->getAttribute('user');
+        $params = $request->getQueryParams();
+        $from = isset($params['from']) && self::isDateParam((string) $params['from']) ? (string) $params['from'] : null;
+        $to = isset($params['to']) && self::isDateParam((string) $params['to']) ? (string) $params['to'] : null;
+        return ResponseHelper::json($response, (new BookingModel())->countsForUser($user, $from, $to));
+    }
+
     private static function isDateParam(string $value): bool
     {
         return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $value);

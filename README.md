@@ -194,9 +194,19 @@ never displays a secret's value again after it's saved, only its name):
 `GITHUB_TOKEN` is provided automatically by Actions — nothing to configure.
 
 The **backend** reads its own secrets from `fixit-pr3/fixit-backend/.env` (git-ignored, never
-committed) — see [`.env.example`](fixit-pr3/fixit-backend/.env.example) for every variable name
-(`DB_*`, `JWT_SECRET`, `CORS_ORIGIN`, `STRIPE_*`, `SMTP_*`, `GOOGLE_MAPS_API_KEY`,
-`FACE_MATCH_*`) — the file ships with placeholder values only.
+committed) — see [`.env.example`](fixit-pr3/fixit-backend/.env.example) for the template with
+placeholder values only. Every variable it defines:
+
+| Variable | Purpose |
+|----------|---------|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | MySQL connection |
+| `JWT_SECRET` | Signs/verifies auth tokens — ≥32 random characters |
+| `CORS_ORIGIN` | Comma-separated allow-list of origins permitted to call the API |
+| `APP_DEBUG` | Must be `false` in production (hides stack traces from responses) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | Outgoing mail for the email-OTP flow |
+| `GOOGLE_MAPS_API_KEY` | Maps JS key, served to the client via `GET /api/config/maps` (restrict by HTTP referrer + API in Google Cloud Console — see the fix in commit history) |
+| `STRIPE_MODE`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe test-mode payments — never put live (`sk_live_`/`pk_live_`) keys here |
+| `FACE_MATCH_URL`, `FACE_MATCH_API_KEY`, `FACE_MATCH_MIN_SCORE` | LAN face-match gateway used by KYC (ID photo vs. live selfie) |
 
 **To prove to a reviewer/grader that credentials are configured and working, without exposing
 any value:**

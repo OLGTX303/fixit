@@ -225,7 +225,8 @@ function selectJob(jobId) {
 	  display: flex;
 	  flex: 1;
 	  min-height: 0;
-	  height: 100%;
+	  height: calc(100dvh - 24px - env(safe-area-inset-top));
+	  max-height: calc(100dvh - 24px - env(safe-area-inset-top));
 	  overflow: hidden;
 	}
 
@@ -235,6 +236,8 @@ function selectJob(jobId) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   background:
     radial-gradient(ellipse 60% 40% at 10% 5%, rgba(255,255,255,0.32) 0%, transparent 65%),
     rgba(255,255,255,0.08);
@@ -303,6 +306,8 @@ function selectJob(jobId) {
 .msg-panel-right {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 .msg-chat-empty {
   flex: 1; display: flex; flex-direction: column;

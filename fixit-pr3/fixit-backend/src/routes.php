@@ -202,6 +202,7 @@ return function (App $app): void {
                 ->add(new RoleGuard(['customer']));
 
             $secure->get('/bookings', [$bookings, 'list']);
+            $secure->get('/bookings/counts', [$bookings, 'counts']);
             // Order details ride the per-interaction encrypted channel (same as payments).
             $secure->get('/bookings/{id}', [$bookings, 'get'])
                 ->add(new SecureChannelMiddleware());

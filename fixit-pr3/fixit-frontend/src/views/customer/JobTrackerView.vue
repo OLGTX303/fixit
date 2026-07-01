@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
 import { useWalletStore } from '../../stores/wallet'
@@ -11,8 +11,10 @@ import * as api from '../../services/api'
 const auth = useAuthStore()
 const bookingsStore = useBookingsStore()
 const walletStore = useWalletStore()
+const route = useRoute()
 const router = useRouter()
-const activeTab = ref('all')
+const validTabs = new Set(['all', 'pending', 'active', 'done', 'cancelled', 'rate'])
+const activeTab = ref(validTabs.has(route.query.tab) ? route.query.tab : 'all')
 const cancellingId = ref(null)
 const confirmId = ref(null)
 const selectedRange = ref('all')
@@ -28,6 +30,11 @@ const TABS = [
   { key: 'cancelled', label: 'Cancelled' },
   { key: 'rate',      label: 'Rate' },
 ]
+
+function selectTab(key) {
+  activeTab.value = key
+  router.replace({ query: { ...route.query, tab: key } })
+}
 
 const statusParam = computed(() => {
   if (activeTab.value === 'all' || activeTab.value === 'rate') return undefined
@@ -88,6 +95,29 @@ const dateRange = computed(() => {
   return { from, to }
 })
 
+const counts = ref({
+  all: 0,
+  pending: 0,
+  active: 0,
+  done: 0,
+  cancelled: 0,
+  rate: 0,
+})
+
+async function loadCounts() {
+  try {
+    counts.value = {
+      ...counts.value,
+      ...await api.getBookingCounts({
+        from: dateRange.value.from,
+        to: dateRange.value.to,
+      }),
+    }
+  } catch {
+    // Badges are helpful, not blocking; the list itself still handles errors.
+  }
+}
+
 const { items, loading, done, sentinel, reset } = useInfiniteList(
   (offset, size) => api.getBookings({
     limit: size,
@@ -98,21 +128,19 @@ const { items, loading, done, sentinel, reset } = useInfiniteList(
   }), 20)
 
 watch([activeTab, dateRange], reset)
+watch(dateRange, loadCounts, { immediate: true })
+watch(
+  () => route.query.tab,
+  (tab) => {
+    activeTab.value = validTabs.has(tab) ? tab : 'all'
+  },
+)
 
 const filtered = computed(() => {
   const all = items.value
   const visible = activeTab.value === 'rate' ? all.filter(b => b.status === 'completed') : all
   return [...visible].sort((a, b) => bookingTime(b) - bookingTime(a) || Number(b.id) - Number(a.id))
 })
-
-const counts = computed(() => ({
-  all:       items.value.length,
-  pending:   items.value.filter(b => b.status === 'requested').length,
-  active:    items.value.filter(b => ['accepted','in_progress'].includes(b.status)).length,
-  done:      items.value.filter(b => ['completed','reviewed'].includes(b.status)).length,
-  cancelled: items.value.filter(b => b.status === 'cancelled').length,
-  rate:      items.value.filter(b => b.status === 'completed').length,
-}))
 
 const STATUS_CFG = {
   requested:   { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
@@ -148,6 +176,8 @@ async function doCancel(b) {
     await api.updateBookingStatus(b.id, 'cancelled')
     b.status = 'cancelled'
     bookingsStore.resetCache()
+    reset()
+    await loadCounts()
     await walletStore.load().catch(() => null)
     confirmId.value = null
   } catch (e) {
@@ -168,7 +198,7 @@ async function doCancel(b) {
       <button
         v-for="t in TABS" :key="t.key"
         class="jt-tab" :class="{ active: activeTab === t.key }"
-        @click="activeTab = t.key"
+        @click="selectTab(t.key)"
       >
         {{ t.label }}
         <span v-if="counts[t.key]" class="jt-tab-count">{{ counts[t.key] }}</span>

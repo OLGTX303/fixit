@@ -33,9 +33,13 @@ onMounted(async () => {
 })
 
 const myBookings = computed(() => bookingsStore.bookings.filter(b => b.customer_id === auth.user?.id))
-const upcoming   = computed(() => myBookings.value.filter(b => ['requested','accepted','in_progress'].includes(b.status)))
+const upcoming   = computed(() => myBookings.value.filter(b => b.status === 'requested'))
 const toReview   = computed(() => myBookings.value.filter(b => b.status === 'completed'))
 const walletBal  = computed(() => (wallet.balanceCents / 100).toFixed(2))
+
+function openBookings(tab = 'all') {
+  router.push({ name: 'job-tracker', query: { tab } })
+}
 
 // ── Admin stats (fetched once on mount) ────────────────────────────
 const adminStats = ref({ users: 0, blocked: 0, providers: 0, pendingVerify: 0, bookings: 0, harmPending: 0 })
@@ -145,7 +149,7 @@ const CUSTOMER_QUICK = [
 
       <!-- ── Customer / Provider stats ── -->
       <div v-else class="acv-stats-row">
-        <div class="acv-stat" @click="router.push({ name: 'job-tracker' })">
+        <div class="acv-stat" @click="openBookings('all')">
           <div class="acv-stat-num">{{ myBookings.length }}</div>
           <div class="acv-stat-lbl">Bookings</div>
         </div>
@@ -155,7 +159,7 @@ const CUSTOMER_QUICK = [
           <div class="acv-stat-lbl">Wallet</div>
         </div>
         <div class="acv-stat-div"></div>
-        <div class="acv-stat">
+        <div class="acv-stat" @click="openBookings('rate')">
           <div class="acv-stat-num">{{ toReview.length }}</div>
           <div class="acv-stat-lbl">To Review</div>
         </div>
@@ -285,32 +289,32 @@ const CUSTOMER_QUICK = [
       <div class="acv-card acv-glass lg-surface">
         <div class="acv-card-header">
           <span class="acv-card-title">My Bookings</span>
-          <button class="acv-see-all" @click="router.push({ name: 'job-tracker' })">
+          <button class="acv-see-all" @click="openBookings('all')">
             View All <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
           </button>
         </div>
         <div class="acv-orders-grid">
-          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+          <button class="acv-order-btn lg-interactive" @click="openBookings('all')">
             <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">list_alt</span>
             </div>
             <span class="acv-order-lbl">All</span>
           </button>
-          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+          <button class="acv-order-btn lg-interactive" @click="openBookings('pending')">
             <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">schedule</span>
               <span v-if="upcoming.length" class="acv-order-badge">{{ upcoming.length }}</span>
             </div>
             <span class="acv-order-lbl">Upcoming</span>
           </button>
-          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+          <button class="acv-order-btn lg-interactive" @click="openBookings('rate')">
             <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">rate_review</span>
               <span v-if="toReview.length" class="acv-order-badge">{{ toReview.length }}</span>
             </div>
             <span class="acv-order-lbl">To Review</span>
           </button>
-          <button class="acv-order-btn lg-interactive" @click="router.push({ name: 'job-tracker' })">
+          <button class="acv-order-btn lg-interactive" @click="openBookings('cancelled')">
             <div class="acv-order-tile lg-icon-tile">
               <span class="material-symbols-outlined acv-order-icon">cancel</span>
             </div>
