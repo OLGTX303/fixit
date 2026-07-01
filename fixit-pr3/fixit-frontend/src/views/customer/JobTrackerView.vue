@@ -88,6 +88,29 @@ const dateRange = computed(() => {
   return { from, to }
 })
 
+const counts = ref({
+  all: 0,
+  pending: 0,
+  active: 0,
+  done: 0,
+  cancelled: 0,
+  rate: 0,
+})
+
+async function loadCounts() {
+  try {
+    counts.value = {
+      ...counts.value,
+      ...await api.getBookingCounts({
+        from: dateRange.value.from,
+        to: dateRange.value.to,
+      }),
+    }
+  } catch {
+    // Badges are helpful, not blocking; the list itself still handles errors.
+  }
+}
+
 const { items, loading, done, sentinel, reset } = useInfiniteList(
   (offset, size) => api.getBookings({
     limit: size,
@@ -98,21 +121,13 @@ const { items, loading, done, sentinel, reset } = useInfiniteList(
   }), 20)
 
 watch([activeTab, dateRange], reset)
+watch(dateRange, loadCounts, { immediate: true })
 
 const filtered = computed(() => {
   const all = items.value
   const visible = activeTab.value === 'rate' ? all.filter(b => b.status === 'completed') : all
   return [...visible].sort((a, b) => bookingTime(b) - bookingTime(a) || Number(b.id) - Number(a.id))
 })
-
-const counts = computed(() => ({
-  all:       items.value.length,
-  pending:   items.value.filter(b => b.status === 'requested').length,
-  active:    items.value.filter(b => ['accepted','in_progress'].includes(b.status)).length,
-  done:      items.value.filter(b => ['completed','reviewed'].includes(b.status)).length,
-  cancelled: items.value.filter(b => b.status === 'cancelled').length,
-  rate:      items.value.filter(b => b.status === 'completed').length,
-}))
 
 const STATUS_CFG = {
   requested:   { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
@@ -148,6 +163,8 @@ async function doCancel(b) {
     await api.updateBookingStatus(b.id, 'cancelled')
     b.status = 'cancelled'
     bookingsStore.resetCache()
+    reset()
+    await loadCounts()
     await walletStore.load().catch(() => null)
     confirmId.value = null
   } catch (e) {
