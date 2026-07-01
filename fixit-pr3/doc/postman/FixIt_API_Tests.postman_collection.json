@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "fixit-api-tests-generated",
     "name": "FixIt API Tests",
-    "description": "Generated from synced FixIt routes.php and frontend api.js. Import with the FixIt Local Environment. Secure-channel endpoints are included with plaintext payload references and header placeholders; they require the app's X25519/AES-GCM/HMAC wrapper to execute successfully.",
+    "description": "Generated from synced FixIt routes.php and frontend api.js. Import with the FixIt Local Environment. Secure-channel endpoints are included with plaintext payload references and header placeholders; they require the app's X25519/AES-GCM/HMAC wrapper to execute successfully.\n\nEncryption: routes with SecureChannelMiddleware (Bookings, Wallet, Stripe, KYC, chat messages, profile update) need a real X25519 + HKDF + AES-256-GCM + HMAC envelope that Postman's sandbox can't compute natively. Use the companion `secure-channel-helper.js` script in this folder (run with Node.js) to compute the exact headers/body to paste in, or let it perform the call directly and show the decrypted response — see each secure request's description for a ready-to-run example command.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -2191,7 +2191,7 @@
                 "{{booking_id}}"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method GET --path /bookings/1` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2262,7 +2262,7 @@
                 "bookings"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /bookings --body '{\"provider_id\": \"1\", \"category_id\": \"1\", \"scheduled_at\": \"2026-07-10 10:00:00\", \"address\": \"123 Postman Street\", \"notes\": \"Postman booking\", \"recurrence_type\": \"none\", \"recurrence_end_date\": null, \"provider_service_id\": \"x\", \"coupon_code\": \"x\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2344,7 +2344,7 @@
                 "status"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method PATCH --path /bookings/1/status --body '{\"status\": \"accepted\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2421,7 +2421,7 @@
                 "{{booking_id}}"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method DELETE --path /bookings/1` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2961,7 +2961,7 @@
                 "messages"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method GET --path /jobs/1/messages` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3034,7 +3034,7 @@
                 "messages"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /jobs/1/messages --body '{\"is_encrypted\": true, \"ciphertext\": \"x\", \"iv\": \"x\", \"content_hash\": \"x\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3170,7 +3170,7 @@
                 "topup"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /wallet/topup --body '{\"amount_cents\": 1000}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3251,7 +3251,7 @@
                 "withdraw"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /wallet/withdraw --body '{\"amount_cents\": 500}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3371,7 +3371,7 @@
                 "customer"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /payments/stripe/customer` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3440,7 +3440,7 @@
                 "setup-intent"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /payments/stripe/setup-intent` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3513,7 +3513,7 @@
                 "save-payment-method"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /payments/stripe/save-payment-method --body '{\"payment_method_id\": \"pm_card_visa\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3595,7 +3595,7 @@
                 "pay-with-saved-method"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /payments/stripe/pay-with-saved-method --body '{\"amount_cents\": 1000, \"currency\": \"usd\", \"booking_id\": \"1\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3677,7 +3677,7 @@
                 "pay"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /payments/booking/pay --body '{\"booking_id\": \"1\", \"amount_cents\": 1000, \"currency\": \"usd\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3755,7 +3755,7 @@
                 "saved-payment-method"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method DELETE --path /payments/stripe/saved-payment-method` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3881,7 +3881,7 @@
                 "me"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method PATCH --path /users/me --body '{\"name\": \"Postman User\", \"phone\": \"+60123456789\"}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4233,7 +4233,7 @@
                 "id-recognition"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /providers/1/kyc/id-recognition --body '{\"valid\": true, \"document_type\": \"national_id\", \"confidence\": 92.5, \"checks\": {\"name_extracted\": \"Postman Provider\", \"id_number_extracted\": \"900101-01-1234\"}, \"fraud_score\": 5, \"ocr_confidence\": 88}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4316,7 +4316,7 @@
                 "liveness"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.\n\nTo actually run this request, compute the encryption with the companion script in this folder (Postman's sandbox has no native X25519 support): `node secure-channel-helper.js --token <bearer_jwt> --method POST --path /providers/1/kyc/liveness --body '{\"passed\": true, \"score\": 98, \"color_sequence_hash\": \"0000000000000000000000000000000000000000000000000000000000000000\", \"checks\": {\"sequence_matched\": true}}'` — prints ready-to-paste headers/body, and can also perform the live call itself so you can see the decrypted response directly.",
             "auth": {
               "type": "bearer",
               "bearer": [
