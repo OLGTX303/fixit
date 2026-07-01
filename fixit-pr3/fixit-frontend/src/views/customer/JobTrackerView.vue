@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useBookingsStore } from '../../stores/bookings'
 import { useWalletStore } from '../../stores/wallet'
@@ -11,8 +11,10 @@ import * as api from '../../services/api'
 const auth = useAuthStore()
 const bookingsStore = useBookingsStore()
 const walletStore = useWalletStore()
+const route = useRoute()
 const router = useRouter()
-const activeTab = ref('all')
+const validTabs = new Set(['all', 'pending', 'active', 'done', 'cancelled', 'rate'])
+const activeTab = ref(validTabs.has(route.query.tab) ? route.query.tab : 'all')
 const cancellingId = ref(null)
 const confirmId = ref(null)
 const selectedRange = ref('all')
@@ -28,6 +30,11 @@ const TABS = [
   { key: 'cancelled', label: 'Cancelled' },
   { key: 'rate',      label: 'Rate' },
 ]
+
+function selectTab(key) {
+  activeTab.value = key
+  router.replace({ query: { ...route.query, tab: key } })
+}
 
 const statusParam = computed(() => {
   if (activeTab.value === 'all' || activeTab.value === 'rate') return undefined
@@ -122,6 +129,12 @@ const { items, loading, done, sentinel, reset } = useInfiniteList(
 
 watch([activeTab, dateRange], reset)
 watch(dateRange, loadCounts, { immediate: true })
+watch(
+  () => route.query.tab,
+  (tab) => {
+    activeTab.value = validTabs.has(tab) ? tab : 'all'
+  },
+)
 
 const filtered = computed(() => {
   const all = items.value
@@ -185,7 +198,7 @@ async function doCancel(b) {
       <button
         v-for="t in TABS" :key="t.key"
         class="jt-tab" :class="{ active: activeTab === t.key }"
-        @click="activeTab = t.key"
+        @click="selectTab(t.key)"
       >
         {{ t.label }}
         <span v-if="counts[t.key]" class="jt-tab-count">{{ counts[t.key] }}</span>
