@@ -195,8 +195,43 @@ captured request to trigger it again, and can't tamper with a message in transit
 server noticing and rejecting it outright.
 
 How that's actually achieved (implemented identically in `secureTransport.js` on the client and
-`SecureChannelMiddleware.php` + `SecureChannel.php` on the server — full diagram:
-[PR3_Diagrams.puml.md](fixit-pr3/doc/PR3_Diagrams.puml.md#extra--key-derivation--encryption-pipeline-x25519--hkdf--aes-256-gcm--hmac)):
+`SecureChannelMiddleware.php` + `SecureChannel.php` on the server):
+
+```mermaid
+flowchart TD
+  subgraph handshake ["1 · Handshake — once per ~30 min session"]
+    CK[Client X25519 keypair] --> Z((ECDH shared secret Z))
+    SK[Server X25519 keypair] --> Z
+    Z --> Master[master key]
+    Master --> Mac[mac key]
+  end
+
+  subgraph perrequest ["2 · Every request — its own one-time key"]
+    Ctr[counter + nonce + timestamp]
+    Master -.-> ReqKey[request key<br/>HKDF]
+    Ctr --> ReqKey
+    ReqKey --> Enc[AES-256-GCM encrypt body]
+    Mac -.-> Sign[HMAC sign metadata]
+    Ctr --> Sign
+  end
+
+  subgraph verify ["3 · Server verifies, in order"]
+    V1[timestamp fresh?] --> V2[nonce unused?]
+    V2 --> V3[signature valid?]
+    V3 --> V4[decrypt]
+  end
+
+  subgraph response ["4 · Response — a different key again"]
+    Master -.-> RespKey[response key<br/>HKDF, different info string]
+    RespKey --> RespEnc[AES-256-GCM encrypt response]
+  end
+
+  Enc --> V1
+  Sign --> V3
+  V4 --> RespKey
+```
+
+Full technical diagram with every field: [PR3_Diagrams.puml.md](fixit-pr3/doc/PR3_Diagrams.puml.md#extra--key-derivation--encryption-pipeline-x25519--hkdf--aes-256-gcm--hmac).
 
 **1. Handshake (once per ~30 min session)** — think of this as the app and server agreeing on a
 shared secret without ever sending that secret over the network (a Diffie-Hellman key exchange).
