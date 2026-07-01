@@ -536,6 +536,90 @@ C -> C : decrypt response
 
 ---
 
+## Extra — Key Derivation & Encryption Pipeline (X25519 + HKDF + AES-256-GCM + HMAC)
+
+> Companion to the sequence diagram above: that one shows *who calls whom*; this one shows what
+> happens to the *data* — the actual key hierarchy and crypto operations, implemented identically
+> in `secureTransport.js` (client) and `SecureChannelMiddleware.php` + `SecureChannel.php` (server).
+
+```plantuml
+@startuml CryptoPipeline
+skinparam componentStyle rectangle
+
+package "Stage 1 — Handshake (once per ~30 min session)" {
+  [Client X25519\nkeypair (ephemeral)] as ClientKP
+  [Server X25519\nkeypair (ephemeral)] as ServerKP
+  [ECDH shared\nsecret Z] as Z
+  [master key\nHKDF(Z, salt, "fixit/v2/master")] as Master
+  [mac key\nHKDF(master, salt, "fixit/v2/mac")] as Mac
+}
+
+ClientKP -down-> Z : client_pub / server_pub exchanged\nover POST /secure/handshake
+ServerKP -down-> Z
+Z -down-> Master
+Master -down-> Mac
+
+note right of Mac
+  master + mac are held in memory only —
+  never transmitted again after derivation.
+end note
+
+package "Stage 2 — Every request derives its own one-time key" {
+  [counter++, random nonce,\ntimestamp] as Ctr
+  [request key\nHKDF(master, salt, "fixit/v2/request/{counter}/{nonce}")] as ReqKey
+  [AES-256-GCM encrypt\n(body + AAD)] as Enc
+  [canonical string\n(session, counter, nonce, ts, method, path, body_hash)] as Canon
+  [HMAC-SHA256 sign\n(with mac key)] as Sign
+}
+
+Ctr -down-> ReqKey
+Master .down.> ReqKey
+ReqKey -down-> Enc
+Ctr -down-> Canon
+Canon -down-> Sign
+Mac .down.> Sign
+
+note bottom of Enc
+  Output: iv (12B) ‖ ciphertext ‖ tag (16B), base64.
+  Sent as the request body, or via X-Sec-Body
+  header when the method is GET/HEAD.
+end note
+
+package "Server-side verification (in order — cheapest check first)" {
+  [1. Timestamp\nwithin window] as V1
+  [2. Nonce not\nalready used] as V2
+  [3. HMAC signature\nmatches] as V3
+  [4. Decrypt with\nthe same derived key] as V4
+}
+V1 -down-> V2
+V2 -down-> V3
+V3 -down-> V4
+
+package "Stage 3 — Response uses a DISTINCT key" {
+  [response key\nHKDF(master, salt, "fixit/v2/response/{counter}/{nonce}")] as RespKey
+  [AES-256-GCM encrypt\n(server's JSON response)] as RespEnc
+}
+RespKey -down-> RespEnc
+
+note bottom of RespEnc
+  Returned with header X-Sec-Enc: 1.
+  Client derives the identical response key
+  and decrypts — same counter/nonce, different
+  HKDF "info" string, so request/sign/response
+  keys are all independent within one call.
+end note
+@enduml
+```
+
+**Why this design, in one line each:**
+- **X25519 ephemeral keys** → perfect forward secrecy: a leaked session key later can't decrypt past traffic, since each session's keypair is thrown away.
+- **HKDF per counter+nonce** → every single request/response gets its own unique key, so no key is ever reused across two messages.
+- **AES-256-GCM** → authenticated encryption: tampering with the ciphertext is detected, not just prevented from being read.
+- **HMAC over a separate mac key** → the signature proves the *metadata* (path, method, timestamp) wasn't tampered with, independent of whether the body decrypts.
+- **Nonce + timestamp window server-side** → replaying a captured request later, even unmodified, is rejected.
+
+---
+
 ## Extra — Activity Diagram: Order Status & History Timestamps
 
 > Each status transition stamps a Job timestamp (migration 022); the Order
