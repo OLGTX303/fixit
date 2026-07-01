@@ -61,10 +61,25 @@ See [fixit-frontend/ANDROID.md](fixit-frontend/ANDROID.md) and [fixit-backend/RE
 ### Deployment credentials
 
 Real credential values are **never** committed, documented, or shown in screenshots/recordings —
-see [the root README's "Deployment credentials & secrets" section](../README.md#deployment-credentials--secrets)
-for the full list of required GitHub Actions secrets and backend `.env` variables, and how to
-*prove* they're configured (GitHub's masked Secrets page, a green Actions run, or the live site
-itself) without ever exposing a value.
+rotate anything ever shown in a screen share or recording. See
+[the root README](../README.md#deployment-credentials--secrets) for the GitHub Actions secrets
+(`SSH_*`, `ANDROID_*`) required by the CI/CD pipeline, and how to *prove* credentials are
+configured without exposing a value (GitHub's masked Secrets page, a green Actions run, or the
+live site itself).
+
+Backend secrets live in `fixit-backend/.env` (git-ignored — template at
+[`.env.example`](fixit-backend/.env.example)):
+
+| Variable | Purpose |
+|----------|---------|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | MySQL connection |
+| `JWT_SECRET` | Signs/verifies auth tokens — ≥32 random characters |
+| `CORS_ORIGIN` | Comma-separated allow-list of origins permitted to call the API |
+| `APP_DEBUG` | Must be `false` in production |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | Outgoing mail for the email-OTP flow |
+| `GOOGLE_MAPS_API_KEY` | Maps JS key, served via `GET /api/config/maps` (restrict by HTTP referrer + API in Google Cloud Console) |
+| `STRIPE_MODE`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe test-mode payments — never use live keys here |
+| `FACE_MATCH_URL`, `FACE_MATCH_API_KEY`, `FACE_MATCH_MIN_SCORE` | LAN face-match gateway used by KYC |
 
 ## Demo accounts
 
