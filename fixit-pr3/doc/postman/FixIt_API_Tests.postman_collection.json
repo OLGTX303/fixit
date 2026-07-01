@@ -320,7 +320,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"challenge_id\": \"{{captcha_challenge_id}}\",\n  \"x\": 120\n}",
+              "raw": "{\n  \"captcha_id\": \"{{captcha_challenge_id}}\",\n  \"captcha_x\": 120,\n  \"drag_ms\": 850\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -369,7 +369,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"new-user+{{$timestamp}}@example.com\"\n}",
+              "raw": "{\n  \"email\": \"new-user+{{$timestamp}}@example.com\",\n  \"captcha_id\": \"{{captcha_challenge_id}}\",\n  \"captcha_pass_token\": \"{{captcha_token}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -417,7 +417,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Customer\",\n  \"email\": \"postman.customer+{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"customer\",\n  \"otp\": \"123456\",\n  \"captcha_token\": \"{{captcha_token}}\",\n  \"accepted_terms\": true,\n  \"accepted_privacy\": true\n}",
+              "raw": "{\n  \"name\": \"Postman Customer\",\n  \"email\": \"postman.customer+{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"customer\",\n  \"email_otp\": \"123456\",\n  \"accepted_terms\": true,\n  \"accepted_privacy\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1117,7 +1117,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"{{coupon_code}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"subtotal_cents\": 10000\n}",
+              "raw": "{\n  \"code\": \"{{coupon_code}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"subtotal\": 100.00\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1365,7 +1365,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Postman test review\"\n}",
+              "raw": "{\n  \"job_id\": \"{{booking_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Postman test review\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1465,7 +1465,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"bio\": \"Postman provider profile\",\n  \"base_rate\": 50,\n  \"location\": \"Kuala Lumpur\",\n  \"services\": [\n    \"Cleaning\"\n  ],\n  \"lat\": 3.139,\n  \"lng\": 101.6869\n}",
+              "raw": "{\n  \"bio\": \"Postman provider profile\",\n  \"location\": \"Kuala Lumpur\",\n  \"base_rate\": 50,\n  \"latitude\": 3.139,\n  \"longitude\": 101.6869,\n  \"services\": [\n    \"Cleaning\"\n  ],\n  \"category_ids\": [\n    \"{{category_id}}\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1617,7 +1617,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Deep cleaning\",\n  \"description\": \"Postman service\",\n  \"price_cents\": 12000,\n  \"duration_minutes\": 120,\n  \"is_active\": true\n}",
+              "raw": "{\n  \"name\": \"Deep cleaning\",\n  \"description\": \"Postman service\",\n  \"price\": 120.00,\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1674,7 +1674,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Deep cleaning updated\",\n  \"description\": \"Updated\",\n  \"price_cents\": 13000,\n  \"duration_minutes\": 120,\n  \"is_active\": true\n}",
+              "raw": "{\n  \"name\": \"Deep cleaning updated\",\n  \"description\": \"Updated\",\n  \"price\": 130.00,\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1773,7 +1773,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"slots\": [\n    {\n      \"day\": \"mon\",\n      \"start\": \"09:00\",\n      \"end\": \"17:00\"\n    },\n    {\n      \"day\": \"tue\",\n      \"start\": \"09:00\",\n      \"end\": \"17:00\"\n    }\n  ]\n}",
+              "raw": "{\n  \"slots\": [\n    {\n      \"day_of_week\": 1,\n      \"start_time\": \"09:00\",\n      \"end_time\": \"17:00\"\n    },\n    {\n      \"day_of_week\": 2,\n      \"start_time\": \"09:00\",\n      \"end_time\": \"17:00\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1869,7 +1869,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"PROVIDER10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"ends_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
+              "raw": "{\n  \"code\": \"PROVIDER10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"expires_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2098,7 +2098,7 @@
                 "{{booking_id}}"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2573,7 +2573,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pin_salt\": \"{{pin_salt}}\",\n  \"public_key\": \"{{public_key_b64}}\",\n  \"private_key_wrapped\": \"{{private_key_wrapped}}\"\n}",
+              "raw": "{\n  \"pin_salt\": \"{{pin_salt}}\",\n  \"pin_verifier\": \"{{pin_hash}}\",\n  \"public_key_jwk\": {},\n  \"wrapped_private_key\": \"{{private_key_wrapped}}\",\n  \"private_key_iv\": \"{{message_nonce}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2629,7 +2629,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pin_hash\": \"{{pin_hash}}\"\n}",
+              "raw": "{\n  \"pin_verifier\": \"{{pin_hash}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2772,7 +2772,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"wrapped_key\": \"{{wrapped_job_key}}\",\n  \"key_version\": 1\n}",
+              "raw": "{\n  \"encrypted_job_key\": \"{{wrapped_job_key}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2880,7 +2880,7 @@
                 "messages"
               ]
             },
-            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. GET has no HTTP body, so the client sends the encrypted payload in an X-Sec-Body header instead. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2966,7 +2966,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ciphertext\": \"{{message_ciphertext}}\",\n  \"nonce\": \"{{message_nonce}}\",\n  \"key_version\": 1,\n  \"content_hash\": \"{{content_hash}}\"\n}",
+              "raw": "{\n  \"is_encrypted\": true,\n  \"ciphertext\": \"{{message_ciphertext}}\",\n  \"iv\": \"{{message_nonce}}\",\n  \"content_hash\": \"{{content_hash}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4168,7 +4168,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"document_type\": \"mykad\",\n  \"front_image\": \"data:image/jpeg;base64,{{image_base64}}\",\n  \"back_image\": \"data:image/jpeg;base64,{{image_base64}}\",\n  \"ocr\": {\n    \"name\": \"Postman Provider\",\n    \"id_number\": \"900101-01-1234\"\n  }\n}",
+              "raw": "{\n  \"valid\": true,\n  \"document_type\": \"national_id\",\n  \"confidence\": 92.5,\n  \"checks\": {\n    \"name_extracted\": \"Postman Provider\",\n    \"id_number_extracted\": \"900101-01-1234\"\n  },\n  \"fraud_score\": 5,\n  \"ocr_confidence\": 88\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4251,7 +4251,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"frames\": [\n    \"data:image/jpeg;base64,{{image_base64}}\"\n  ],\n  \"challenge\": \"turn_head\",\n  \"score\": 0.98\n}",
+              "raw": "{\n  \"passed\": true,\n  \"score\": 98,\n  \"color_sequence_hash\": \"0000000000000000000000000000000000000000000000000000000000000000\",\n  \"checks\": {\n    \"sequence_matched\": true\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4929,7 +4929,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"ADMIN10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"ends_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
+              "raw": "{\n  \"code\": \"ADMIN10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"expires_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
