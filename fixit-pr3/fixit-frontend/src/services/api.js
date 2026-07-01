@@ -182,6 +182,9 @@ export function getBookings({ limit = 0, offset = 0, status, from, to } = {}) {
   if (to) entries.push(['to', to])
   return get(`/bookings${queryString(entries)}`)
 }
+export function getBookingCounts({ from, to } = {}) {
+  return get(`/bookings/counts${queryString([['from', from], ['to', to]])}`)
+}
 // Single enriched booking incl. order-history timestamps + paid_at. Backend
 // authorizes per role, so customer / provider / admin all use this same call.
 export const getBooking = (id) => get(`/bookings/${id}`)

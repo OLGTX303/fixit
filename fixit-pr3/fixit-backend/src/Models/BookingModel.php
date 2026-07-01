@@ -116,6 +116,54 @@ final class BookingModel
         return $this->attachMessageSummaries($jobs);
     }
 
+    /** @return array{all:int,pending:int,active:int,done:int,cancelled:int,rate:int} */
+    public function countsForUser(array $user, ?string $fromDate = null, ?string $toDate = null): array
+    {
+        $sql = "SELECT
+                    COUNT(*) AS all_count,
+                    COALESCE(SUM(j.status = 'requested'), 0) AS pending_count,
+                    COALESCE(SUM(j.status IN ('accepted', 'in_progress')), 0) AS active_count,
+                    COALESCE(SUM(j.status IN ('completed', 'reviewed')), 0) AS done_count,
+                    COALESCE(SUM(j.status = 'cancelled'), 0) AS cancelled_count,
+                    COALESCE(SUM(j.status = 'completed'), 0) AS rate_count
+                FROM Job j
+                WHERE j.status != 'inquiry'";
+        $params = [];
+
+        if ($user['role'] === 'customer') {
+            $sql .= ' AND j.customer_id = :uid';
+            $params['uid'] = $user['id'];
+        } elseif ($user['role'] === 'provider') {
+            $profile = $this->providers->findByUserId((int) $user['id']);
+            if (!$profile) {
+                return ['all' => 0, 'pending' => 0, 'active' => 0, 'done' => 0, 'cancelled' => 0, 'rate' => 0];
+            }
+            $sql .= ' AND j.provider_id = :pid';
+            $params['pid'] = (int) $profile['id'];
+        }
+
+        if ($fromDate !== null && $fromDate !== '') {
+            $sql .= ' AND j.scheduled_at >= :from_date';
+            $params['from_date'] = $fromDate . ' 00:00:00';
+        }
+        if ($toDate !== null && $toDate !== '') {
+            $sql .= ' AND j.scheduled_at <= :to_date';
+            $params['to_date'] = $toDate . ' 23:59:59';
+        }
+
+        $stmt = Connection::get()->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return [
+            'all' => (int) ($row['all_count'] ?? 0),
+            'pending' => (int) ($row['pending_count'] ?? 0),
+            'active' => (int) ($row['active_count'] ?? 0),
+            'done' => (int) ($row['done_count'] ?? 0),
+            'cancelled' => (int) ($row['cancelled_count'] ?? 0),
+            'rate' => (int) ($row['rate_count'] ?? 0),
+        ];
+    }
+
     public function findEnriched(int $id): ?array
     {
         $stmt = Connection::get()->prepare('SELECT * FROM Job WHERE id = :id LIMIT 1');
