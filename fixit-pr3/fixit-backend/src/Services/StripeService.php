@@ -418,54 +418,17 @@ final class StripeService
         );
     }
 
-    private function creditWalletBookingRefund(int $userId, int $bookingId): bool
-    {
-        $ref = 'booking_pay_' . $bookingId;
-        $pdo = Connection::get();
-        $stmt = $pdo->prepare(
-            "SELECT amount_cents FROM WalletTransaction
-             WHERE user_id = :uid AND kind = 'booking_pay' AND stripe_ref = :ref AND status = 'settled'
-             LIMIT 1"
-        );
-        $stmt->execute(['uid' => $userId, 'ref' => $ref]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$row) {
-            return false;
-        }
-        $debited = abs((int) $row['amount_cents']);
-        if ($debited <= 0) {
-            return false;
-        }
-        $refundRef = 'booking_refund_' . $bookingId;
-        $chk = $pdo->prepare(
-            "SELECT 1 FROM WalletTransaction WHERE kind = 'booking_refund' AND stripe_ref = :ref LIMIT 1"
-        );
-        $chk->execute(['ref' => $refundRef]);
-        if ($chk->fetchColumn()) {
-            return true;
-        }
-        $this->wallet->add(
-            $userId,
-            'booking_refund',
-            $debited,
-            'myr',
-            $refundRef,
-            'Booking #' . $bookingId . ' refund (wallet)'
-        );
-        return true;
-    }
-
     // ── Wallet ────────────────────────────────────────────────────────────
     // The wallet is a ledger (WalletModel). Top-up = a real PaymentIntent on the
     // saved card; withdraw = a real Refund of prior top-ups. Both produce real
     // Stripe sandbox objects AND a settled ledger row — no fake balances.
 
-    public function getWallet(int $userId): array
+    public function getWallet(int $userId, ?string $fromDate = null, ?string $toDate = null): array
     {
         return [
             'balance_cents' => $this->wallet->balanceCents($userId),
             'currency' => 'myr',
-            'transactions' => $this->wallet->list($userId),
+            'transactions' => $this->wallet->list($userId, 50, $fromDate, $toDate),
             'mode' => 'test',
         ];
     }
@@ -664,58 +627,26 @@ final class StripeService
     }
 
     /**
-     * Refund a succeeded Stripe charge tied to a booking. Idempotent: if the
-     * StripePayment row is already 'refunded', or the charge has nothing left to
-     * refund, this is a no-op — never issues a second Stripe Refund.
-     * Unpaid bookings (no succeeded StripePayment) return false.
+     * Refund a paid booking into the customer's wallet ledger. Idempotent:
+     * the wallet transaction is keyed by booking id, and paid rows are marked
+     * refunded so cancellation cannot credit the wallet twice.
      */
     public function refundBookingIfPaid(int $bookingId, int $customerUserId): bool
     {
         $payments = $this->payments->findAllSucceededByBooking($bookingId);
-        if (!$payments) {
-            return false;
-        }
-
-        $refundedAny = false;
+        $paidCents = 0;
         foreach ($payments as $payment) {
             if ((int) $payment['user_id'] !== $customerUserId) {
                 throw new \RuntimeException('Payment owner mismatch');
             }
-
-            $piId = (string) $payment['stripe_payment_intent_id'];
-            if (str_starts_with($piId, 'wallet_booking_')) {
-                if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
-                    $refundedAny = true;
-                }
-                continue;
-            }
-
-            $pi = $this->stripe->paymentIntents->retrieve($piId, ['expand' => ['latest_charge']]);
-            $charge = $pi->latest_charge ?? null;
-            if (!$charge || !isset($charge->id)) {
-                continue;
-            }
-
-            $refundable = (int) $charge->amount - (int) ($charge->amount_refunded ?? 0);
-            if ($refundable <= 0) {
-                continue;
-            }
-
-            $this->stripe->refunds->create([
-                'charge' => $charge->id,
-                'amount' => $refundable,
-                'metadata' => [
-                    'fixit_booking_id' => (string) $bookingId,
-                    'fixit_purpose' => 'booking_cancel',
-                    'stripe_mode' => 'test',
-                ],
-            ]);
-            $refundedAny = true;
+            $paidCents = max($paidCents, (int) ($payment['amount_cents'] ?? 0));
         }
 
-        if ($this->creditWalletBookingRefund($customerUserId, $bookingId)) {
-            $refundedAny = true;
-        }
+        $refundedAny = $this->wallet->refundBookingPayment(
+            $customerUserId,
+            $bookingId,
+            $paidCents > 0 ? $paidCents : null
+        );
 
         if ($refundedAny) {
             $this->payments->markRefunded($bookingId);

@@ -26,7 +26,14 @@ final class BookingModel
      *
      * @return list<array<string,mixed>>
      */
-    public function listForUser(array $user, int $limit = 0, int $offset = 0, ?string $statusFilter = null): array
+    public function listForUser(
+        array $user,
+        int $limit = 0,
+        int $offset = 0,
+        ?string $statusFilter = null,
+        ?string $fromDate = null,
+        ?string $toDate = null
+    ): array
     {
         $sql = "SELECT j.id, j.customer_id, j.provider_id, j.category_id, j.status,
                        j.scheduled_at, j.address, j.total, j.coupon_id, j.discount_amount, j.notes,
@@ -86,6 +93,15 @@ final class BookingModel
                 }
                 $sql .= ' AND j.status IN (' . implode(',', $placeholders) . ')';
             }
+        }
+
+        if ($fromDate !== null && $fromDate !== '') {
+            $sql .= ' AND j.scheduled_at >= :from_date';
+            $params['from_date'] = $fromDate . ' 00:00:00';
+        }
+        if ($toDate !== null && $toDate !== '') {
+            $sql .= ' AND j.scheduled_at <= :to_date';
+            $params['to_date'] = $toDate . ' 23:59:59';
         }
 
         $sql .= ' ORDER BY j.scheduled_at DESC, j.id DESC';

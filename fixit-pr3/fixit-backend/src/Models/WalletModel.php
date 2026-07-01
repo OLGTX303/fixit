@@ -24,17 +24,27 @@ final class WalletModel
     }
 
     /** @return array<int,array> newest first */
-    public function list(int $userId, int $limit = 50): array
+    public function list(int $userId, int $limit = 50, ?string $fromDate = null, ?string $toDate = null): array
     {
         $limit = max(1, min(50, $limit));
+        $where = "WHERE user_id = :uid";
+        $params = ['uid' => $userId];
+        if ($fromDate !== null && $fromDate !== '') {
+            $where .= ' AND created_at >= :from_date';
+            $params['from_date'] = $fromDate . ' 00:00:00';
+        }
+        if ($toDate !== null && $toDate !== '') {
+            $where .= ' AND created_at <= :to_date';
+            $params['to_date'] = $toDate . ' 23:59:59';
+        }
         $stmt = Connection::get()->prepare(
             "SELECT id, kind, amount_cents, currency, stripe_ref, status, note, created_at
              FROM WalletTransaction
-             WHERE user_id = :uid
+             {$where}
              ORDER BY created_at DESC, id DESC
              LIMIT {$limit}"
         );
-        $stmt->execute(['uid' => $userId]);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
@@ -95,6 +105,52 @@ final class WalletModel
             return false;
         }
         $this->add($userId, 'adjustment', -(int) $cents, $currency, $clawRef, 'Payout clawback for cancelled job #' . $jobId);
+        return true;
+    }
+
+    /** Refund a cancelled booking into the customer's wallet. Idempotent. */
+    public function refundBookingPayment(
+        int $userId,
+        int $bookingId,
+        ?int $amountCents = null,
+        string $currency = 'myr'
+    ): bool
+    {
+        $ref = 'booking_pay_' . $bookingId;
+        $pdo = Connection::get();
+        $stmt = $pdo->prepare(
+            "SELECT amount_cents FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'booking_pay' AND stripe_ref = :ref AND status = 'settled'
+             LIMIT 1"
+        );
+        $stmt->execute(['uid' => $userId, 'ref' => $ref]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row && $amountCents === null) {
+            return false;
+        }
+        $refundCents = $amountCents !== null ? abs($amountCents) : abs((int) $row['amount_cents']);
+        if ($refundCents <= 0) {
+            return false;
+        }
+
+        $refundRef = 'booking_refund_' . $bookingId;
+        $chk = $pdo->prepare(
+            "SELECT 1 FROM WalletTransaction
+             WHERE user_id = :uid AND kind = 'booking_refund' AND stripe_ref = :ref LIMIT 1"
+        );
+        $chk->execute(['uid' => $userId, 'ref' => $refundRef]);
+        if ($chk->fetchColumn()) {
+            return true;
+        }
+
+        $this->add(
+            $userId,
+            'booking_refund',
+            $refundCents,
+            $currency,
+            $refundRef,
+            'Booking #' . $bookingId . ' refund (wallet)'
+        );
         return true;
     }
 

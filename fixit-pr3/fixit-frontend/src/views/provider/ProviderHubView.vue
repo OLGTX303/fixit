@@ -21,6 +21,15 @@ onMounted(async () => {
 const user      = computed(() => auth.user || {})
 const initials  = computed(() => (user.value.name || '—').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase())
 const myProfile = computed(() => providersStore.providers.find(p => p.user_id === auth.user?.id))
+const providerCategoryLabel = computed(() => {
+  const profile = myProfile.value
+  if (!profile) return 'Home Services'
+  if (profile.category?.name) return profile.category.name
+  if (profile.category_names?.length) return profile.category_names.slice(0, 2).join(' · ')
+  if (profile.categories?.length) return profile.categories.slice(0, 2).map(c => c.name).join(' · ')
+  if (profile.services?.length) return profile.services.slice(0, 2).join(' · ')
+  return 'Home Services'
+})
 
 const kycVerified = computed(() => myProfile.value?.is_verified)
 const kycLabel    = computed(() => {
@@ -35,6 +44,8 @@ const activeJobs = computed(() => myJobs.value.filter(b => ['accepted','in_progr
 const newJobs    = computed(() => myJobs.value.filter(b => b.status === 'requested'))
 
 const avgRating  = computed(() => {
+  const profileRating = Number(myProfile.value?.avg_rating || 0)
+  if (profileRating > 0) return profileRating.toFixed(1)
   const rated = doneJobs.value.filter(b => b.rating)
   if (!rated.length) return '—'
   return (rated.reduce((s, b) => s + b.rating, 0) / rated.length).toFixed(1)
@@ -45,6 +56,15 @@ const avgRating  = computed(() => {
 const earningsTotal = computed(() => (wallet.balanceCents / 100).toFixed(0))
 
 const recentDone = computed(() => [...doneJobs.value].reverse().slice(0, 3))
+
+function money(value) {
+  const amount = Number(value || 0)
+  return amount.toLocaleString('en-MY', { maximumFractionDigits: 0 })
+}
+
+function personInitials(name) {
+  return (name || '—').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
 
 // Avatar upload
 const fileInput = ref(null)
@@ -100,7 +120,7 @@ const QUICK = [
         </div>
         <div class="phv-name-block">
           <div class="phv-username">{{ user.name || 'Provider' }}</div>
-          <div class="phv-category">{{ myProfile?.category?.name || 'Home Services' }}</div>
+          <div class="phv-category">{{ providerCategoryLabel }}</div>
           <div class="phv-badge-row">
             <div class="phv-kyc-chip" :class="kycVerified ? 'verified' : 'pending'">
               <span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">
@@ -176,13 +196,13 @@ const QUICK = [
       </div>
       <div v-if="recentDone.length" class="phv-job-list">
         <div v-for="b in recentDone" :key="b.id" class="phv-job-row">
-          <div class="phv-job-avatar">{{ (b.customer?.name||'—').split(' ').map(w=>w[0]).join('') }}</div>
+          <div class="phv-job-avatar">{{ personInitials(b.customer?.name) }}</div>
           <div class="phv-job-info">
             <div class="phv-job-name">{{ b.customer?.name || 'Customer' }}</div>
             <div class="phv-job-meta">{{ b.category?.name }} · {{ fmtDate(b.scheduled_at) }}</div>
           </div>
           <div class="phv-job-right">
-            <div class="phv-job-amount">RM{{ b.total }}</div>
+            <div class="phv-job-amount">RM{{ money(b.total) }}</div>
             <div class="phv-job-chip">{{ b.status === 'reviewed' ? '✓ Reviewed' : 'Done' }}</div>
           </div>
         </div>

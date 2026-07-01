@@ -10,10 +10,9 @@ const bookingsStore = useBookingsStore()
 
 const selectedId = ref(null)
 const brokenAvatars = ref({})
+const statusFilter = ref('all')
 
 onMounted(() => bookingsStore.reload())
-
-const conversations = computed(() => bookingsStore.bookings)
 
 const STATUS = {
   inquiry:     { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'Inquiry' },
@@ -22,6 +21,28 @@ const STATUS = {
   in_progress: { c: 'var(--fx-blue)',    bg: 'var(--fx-blue-soft)',    label: 'In Progress' },
   completed:   { c: 'var(--fx-success)', bg: 'var(--fx-success-soft)', label: 'Completed' },
   reviewed:    { c: 'var(--fx-muted)',   bg: 'rgba(255,255,255,0.18)', label: 'Reviewed' },
+}
+
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'requested', label: 'Requested' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+]
+
+const FILTER_MATCH = {
+  all: () => true,
+  requested: b => b.status === 'inquiry' || b.status === 'requested',
+  in_progress: b => b.status === 'accepted' || b.status === 'in_progress',
+  completed: b => b.status === 'completed' || b.status === 'reviewed',
+}
+
+const allConversations = computed(() => bookingsStore.bookings)
+
+const conversations = computed(() => allConversations.value.filter(FILTER_MATCH[statusFilter.value]))
+
+function filterCount(value) {
+  return allConversations.value.filter(FILTER_MATCH[value]).length
 }
 
 function initials(name) {
@@ -52,6 +73,18 @@ function select(b) {
         <span class="msg-panel-sub">{{ conversations.length }} conversation{{ conversations.length !== 1 ? 's' : '' }}</span>
       </div>
 
+      <div class="msg-filter-bar">
+        <button
+          v-for="opt in FILTER_OPTIONS" :key="opt.value"
+          class="msg-filter-chip"
+          :class="{ active: statusFilter === opt.value }"
+          @click="statusFilter = opt.value"
+        >
+          {{ opt.label }}
+          <span class="msg-filter-count">{{ filterCount(opt.value) }}</span>
+        </button>
+      </div>
+
       <div class="msg-conv-list">
         <button
           v-for="b in conversations" :key="b.id"
@@ -74,7 +107,7 @@ function select(b) {
 
         <div v-if="!conversations.length" class="msg-empty-list">
           <span class="material-symbols-outlined" style="font-size:40px;color:var(--fx-muted-soft)">chat_bubble</span>
-          <p>No conversations to monitor</p>
+          <p>{{ statusFilter === 'all' ? 'No conversations to monitor' : 'No conversations with this status' }}</p>
         </div>
       </div>
     </div>
@@ -95,6 +128,19 @@ function select(b) {
       <h1 class="fw-bold mb-1" style="font-size:24px;letter-spacing:-0.02em">CS Chats</h1>
       <p style="font-size:14px;color:var(--fx-muted);margin:0">Monitor customer ↔ provider conversations</p>
     </div>
+
+    <div class="msg-filter-bar msg-filter-bar-mobile">
+      <button
+        v-for="opt in FILTER_OPTIONS" :key="opt.value"
+        class="msg-filter-chip"
+        :class="{ active: statusFilter === opt.value }"
+        @click="statusFilter = opt.value"
+      >
+        {{ opt.label }}
+        <span class="msg-filter-count">{{ filterCount(opt.value) }}</span>
+      </button>
+    </div>
+
     <div class="d-flex flex-column gap-2">
       <button v-for="b in conversations" :key="b.id"
               class="conv-row acv-glass lg-surface d-flex align-items-center gap-3"
@@ -120,18 +166,18 @@ function select(b) {
       </button>
       <div v-if="!conversations.length" class="acv-glass lg-surface text-center py-5">
         <span class="material-symbols-outlined" style="font-size:44px;color:var(--fx-muted-soft);display:block;margin-bottom:12px">chat</span>
-        <div class="fw-semibold" style="font-size:15px;margin-bottom:4px">No conversations yet</div>
-        <div style="font-size:13px;color:var(--fx-muted)">Bookings will appear here when customers message providers</div>
+        <div class="fw-semibold" style="font-size:15px;margin-bottom:4px">{{ statusFilter === 'all' ? 'No conversations yet' : 'No conversations with this status' }}</div>
+        <div style="font-size:13px;color:var(--fx-muted)">{{ statusFilter === 'all' ? 'Bookings will appear here when customers message providers' : 'Try a different filter' }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.msg-split { display: flex; height: calc(100vh - 0px); overflow: hidden; }
+.msg-split { display: flex; height: 100vh; max-height: 100vh; overflow: hidden; }
 
 .msg-panel-left {
-  width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  width: 300px; flex-shrink: 0; min-height: 0; display: flex; flex-direction: column;
   background:
     radial-gradient(ellipse 60% 40% at 10% 5%, rgba(255,255,255,0.32) 0%, transparent 65%),
     rgba(255,255,255,0.08);
@@ -144,7 +190,36 @@ function select(b) {
 .msg-panel-title  { font-size: 20px; font-weight: 800; color: var(--fx-text); display: block; }
 .msg-panel-sub    { font-size: 12px; color: var(--fx-muted); margin-top: 2px; display: block; }
 
-.msg-conv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.msg-filter-bar {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 14px 16px; flex-shrink: 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.40);
+}
+.msg-filter-bar-mobile { padding: 0 0 16px; border-bottom: none; }
+
+.msg-filter-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; line-height: 1;
+  color: var(--fx-text); background: rgba(255,255,255,0.55);
+  border: 1.5px solid rgba(0,0,0,0.12);
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.msg-filter-chip:hover  { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.20); }
+.msg-filter-chip:active { transform: scale(0.96); }
+.msg-filter-chip.active {
+  background: var(--fx-accent); border-color: var(--fx-accent);
+  color: #fff; box-shadow: 0 2px 8px rgba(255,102,53,0.30);
+}
+.msg-filter-count {
+  font-size: 10px; font-weight: 800;
+  padding: 1px 6px; border-radius: 999px;
+  background: rgba(0,0,0,0.08); color: inherit;
+}
+.msg-filter-chip.active .msg-filter-count { background: rgba(255,255,255,0.30); }
+
+.msg-conv-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 0; }
 
 .msg-conv-row {
   width: 100%; display: flex; align-items: center; gap: 12px;
@@ -180,7 +255,7 @@ function select(b) {
 .msg-empty-list { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 10px; text-align: center; }
 .msg-empty-list p { font-size: 13px; color: var(--fx-muted); margin: 0; }
 
-.msg-panel-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msg-panel-right { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .msg-chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--fx-muted); font-size: 14px; }
 
 .conv-row {

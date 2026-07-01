@@ -1,0 +1,5055 @@
+{
+  "info": {
+    "_postman_id": "fixit-api-tests-generated",
+    "name": "FixIt API Tests",
+    "description": "Generated from synced FixIt routes.php and frontend api.js. Import with the FixIt Local Environment. Secure-channel endpoints are included with plaintext payload references and header placeholders; they require the app's X25519/AES-GCM/HMAC wrapper to execute successfully.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{customer_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+          "const ct = pm.response.headers.get('Content-Type') || '';",
+          "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://fixit.olgtx.com/api"
+    },
+    {
+      "key": "customer_token",
+      "value": ""
+    },
+    {
+      "key": "provider_token",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "provider_id",
+      "value": "1"
+    },
+    {
+      "key": "category_id",
+      "value": "1"
+    },
+    {
+      "key": "booking_id",
+      "value": "1"
+    },
+    {
+      "key": "job_id",
+      "value": "1"
+    },
+    {
+      "key": "service_id",
+      "value": "1"
+    },
+    {
+      "key": "user_id",
+      "value": "1"
+    },
+    {
+      "key": "coupon_id",
+      "value": "1"
+    },
+    {
+      "key": "x25519_client_pub_b64",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Health & Public Config",
+      "item": [
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Latest Android Release",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/app/latest",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "app",
+                "latest"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Latest Android Release Refresh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/app/latest?refresh=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "app",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "refresh",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google Maps Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/config/maps",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "config",
+                "maps"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Captcha Challenge",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/captcha",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "captcha"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Captcha Verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/captcha/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "captcha",
+                "verify"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge_id\": \"{{captcha_challenge_id}}\",\n  \"x\": 120\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register",
+                "otp"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new-user+{{$timestamp}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Customer\",\n  \"email\": \"postman.customer+{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"customer\",\n  \"otp\": \"123456\",\n  \"captcha_token\": \"{{captcha_token}}\",\n  \"accepted_terms\": true,\n  \"accepted_privacy\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Customer - saves customer_token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login succeeded', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test('token returned', function () { pm.expect(json.token).to.be.a('string').and.not.empty; });",
+                  "if (json.token) pm.collectionVariables.set('customer_token', json.token);",
+                  "if (json.token) pm.environment.set('customer_token', json.token);",
+                  "if (json.user) pm.environment.set('last_user_id', json.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Provider - saves provider_token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login succeeded', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test('token returned', function () { pm.expect(json.token).to.be.a('string').and.not.empty; });",
+                  "if (json.token) pm.collectionVariables.set('provider_token', json.token);",
+                  "if (json.token) pm.environment.set('provider_token', json.token);",
+                  "if (json.user) pm.environment.set('last_user_id', json.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Admin - saves admin_token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login succeeded', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test('token returned', function () { pm.expect(json.token).to.be.a('string').and.not.empty; });",
+                  "if (json.token) pm.collectionVariables.set('admin_token', json.token);",
+                  "if (json.token) pm.environment.set('admin_token', json.token);",
+                  "if (json.user) pm.environment.set('last_user_id', json.user.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Public Catalog",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers?q=&category=&sort=recommended&region=&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "category",
+                  "value": ""
+                },
+                {
+                  "key": "sort",
+                  "value": "recommended"
+                },
+                {
+                  "key": "region",
+                  "value": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Provider",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Provider Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "availability"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Provider Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "services"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Provider Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "reviews"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Avatar Proxy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/avatars/{{avatar_key}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "avatars",
+                "{{avatar_key}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Image Proxy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/images/{{image_key}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "images",
+                "{{image_key}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Customer",
+      "item": [
+        {
+          "name": "List Favorites",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/favorites?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "favorites"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Favorite Provider",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/favorite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "favorite"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Favorite Provider",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/favorite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "favorite"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Provider Inquiry",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/inquiry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "inquiry"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/coupons/validate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coupons",
+                "validate"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{coupon_code}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"subtotal_cents\": 10000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Available Coupons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/coupons/available?provider_id={{$provider_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coupons",
+                "available"
+              ],
+              "query": [
+                {
+                  "key": "provider_id",
+                  "value": "{{provider_id}}"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record Browsing History",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "history"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider_id\": \"{{provider_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Browsing History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/history?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear Browsing History",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "history"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reviews"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Postman test review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Provider",
+      "item": [
+        {
+          "name": "My Provider Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/provider",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "provider"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Provider Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"bio\": \"Postman provider profile\",\n  \"base_rate\": 50,\n  \"location\": \"Kuala Lumpur\",\n  \"services\": [\n    \"Cleaning\"\n  ],\n  \"lat\": 3.139,\n  \"lng\": 101.6869\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Provider Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Updated from Postman\",\n  \"base_rate\": 60,\n  \"location\": \"Kuala Lumpur\",\n  \"services\": [\n    \"Cleaning\",\n    \"Repair\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Provider Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Provider Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/services",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "services"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deep cleaning\",\n  \"description\": \"Postman service\",\n  \"price_cents\": 12000,\n  \"duration_minutes\": 120,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Provider Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/services/{{service_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "services",
+                "{{service_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deep cleaning updated\",\n  \"description\": \"Updated\",\n  \"price_cents\": 13000,\n  \"duration_minutes\": 120,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Provider Service",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/services/{{service_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "services",
+                "{{service_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "availability"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slots\": [\n    {\n      \"day\": \"mon\",\n      \"start\": \"09:00\",\n      \"end\": \"17:00\"\n    },\n    {\n      \"day\": \"tue\",\n      \"start\": \"09:00\",\n      \"end\": \"17:00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Coupons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/coupons",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "coupons"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create My Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me/coupons",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "coupons"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PROVIDER10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"ends_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update My Coupon",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me/coupons/{{coupon_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "coupons",
+                "{{coupon_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_value\": 15,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete My Coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me/coupons/{{coupon_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me",
+                "coupons",
+                "{{coupon_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Bookings",
+      "item": [
+        {
+          "name": "List Bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings?limit=25&offset=0&status=&from=&to=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "from",
+                  "value": ""
+                },
+                {
+                  "key": "to",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Booking (secure)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Booking (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider_id\": \"{{provider_id}}\",\n  \"category_id\": \"{{category_id}}\",\n  \"scheduled_at\": \"2026-07-10 10:00:00\",\n  \"address\": \"123 Postman Street\",\n  \"notes\": \"Postman booking\",\n  \"recurrence_type\": \"none\",\n  \"recurrence_end_date\": null,\n  \"provider_service_id\": \"{{service_id}}\",\n  \"coupon_code\": \"{{coupon_code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Booking Status (secure)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}",
+                "status"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Booking (secure)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/{{booking_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Chat & Crypto",
+      "item": [
+        {
+          "name": "Secure Handshake",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/secure/handshake",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "secure",
+                "handshake"
+              ]
+            },
+            "description": "Starts the dynamic secure channel. client_pub must be a base64 raw X25519 public key generated by the client.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_pub\": \"{{x25519_client_pub_b64}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const j = pm.response.json(); if (j.session_id) pm.environment.set('secure_session', j.session_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crypto Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/crypto/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crypto",
+                "status"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PIN Salt",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/crypto/pin/salt",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crypto",
+                "pin",
+                "salt"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Public Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/crypto/public-key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crypto",
+                "public-key"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup PIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crypto/pin/setup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crypto",
+                "pin",
+                "setup"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin_salt\": \"{{pin_salt}}\",\n  \"public_key\": \"{{public_key_b64}}\",\n  \"private_key_wrapped\": \"{{private_key_wrapped}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify PIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crypto/pin/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crypto",
+                "pin",
+                "verify"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin_hash\": \"{{pin_hash}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Job Crypto Peers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/crypto/peers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "crypto",
+                "peers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Job Crypto Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/crypto/key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "crypto",
+                "key"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Job Crypto Key",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/crypto/key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "crypto",
+                "key"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wrapped_key\": \"{{wrapped_job_key}}\",\n  \"key_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Public Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/crypto/public-key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "crypto",
+                "public-key"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Job Messages (secure)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "messages"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send Job Message (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "messages"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ciphertext\": \"{{message_ciphertext}}\",\n  \"nonce\": \"{{message_nonce}}\",\n  \"key_version\": 1,\n  \"content_hash\": \"{{content_hash}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Wallet & Payments",
+      "item": [
+        {
+          "name": "Get Wallet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/wallet?from=&to=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": ""
+                },
+                {
+                  "key": "to",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wallet Top Up (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet/topup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "topup"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount_cents\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wallet Withdraw (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet/withdraw",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "withdraw"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount_cents\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stripe Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/config",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "config"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ensure Stripe Customer (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/customer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "customer"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Stripe Setup Intent (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/setup-intent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "setup-intent"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save Stripe Payment Method (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/save-payment-method",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "save-payment-method"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_id\": \"pm_card_visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay With Saved Method (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/pay-with-saved-method",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "pay-with-saved-method"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount_cents\": 1000,\n  \"currency\": \"usd\",\n  \"booking_id\": \"{{booking_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay Booking (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/booking/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "booking",
+                "pay"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"amount_cents\": 1000,\n  \"currency\": \"usd\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Saved Payment Method (secure)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/saved-payment-method",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "saved-payment-method"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/stripe/webhook",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "webhook"
+              ]
+            },
+            "description": "Requires a valid Stripe-Signature header in production.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_webhook\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 User Profile & Uploads",
+      "item": [
+        {
+          "name": "Update My Profile (secure)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman User\",\n  \"phone\": \"+60123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me/avatar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/png;base64,{{image_base64}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Generic Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/upload/image",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "upload",
+                "image"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/png;base64,{{image_base64}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me/email/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "email",
+                "otp"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new-email@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me/email/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "email",
+                "verify"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new-email@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 KYC",
+      "item": [
+        {
+          "name": "Get KYC Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "kyc"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit ID Recognition (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/kyc/id-recognition",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "kyc",
+                "id-recognition"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"mykad\",\n  \"front_image\": \"data:image/jpeg;base64,{{image_base64}}\",\n  \"back_image\": \"data:image/jpeg;base64,{{image_base64}}\",\n  \"ocr\": {\n    \"name\": \"Postman Provider\",\n    \"id_number\": \"900101-01-1234\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Liveness (secure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Sec-Session",
+                "value": "{{secure_session}}",
+                "description": "Generated by /secure/handshake + X25519 client",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Counter",
+                "value": "{{secure_counter}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Nonce",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Ts",
+                "value": "{{$timestamp}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Sec-Sign",
+                "value": "{{secure_signature}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/kyc/liveness",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "kyc",
+                "liveness"
+              ]
+            },
+            "description": "SECURE CHANNEL REQUIRED: this route has SecureChannelMiddleware. The app encrypts/signs the body with X25519 + HKDF + AES-256-GCM + HMAC. Plain JSON is included only as the pre-encryption payload reference; it will not pass unless wrapped by the secure transport.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{provider_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frames\": [\n    \"data:image/jpeg;base64,{{image_base64}}\"\n  ],\n  \"challenge\": \"turn_head\",\n  \"score\": 0.98\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 Admin",
+      "item": [
+        {
+          "name": "Admin Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/providers?verified=&limit=25&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "providers"
+              ],
+              "query": [
+                {
+                  "key": "verified",
+                  "value": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Provider",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/providers/{{provider_id}}/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "providers",
+                "{{provider_id}}",
+                "verify"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_verified\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Provider Priority",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/providers/{{provider_id}}/priority",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "providers",
+                "{{provider_id}}",
+                "priority"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_priority\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users?q=&limit=25&offset=0&sort=name",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "name"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Block User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{user_id}}/block",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{user_id}}",
+                "block"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blocked\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Category Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/category-stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "category-stats"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verify-stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "verify-stats"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/reviews?limit=25&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stripe Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/stripe/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "stripe",
+                "stats"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Harm Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/harm-reviews?limit=50&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "harm-reviews"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review Harm Message",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/harm-reviews/{{harm_review_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "harm-reviews",
+                "{{harm_review_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"reviewed_clear\",\n  \"admin_notes\": \"Reviewed from Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Coupons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/coupons?limit=25&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "coupons"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Admin Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/coupons",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "coupons"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ADMIN10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"ends_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Admin Coupon",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/coupons/{{coupon_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "coupons",
+                "{{coupon_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_value\": 20,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Admin Coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/coupons/{{coupon_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "coupons",
+                "{{coupon_id}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('response is not a server error', function () { pm.expect(pm.response.code).to.be.below(500); });",
+                  "const ct = pm.response.headers.get('Content-Type') || '';",
+                  "if (pm.response.text() && ct.includes('application/json')) { pm.test('response is valid JSON', function () { pm.response.json(); }); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
