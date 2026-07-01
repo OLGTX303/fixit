@@ -1,5 +1,9 @@
 # FixIt
 
+<p align="center">
+  <img src="fixit-pr3/fixit-frontend/public/fixit-logo.svg" alt="FixIt project logo" width="240">
+</p>
+
 On-demand local home-services marketplace — full-stack PR3 build with Vue 3 frontend, PHP Slim 4 API, MySQL, E2E encrypted chat, harm-message review, and Capacitor Android app.
 
 **Live:** [https://fixit.olgtx.com](https://fixit.olgtx.com) · API base: `https://fixit.olgtx.com/api`
