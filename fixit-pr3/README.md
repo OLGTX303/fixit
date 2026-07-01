@@ -58,6 +58,14 @@ npm run cap:sync && npm run cap:android
 
 See [fixit-frontend/ANDROID.md](fixit-frontend/ANDROID.md) and [fixit-backend/README.md](fixit-backend/README.md) (includes **aaPanel / nginx production deploy**).
 
+### Deployment credentials
+
+Real credential values are **never** committed, documented, or shown in screenshots/recordings —
+see [the root README's "Deployment credentials & secrets" section](../README.md#deployment-credentials--secrets)
+for the full list of required GitHub Actions secrets and backend `.env` variables, and how to
+*prove* they're configured (GitHub's masked Secrets page, a green Actions run, or the live site
+itself) without ever exposing a value.
+
 ## Demo accounts
 
 Password: `password123`

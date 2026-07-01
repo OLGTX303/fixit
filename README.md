@@ -174,6 +174,41 @@ flowchart LR
    ```
 5. Serve `fixit-pr3/fixit-frontend/dist/` from any static host (nginx, Netlify, Render, S3).
 
+## Deployment credentials & secrets
+
+**Never commit real credential values to git or paste them into docs, slides, or screenshots.**
+Rotate any secret that's ever shown in a screen share, recording, or classroom demo — a shown
+secret should be treated as compromised, even shown "just once."
+
+The CI/CD pipeline (`.github/workflows/deploy.yml`, `release-apk.yml`) needs these **GitHub
+Actions secrets** (Settings → Secrets and variables → Actions → New repository secret — GitHub
+never displays a secret's value again after it's saved, only its name):
+
+| Secret | Used for |
+|--------|----------|
+| `SSH_HOST`, `SSH_PORT` | Address of the production server for the auto-redeploy job |
+| `SSH_KEY` | Private key for the `deploy` SSH user (public key installed on the server) |
+| `ANDROID_KEYSTORE_BASE64` | Base64-encoded release keystore for signing the Android APK |
+| `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Keystore/key passwords for signing |
+
+`GITHUB_TOKEN` is provided automatically by Actions — nothing to configure.
+
+The **backend** reads its own secrets from `fixit-pr3/fixit-backend/.env` (git-ignored, never
+committed) — see [`.env.example`](fixit-pr3/fixit-backend/.env.example) for every variable name
+(`DB_*`, `JWT_SECRET`, `CORS_ORIGIN`, `STRIPE_*`, `SMTP_*`, `GOOGLE_MAPS_API_KEY`,
+`FACE_MATCH_*`) — the file ships with placeholder values only.
+
+**To prove to a reviewer/grader that credentials are configured and working, without exposing
+any value:**
+- GitHub → Settings → Secrets and variables → Actions — shows every secret **name** (values
+  permanently masked).
+- GitHub → Actions tab — a green run of `deploy.yml` proves the SSH key and Android signing
+  secrets actually authenticated and worked.
+- On the server: `grep -oE '^[A-Z_]+=' fixit-pr3/fixit-backend/.env` lists every configured key
+  with no values printed.
+- The live site itself (`https://fixit.olgtx.com`) working end-to-end is the strongest proof —
+  a broken credential means a broken deployment.
+
 ## Earlier milestones
 
 | Folder | Milestone | Run |
