@@ -142,6 +142,9 @@ flowchart LR
     MySQL[(MySQL)]
   end
   Stripe[[Stripe API]]
+  Mail[[SMTP]]
+  Maps[[Google Maps JS API]]
+  FaceMatch[[Face-Match Gateway<br/>LAN]]
   Web --> JWT
   Android --> JWT
   JWT --> SCM
@@ -149,6 +152,10 @@ flowchart LR
   JWT -.plain routes.-> Slim
   Slim --> MySQL
   Slim --> Stripe
+  Slim --> Mail
+  Slim --> FaceMatch
+  Slim -. maps_api_key .-> Web
+  Web --> Maps
 ```
 
 - **Frontend** calls the API via `fixit-pr3/fixit-frontend/src/services/api.js`
@@ -156,6 +163,8 @@ flowchart LR
 - **Per-interaction channel** (`secureTransport.js` ↔ `SecureChannelMiddleware.php`) wraps payments, chat, and order-detail requests — separate from and on top of the chat's own E2E ciphertext
 - **Chat notifications** are client-side only (`services/push.js` polls `/bookings` and fires a local notification) — no FCM/APNs, no server push infrastructure
 - **Harm screening** runs client-side before encryption (`harmReview.js`)
+- **Google Maps** — the backend only hands the browser its API key (`GET /api/config/maps`, origin-checked); the browser loads Google's JS SDK directly, the key is never bundled into source
+- **KYC face-match** — the backend calls a LAN gateway server-side to compare the ID photo against the live selfie; the browser never talks to it directly
 
 ## Production deployment
 

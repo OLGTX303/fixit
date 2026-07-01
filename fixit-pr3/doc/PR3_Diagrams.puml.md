@@ -79,14 +79,16 @@ package "API Server (PHP Slim 4)" {
   [Rate Limit /\nCORS / Headers] as Sec
   [JWT Auth + RBAC\nMiddleware] as JWT
   [SecureChannel\nMiddleware (X25519)] as SCM
-  [Controllers\n(Auth, Booking, Provider,\nPayment, Crypto, Admin)] as API
-  [Services\n(SliderCaptcha, Mail, Stripe)] as Svc
+  [Controllers\n(Auth, Booking, Provider,\nPayment, Crypto, Admin, KYC)] as API
+  [Services\n(SliderCaptcha, Mail, Stripe,\nFaceMatch)] as Svc
   [Models\n(PDO data-access)] as PDO
 }
 
 database "MySQL" as DB
 cloud "Stripe API\n(test mode)" as Stripe
 cloud "SMTP / Mail" as Mail
+cloud "Google Maps\nJS API" as Maps
+node "Face-Match Gateway\n(LAN)" as FaceMatch
 
 note bottom of Web
   Chat E2E: AES-256-GCM + RSA-2048 client-side.
@@ -108,6 +110,9 @@ API --> PDO
 PDO --> DB
 Svc --> Stripe : payments
 Svc --> Mail : OTP email
+Svc --> FaceMatch : KYC selfie vs ID photo
+API --> Web : maps_api_key\n(GET /api/config/maps)
+Web --> Maps : load JS SDK directly\n(key never bundled in source)
 @enduml
 ```
 
