@@ -2,11 +2,14 @@
 
 On-demand local home-services marketplace — full-stack PR3 build with Vue 3 frontend, PHP Slim 4 API, MySQL, E2E encrypted chat, harm-message review, and Capacitor Android app.
 
+**Live:** [https://fixit.olgtx.com](https://fixit.olgtx.com) · API base: `https://fixit.olgtx.com/api`
+
 ## Repository layout
 
 ```
 ├── fixit/              PR1 — interactive UI mockup (React/JSX design canvas)
 ├── fixit-pr2/          PR2 — Vue 3 interim build (mock JSON, no backend)
+├── fixit-meituan-ui/   Meituan-style UI rebuild (reversed from Meituan APK)
 ├── fixit-pr3/          PR3 — full-stack Vue 3 + PHP Slim 4 + MySQL + Android
 │   ├── fixit-frontend/ Vue 3 + Vite SPA + Capacitor Android (live API)
 │   └── fixit-backend/  PHP Slim 4 REST API + MySQL
@@ -27,10 +30,13 @@ Frontend and backend deploy separately. No Docker required.
 | **Provider KYC** | OCR + MRZ + anti-spoof ID checks + 8-colour face liveness |
 | **Payments** | Stripe test mode (SetupIntent + saved test card) |
 | **Registration** | Slider puzzle captcha + Terms/Privacy policy acceptance |
-| **E2E chat** | AES-256-GCM messages; server stores ciphertext only |
+| **E2E chat** | AES-256-GCM messages; server stores ciphertext only; auto-refreshes every 3s |
 | **PIN unlock** | RSA-2048 keypair; private key wrapped with PIN (PBKDF2) for new devices |
+| **Order history** | Order Details page (customer/provider/admin) with a submit → paid → accepted → in-progress → completed timeline and synced avatars |
+| **Per-interaction encryption** | X25519 handshake + HKDF + AES-256-GCM + HMAC on every payment, chat, and order-detail request (same channel as Stripe writes); live in the Encryption Debug capsule |
+| **Chat notifications** | Direct client-side notifications (Web Notifications API / Capacitor Local Notifications) — no FCM, no push server, no device tokens |
 | **Harm review** | Client-side screening; flagged metadata queued for admin |
-| **Android** | Capacitor app with geolocation, status bar, back-button handling |
+| **Android** | Capacitor app with geolocation, status bar, local notifications, back-button handling |
 | **Security** | Prepared statements, rate limiting, CORS lockdown, security headers |
 
 ## Quick start
@@ -46,10 +52,7 @@ Frontend and backend deploy separately. No Docker required.
 ```bash
 mysql -u root -p < fixit-pr3/fixit-backend/schema.sql
 mysql -u root -p < fixit-pr3/fixit-backend/seed.sql
-mysql -u root -p < fixit-pr3/fixit-backend/migrations/002_e2e_crypto_harm.sql
-mysql -u root -p < fixit-pr3/fixit-backend/migrations/003_kyc_verification.sql
-mysql -u root -p < fixit-pr3/fixit-backend/migrations/004_stripe_payments.sql
-mysql -u root -p < fixit-pr3/fixit-backend/migrations/005_legal_acceptance.sql
+for f in fixit-pr3/fixit-backend/migrations/*.sql; do mysql -u root -p < "$f"; done
 ```
 
 Create a least-privilege MySQL user (see [fixit-pr3/fixit-backend/README.md](fixit-pr3/fixit-backend/README.md)).
@@ -112,11 +115,13 @@ Seed password for all users: `password123` (change before production).
 | Catalog | `GET /categories`, `GET /providers`, `GET /providers/{id}` |
 | KYC | `GET/POST /providers/{id}/kyc/*` (ID recognition + liveness) |
 | Payments | Stripe config, setup-intent, save/pay with test card |
-| Bookings | CRUD + status updates (customer/provider) |
+| Bookings | CRUD + status updates (customer/provider); `GET /bookings/{id}` returns the full order-history timeline + `paid_at` |
 | Reviews | Create + list per provider |
 | Crypto | PIN setup/verify, RSA keys, per-job AES key exchange |
 | Messages | Encrypted job chat (`GET/POST /jobs/{id}/messages`) |
 | Admin | Provider verification, users, reviews, harm-review queue |
+
+`POST /bookings`, `PATCH/DELETE /bookings/{id}`, `GET /bookings/{id}`, and both `/jobs/{id}/messages` routes ride the same per-interaction encrypted channel as Stripe payments (`SecureChannelMiddleware`, X25519 handshake via `POST /secure/handshake`). GET requests carry their encrypted payload in an `X-Sec-Body` header (fetch forbids a GET body).
 
 ## Architecture
 
@@ -127,18 +132,25 @@ flowchart LR
     Android[Capacitor Android]
   end
   subgraph api [fixit-pr3/fixit-backend]
-    Slim[Slim 4 API]
     JWT[JWT Auth]
+    SCM[SecureChannel<br/>Middleware X25519]
+    Slim[Slim 4 API]
     MySQL[(MySQL)]
   end
-  Web --> Slim
-  Android --> Slim
-  Slim --> JWT
-  JWT --> MySQL
+  Stripe[[Stripe API]]
+  Web --> JWT
+  Android --> JWT
+  JWT --> SCM
+  SCM --> Slim
+  JWT -.plain routes.-> Slim
+  Slim --> MySQL
+  Slim --> Stripe
 ```
 
 - **Frontend** calls the API via `fixit-pr3/fixit-frontend/src/services/api.js`
 - **E2E crypto** runs in the browser/app (`crypto.js`, `chatCrypto.js`); backend stores wrapped keys and ciphertext
+- **Per-interaction channel** (`secureTransport.js` ↔ `SecureChannelMiddleware.php`) wraps payments, chat, and order-detail requests — separate from and on top of the chat's own E2E ciphertext
+- **Chat notifications** are client-side only (`services/push.js` polls `/bookings` and fires a local notification) — no FCM/APNs, no server push infrastructure
 - **Harm screening** runs client-side before encryption (`harmReview.js`)
 
 ## Production deployment
@@ -176,6 +188,8 @@ flowchart LR
 | [fixit-pr2/README.md](fixit-pr2/README.md) | PR2 mock-data architecture & migration notes |
 | [SECURITY.md](SECURITY.md) | Audit findings, E2E crypto notes, CSP |
 | [docs/adr/0001-separate-frontend-backend.md](docs/adr/0001-separate-frontend-backend.md) | ADR: split deployment |
+| [fixit-pr3/doc/PR3_Diagrams.puml.md](fixit-pr3/doc/PR3_Diagrams.puml.md) | PlantUML: use case, architecture, sequence, activity, deployment, ER diagrams |
+| [fixit-pr3/doc/postman/](fixit-pr3/doc/postman/) | Postman collection + environment for manual API testing |
 
 ## License
 

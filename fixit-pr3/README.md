@@ -8,6 +8,8 @@ On-demand local home-services marketplace. This is the **PR3 milestone**:
 Vue 3 frontend + PHP Slim 4 API + MySQL, with production KYC, Stripe test payments,
 slider captcha registration, legal policies, E2E encrypted chat, and Capacitor Android.
 
+**Live:** [https://fixit.olgtx.com](https://fixit.olgtx.com) · API base: `https://fixit.olgtx.com/api`
+
 ## Layout
 
 ```
@@ -23,10 +25,7 @@ fixit-pr3/
 ```bash
 mysql -u root -p < fixit-backend/schema.sql
 mysql -u root -p < fixit-backend/seed.sql
-mysql -u root -p < fixit-backend/migrations/002_e2e_crypto_harm.sql
-mysql -u root -p < fixit-backend/migrations/003_kyc_verification.sql
-mysql -u root -p < fixit-backend/migrations/004_stripe_payments.sql
-mysql -u root -p < fixit-backend/migrations/005_legal_acceptance.sql
+for f in fixit-backend/migrations/*.sql; do mysql -u root -p < "$f"; done
 ```
 
 ### Backend
@@ -77,5 +76,8 @@ Password: `password123`
 | KYC | OCR + MRZ + anti-spoof + 8-colour face liveness |
 | Payments | Stripe test mode (SetupIntent + saved card) |
 | Auth | Slider puzzle captcha + Terms/Privacy acceptance |
-| Chat | E2E AES-256-GCM; PIN-wrapped RSA keys |
+| Chat | E2E AES-256-GCM; PIN-wrapped RSA keys; auto-refreshes every 3s |
+| Order history | Order Details page (customer/provider/admin): submit → paid → accepted → in-progress → completed timeline, synced avatars |
+| Per-interaction encryption | X25519 + HKDF + AES-256-GCM + HMAC on payments, chat, and order-detail requests — same channel, visible in the Encryption Debug capsule |
+| Chat notifications | Client-side only (Web Notifications / Capacitor Local Notifications) — no FCM, no push server |
 | Security | Rate limits, CORS, prepared statements, security headers |
