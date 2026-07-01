@@ -482,8 +482,16 @@ async function sendQuick(text) {
 </template>
 
 <style scoped>
-.chat-root { background: transparent; }
-.chat-root.embedded { height: 100%; }
+.chat-root {
+  background: transparent;
+  min-height: 0;
+  overflow: hidden;
+}
+.chat-root.embedded {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
 /* Standalone (not embedded): own the viewport — fits mobile (dynamic vh + safe
    areas, dock hidden via useModalGuard) and desktop (centered column). */
@@ -627,8 +635,9 @@ async function sendQuick(text) {
 }
 
 .chat-list {
-  flex: 1; overflow-y: auto; padding: 16px;
+  flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
   display: flex; flex-direction: column; gap: 12px;
+  overscroll-behavior: contain;
 }
 
 .chat-row {
