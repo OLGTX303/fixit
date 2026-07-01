@@ -212,32 +212,63 @@ async function remove(c) {
 .acv-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); }
 .acv-sentinel { height: 1px; }
 
-/* Frosted-glass modal background: opaque enough to read text, still has the glass look */
+/* iOS 26 "Liquid Glass" modal: deep frosted blur + soft specular highlight + hairline border */
 .lg-modal {
-  background:
-    radial-gradient(ellipse 50% 36% at 18% 8%, rgba(255,255,255,0.55) 0%, transparent 60%),
-    rgba(255,255,255,0.88);
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.8) 55%, rgba(255,255,255,0.88) 100%);
+  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 28px;
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.25),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 0 40px rgba(255,255,255,0.15);
+  overflow: hidden;
 }
+/* soft top-left sheen, classic liquid-glass specular highlight */
+.lg-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 30% at 22% 0%, rgba(255,255,255,0.65) 0%, transparent 65%);
+  z-index: 0;
+}
+.acv-modal-head, .acv-modal-body, .acv-modal-foot { position: relative; z-index: 1; }
 
 .acv-modal-head {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 20px; font-weight: 800; border-bottom: 1px solid rgba(0,0,0,0.06);
+  padding: 16px 20px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.4);
 }
 .acv-close { background: none; border: none; cursor: pointer; color: var(--fx-muted); }
-.acv-modal-body { padding: 16px 20px; overflow-y: auto; }
-.acv-lbl { display: block; font-size: 12px; font-weight: 700; color: #5c4a44; margin-bottom: 4px; }
+.acv-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.acv-modal-body::-webkit-scrollbar,
+.acv-modal-body::-webkit-scrollbar-thumb,
+.acv-modal-body::-webkit-scrollbar-track {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+.acv-lbl { display: block; font-size: 12px; font-weight: 700; color: var(--fx-accent); margin-bottom: 4px; }
 .acv-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 8px; }
-.acv-modal-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(0,0,0,0.06); }
+.acv-modal-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.4); }
 
 /* Higher-contrast form fields inside the coupon modal */
 .acv-modal-body input.fx-input,
 .acv-modal-body select.fx-input {
-  background: #ffffff;
+  background: rgba(255,255,255,0.9);
   color: #1b1c1c;
-  border: 1px solid rgba(0,0,0,0.15);
-  box-shadow: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .acv-modal-body input.fx-input:focus-within,
 .acv-modal-body select.fx-input:focus-within,
