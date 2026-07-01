@@ -24,6 +24,7 @@ use FixIt\Middleware\JwtAuth;
 use FixIt\Middleware\RateLimitMiddleware;
 use FixIt\Middleware\SecureChannelMiddleware;
 use FixIt\Middleware\RoleGuard;
+use FixIt\Support\ResponseHelper;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
@@ -293,17 +294,27 @@ return function (App $app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Public client config �?the Google Maps JS key is stored server-side in
+    // Public client config — the Google Maps JS key is stored server-side in
     // .env (GOOGLE_MAPS_API_KEY) and fetched at runtime so it never lives in
-    // the committed frontend source. Restrict the key in Google Cloud Console.
+    // the committed frontend source. The key still MUST carry HTTP referrer +
+    // API restrictions in Google Cloud Console (a JS Maps key is inherently
+    // visible to the browser that loads it) — this endpoint only stops
+    // trivial scraping (curl/scanners hitting the API directly with no
+    // Origin header, which CorsMiddleware's Origin check does not catch).
     $app->get('/api/config/maps', function ($request, $response) {
+        $origin = $request->getHeaderLine('Origin');
+        $allowed = array_map('trim', explode(',', $_ENV['CORS_ORIGIN'] ?? ''));
+        if ($origin === '' || !in_array($origin, $allowed, true)) {
+            return ResponseHelper::error($response, 'Forbidden', 403);
+        }
+
         $key = $_ENV['GOOGLE_MAPS_API_KEY'] ?? '';
         $response->getBody()->write(json_encode([
             'maps_api_key' => $key,
             'configured' => $key !== '',
         ]));
         return $response->withHeader('Content-Type', 'application/json');
-    });
+    })->add($rateLimit);
 
     $app->get('/api', function ($request, $response) {
         $response->getBody()->write(json_encode([
