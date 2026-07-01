@@ -189,7 +189,7 @@ async function runLiveness() {
     })
 
     if (!result.passed) {
-      error.value = `Face liveness failed (${result.score}%). Keep your face in the oval and look at the screen during colour flashes.`
+      error.value = `Face liveness failed (${result.score}%). Keep your face in the oval and look at the screen during colour flashes. In bright daylight, try shading the camera or moving indoors — strong ambient light can overpower the colour flashes.`
       return
     }
     stopCamera()
