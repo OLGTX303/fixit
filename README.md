@@ -188,33 +188,40 @@ anything on its own, it shows exactly what the real request/response cycle did.
 
 ### Per-interaction encryption pipeline
 
-The channel behind the debug capsule, implemented identically in `secureTransport.js` (client) and
-`SecureChannelMiddleware.php` + `SecureChannel.php` (server). Full diagram:
-[PR3_Diagrams.puml.md — Key Derivation & Encryption Pipeline](fixit-pr3/doc/PR3_Diagrams.puml.md#extra--key-derivation--encryption-pipeline-x25519--hkdf--aes-256-gcm--hmac).
+**In plain terms:** every payment, chat message, and order-detail request gets wrapped in its own
+throwaway lock and key, generated fresh for that one request and never reused. Even someone who
+captures the traffic and later steals the server's keys can't unlock old messages, can't replay a
+captured request to trigger it again, and can't tamper with a message in transit without the
+server noticing and rejecting it outright.
 
-**1. Handshake (once per ~30 min session)** — client and server each generate an ephemeral X25519
-keypair, exchange public keys via `POST /secure/handshake`, and both independently compute the same
-ECDH shared secret `Z`. From `Z` and a server-issued salt, both derive a `master` key and a `mac`
-key via HKDF-SHA256 — held in memory only, never sent again.
+How that's actually achieved (implemented identically in `secureTransport.js` on the client and
+`SecureChannelMiddleware.php` + `SecureChannel.php` on the server — full diagram:
+[PR3_Diagrams.puml.md](fixit-pr3/doc/PR3_Diagrams.puml.md#extra--key-derivation--encryption-pipeline-x25519--hkdf--aes-256-gcm--hmac)):
 
-**2. Every request derives its own one-time key** — a fresh `counter` + random `nonce` feed HKDF to
-produce a request key used *once*. The body is encrypted with AES-256-GCM under that key; the
-request metadata (session, counter, nonce, timestamp, method, path, body hash) is signed separately
-with HMAC-SHA256 under the `mac` key.
+**1. Handshake (once per ~30 min session)** — think of this as the app and server agreeing on a
+shared secret without ever sending that secret over the network (a Diffie-Hellman key exchange).
+Both sides end up holding the same two keys — one for encrypting, one for signing — that only ever
+exist in memory and are never transmitted again.
 
-**3. Server verifies in cheapest-first order** — timestamp within window → nonce not already used
-(replay check) → HMAC signature valid → only then decrypt.
+**2. Every request gets its own one-time key** — instead of encrypting everything with one fixed
+key for the whole session, each individual request derives a brand-new key just for itself, then
+encrypts its data with that key and separately signs the request details (so tampering with either
+the data or the "envelope" it travels in is detectable).
 
-**4. The response uses a distinct key** — same counter/nonce, a different HKDF "info" string, so
-the response is never encrypted under the same key as the request that triggered it.
+**3. The server checks three things before trusting anything** — is this request recent (not an
+old one being replayed)? has this exact request been seen before (reject duplicates)? does the
+signature actually match? Only if all three pass does it bother decrypting.
 
-| Design choice | Why |
+**4. The reply back is locked with yet another different key** — so a request and its response
+never share a key either.
+
+| What we did | Why it matters, in plain terms |
 |---|---|
-| Ephemeral X25519 keypairs | Perfect forward secrecy — a key leaked later can't decrypt past traffic |
-| HKDF per counter+nonce | No key is ever reused across two messages |
-| AES-256-GCM | Authenticated encryption — tampering is detected, not just hidden from |
-| HMAC over a separate mac key | Proves metadata (path/method/timestamp) wasn't altered, independent of body decryption |
-| Nonce + timestamp window | A captured request replayed later, even unmodified, is rejected |
+| Fresh, throwaway session keys | If a key is ever compromised later, it can't be used to read *past* conversations — there's nothing old left to unlock |
+| A brand-new key for every request | No two messages are ever protected by the same key, so cracking one tells you nothing about any other |
+| Authenticated encryption (AES-256-GCM) | The server can tell if a message was tampered with in transit — not just "unreadable," but "rejected as invalid" |
+| A separate signature on the request details | Even the *metadata* (which endpoint, what time) is tamper-proof, not just the message content |
+| Reject anything old or already seen | Someone who captures a real request can't just resend it later and have it work again |
 
 ## Production deployment
 
