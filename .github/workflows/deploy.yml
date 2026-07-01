@@ -1,8 +1,12 @@
 name: Deploy & Android Release
 
 # Every push to master:
-#   1. SSH redeploy on the server (frontend + backend + migrations)
-#   2. Build a signed APK and publish a GitHub Release (OTA pickup)
+#   0. Detect whether backend/ and/or frontend/ actually changed
+#   1. If either did: SSH redeploy on the server (frontend + backend + migrations)
+#   2. If frontend did: build a signed APK and publish a GitHub Release (OTA pickup)
+# A push that touches neither (docs, diagrams, README, etc.) is just a normal
+# git update — no redeploy, no new APK/release, no wasted CI minutes.
+# workflow_dispatch always runs everything (manual trigger = force it).
 on:
   push:
     branches: [master]
@@ -13,8 +17,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'fixit-pr3/fixit-backend/**'
+            frontend:
+              - 'fixit-pr3/fixit-frontend/**'
+
   deploy-server:
     name: Deploy to server
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: SSH redeploy (frontend + backend + DB migrations)
@@ -29,6 +52,10 @@ jobs:
 
   android-release:
     name: Build & publish APK
+    needs: changes
+    # Only the frontend affects the APK bundle — a backend-only push would
+    # produce a byte-identical app and just clutter the release history.
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
