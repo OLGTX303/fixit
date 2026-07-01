@@ -166,6 +166,26 @@ flowchart LR
 - **Google Maps** — the backend only hands the browser its API key (`GET /api/config/maps`, origin-checked); the browser loads Google's JS SDK directly, the key is never bundled into source
 - **KYC face-match** — the backend calls a LAN gateway server-side to compare the ID photo against the live selfie; the browser never talks to it directly
 
+### Encryption Debug Capsule
+
+A small floating lock button (bottom-left corner of the app, purple) lets anyone watch the
+per-interaction encryption channel work in real time — useful for demos, since it's live proof
+the channel actually encrypts/decrypts rather than a claim on a slide.
+
+Click it to open a panel showing, for the most recent secure-channel request:
+- **↑ encrypt — before**: the plaintext payload, as the app built it
+- **↑ encrypt — after**: the AES-256-GCM ciphertext actually sent over the wire (base64)
+- **↓ decrypt — before**: the encrypted response ciphertext that came back
+- **↓ decrypt — after**: the plaintext after the app decrypted it
+
+A `‹ older` / `newer ›` nav flips through the last 25 captured requests, and the badge on the
+closed button shows how many have been captured this session. Trigger one by doing anything that
+rides the secure channel — booking, paying, opening Order Details, or sending a chat message.
+
+Implementation: `secureTransport.js` pushes every request into a small reactive `secureDebug`
+store as it happens; `DebugCapsule.vue` just renders that store — it doesn't intercept or decrypt
+anything on its own, it shows exactly what the real request/response cycle did.
+
 ## Production deployment
 
 1. Read [SECURITY.md](SECURITY.md) and complete both checklists (backend + frontend).

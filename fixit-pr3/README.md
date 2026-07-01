@@ -104,3 +104,11 @@ Password: `password123`
 | Per-interaction encryption | X25519 + HKDF + AES-256-GCM + HMAC on payments, chat, and order-detail requests — same channel, visible in the Encryption Debug capsule |
 | Chat notifications | Client-side only (Web Notifications / Capacitor Local Notifications) — no FCM, no push server |
 | Security | Rate limits, CORS, prepared statements, security headers |
+
+### Encryption Debug Capsule
+
+A floating lock button (bottom-left of the app) opens a live panel showing the per-interaction
+channel actually encrypting and decrypting — the plaintext before/after AES-256-GCM encryption on
+the way out, and the ciphertext/plaintext on the way back, for the last 25 secure-channel requests.
+Trigger it with any booking, payment, chat message, or Order Details open. Full explanation and
+what each field means: [root README](../README.md#encryption-debug-capsule).
