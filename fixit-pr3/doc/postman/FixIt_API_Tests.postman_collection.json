@@ -297,12 +297,7 @@
           "name": "Captcha Verify",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/captcha/verify",
               "host": [
@@ -319,13 +314,24 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"captcha_id\": \"{{captcha_challenge_id}}\",\n  \"captcha_x\": 120,\n  \"drag_ms\": 850\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "captcha_id",
+                  "value": "{{captcha_challenge_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "captcha_x",
+                  "value": "120",
+                  "type": "text"
+                },
+                {
+                  "key": "drag_ms",
+                  "value": "850",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -346,12 +352,7 @@
           "name": "Register OTP",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/register/otp",
               "host": [
@@ -368,13 +369,24 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"new-user+{{$timestamp}}@example.com\",\n  \"captcha_id\": \"{{captcha_challenge_id}}\",\n  \"captcha_pass_token\": \"{{captcha_token}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "new-user+{{$timestamp}}@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "captcha_id",
+                  "value": "{{captcha_challenge_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "captcha_pass_token",
+                  "value": "{{captcha_token}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -395,12 +407,7 @@
           "name": "Register Customer",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/register",
               "host": [
@@ -416,13 +423,44 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Customer\",\n  \"email\": \"postman.customer+{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"customer\",\n  \"email_otp\": \"123456\",\n  \"accepted_terms\": true,\n  \"accepted_privacy\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Postman Customer",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "postman.customer+{{$timestamp}}@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "type": "text"
+                },
+                {
+                  "key": "email_otp",
+                  "value": "123456",
+                  "type": "text"
+                },
+                {
+                  "key": "accepted_terms",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "accepted_privacy",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -443,12 +481,7 @@
           "name": "Login Customer - saves customer_token",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/login",
               "host": [
@@ -464,13 +497,19 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{customer_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -494,12 +533,7 @@
           "name": "Login Provider - saves provider_token",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/login",
               "host": [
@@ -515,13 +549,19 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{provider_email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{provider_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -545,12 +585,7 @@
           "name": "Login Admin - saves admin_token",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/auth/login",
               "host": [
@@ -566,13 +601,19 @@
               "type": "noauth"
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{admin_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1088,12 +1129,7 @@
           "name": "Validate Coupon",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/coupons/validate",
               "host": [
@@ -1116,13 +1152,24 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"{{coupon_code}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"subtotal\": 100.00\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "code",
+                  "value": "{{coupon_code}}",
+                  "type": "text"
+                },
+                {
+                  "key": "provider_id",
+                  "value": "{{provider_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subtotal",
+                  "value": "100.00",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1190,12 +1237,7 @@
           "name": "Record Browsing History",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/me/history",
               "host": [
@@ -1218,13 +1260,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"provider_id\": \"{{provider_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "provider_id",
+                  "value": "{{provider_id}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1337,12 +1380,7 @@
           "name": "Create Review",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/reviews",
               "host": [
@@ -1364,13 +1402,24 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"job_id\": \"{{booking_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Postman test review\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "job_id",
+                  "value": "{{booking_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "rating",
+                  "value": "5",
+                  "type": "text"
+                },
+                {
+                  "key": "comment",
+                  "value": "Postman test review",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1452,7 +1501,7 @@
                 "providers"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: services/category_ids are arrays — not a flat form body.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1507,7 +1556,7 @@
                 "{{provider_id}}"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: services is an array — not a flat form body.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1587,12 +1636,7 @@
           "name": "Create Provider Service",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}/services",
               "host": [
@@ -1616,13 +1660,29 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Deep cleaning\",\n  \"description\": \"Postman service\",\n  \"price\": 120.00,\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Deep cleaning",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Postman service",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "120.00",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1643,12 +1703,7 @@
           "name": "Update Provider Service",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}/services/{{service_id}}",
               "host": [
@@ -1673,13 +1728,29 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Deep cleaning updated\",\n  \"description\": \"Updated\",\n  \"price\": 130.00,\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Deep cleaning updated",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "130.00",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1760,7 +1831,7 @@
                 "availability"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: slots is an array of objects — not a flat form body.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1840,12 +1911,7 @@
           "name": "Create My Coupon",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/me/coupons",
               "host": [
@@ -1868,13 +1934,39 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"PROVIDER10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"expires_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "code",
+                  "value": "PROVIDER10",
+                  "type": "text"
+                },
+                {
+                  "key": "discount_type",
+                  "value": "percent",
+                  "type": "text"
+                },
+                {
+                  "key": "discount_value",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "starts_at",
+                  "value": "2026-01-01",
+                  "type": "text"
+                },
+                {
+                  "key": "expires_at",
+                  "value": "2026-12-31",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -1895,12 +1987,7 @@
           "name": "Update My Coupon",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/me/coupons/{{coupon_id}}",
               "host": [
@@ -1924,13 +2011,19 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"discount_value\": 15,\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "discount_value",
+                  "value": "15",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -2363,12 +2456,7 @@
           "name": "Secure Handshake",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/secure/handshake",
               "host": [
@@ -2391,13 +2479,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"client_pub\": \"{{x25519_client_pub_b64}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_pub",
+                  "value": "{{x25519_client_pub_b64}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -2560,7 +2649,7 @@
                 "setup"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: public_key_jwk is a nested object in real usage.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2599,12 +2688,7 @@
           "name": "Verify PIN",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/crypto/pin/verify",
               "host": [
@@ -2628,13 +2712,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pin_verifier\": \"{{pin_hash}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "pin_verifier",
+                  "value": "{{pin_hash}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -2741,12 +2826,7 @@
           "name": "Save Job Crypto Key",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/jobs/{{job_id}}/crypto/key",
               "host": [
@@ -2771,13 +2851,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"encrypted_job_key\": \"{{wrapped_job_key}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "encrypted_job_key",
+                  "value": "{{wrapped_job_key}}",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -3721,7 +3802,7 @@
                 "webhook"
               ]
             },
-            "description": "Requires a valid Stripe-Signature header in production.",
+            "description": "Requires a valid Stripe-Signature header in production. Kept as raw JSON: must mirror Stripe's real webhook payload format.",
             "auth": {
               "type": "noauth"
             },
@@ -3856,7 +3937,7 @@
                 "avatar"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: the backend only accepts a base64 data URL in an 'image' field, not a real multipart file upload.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3911,7 +3992,7 @@
                 "image"
               ]
             },
-            "description": "",
+            "description": "Kept as raw JSON: the backend only accepts a base64 data URL in an 'image' field, not a real multipart file upload.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3950,12 +4031,7 @@
           "name": "Request Email OTP",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/users/me/email/otp",
               "host": [
@@ -3980,13 +4056,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"new-email@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "new-email@example.com",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4007,12 +4084,7 @@
           "name": "Verify Email OTP",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/users/me/email/verify",
               "host": [
@@ -4037,13 +4109,19 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"new-email@example.com\",\n  \"otp\": \"123456\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "new-email@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "otp",
+                  "value": "123456",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4337,12 +4415,7 @@
           "name": "Verify Provider",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/providers/{{provider_id}}/verify",
               "host": [
@@ -4367,13 +4440,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"is_verified\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "is_verified",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4394,12 +4468,7 @@
           "name": "Set Provider Priority",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/providers/{{provider_id}}/priority",
               "host": [
@@ -4424,13 +4493,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"is_priority\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "is_priority",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4510,12 +4580,7 @@
           "name": "Block User",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/users/{{user_id}}/block",
               "host": [
@@ -4540,13 +4605,14 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"blocked\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "blocked",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4793,12 +4859,7 @@
           "name": "Review Harm Message",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/harm-reviews/{{harm_review_id}}",
               "host": [
@@ -4822,13 +4883,19 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"reviewed_clear\",\n  \"admin_notes\": \"Reviewed from Postman\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "status",
+                  "value": "reviewed_clear",
+                  "type": "text"
+                },
+                {
+                  "key": "admin_notes",
+                  "value": "Reviewed from Postman",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4900,12 +4967,7 @@
           "name": "Create Admin Coupon",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/coupons",
               "host": [
@@ -4928,13 +4990,39 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"ADMIN10\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 10,\n  \"starts_at\": \"2026-01-01\",\n  \"expires_at\": \"2026-12-31\",\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "code",
+                  "value": "ADMIN10",
+                  "type": "text"
+                },
+                {
+                  "key": "discount_type",
+                  "value": "percent",
+                  "type": "text"
+                },
+                {
+                  "key": "discount_value",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "starts_at",
+                  "value": "2026-01-01",
+                  "type": "text"
+                },
+                {
+                  "key": "expires_at",
+                  "value": "2026-12-31",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
@@ -4955,12 +5043,7 @@
           "name": "Update Admin Coupon",
           "request": {
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/admin/coupons/{{coupon_id}}",
               "host": [
@@ -4984,13 +5067,19 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"discount_value\": 20,\n  \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "discount_value",
+                  "value": "20",
+                  "type": "text"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "type": "text"
                 }
-              }
+              ]
             }
           },
           "event": [
