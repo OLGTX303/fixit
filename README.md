@@ -186,6 +186,36 @@ Implementation: `secureTransport.js` pushes every request into a small reactive 
 store as it happens; `DebugCapsule.vue` just renders that store — it doesn't intercept or decrypt
 anything on its own, it shows exactly what the real request/response cycle did.
 
+### Per-interaction encryption pipeline
+
+The channel behind the debug capsule, implemented identically in `secureTransport.js` (client) and
+`SecureChannelMiddleware.php` + `SecureChannel.php` (server). Full diagram:
+[PR3_Diagrams.puml.md — Key Derivation & Encryption Pipeline](fixit-pr3/doc/PR3_Diagrams.puml.md#extra--key-derivation--encryption-pipeline-x25519--hkdf--aes-256-gcm--hmac).
+
+**1. Handshake (once per ~30 min session)** — client and server each generate an ephemeral X25519
+keypair, exchange public keys via `POST /secure/handshake`, and both independently compute the same
+ECDH shared secret `Z`. From `Z` and a server-issued salt, both derive a `master` key and a `mac`
+key via HKDF-SHA256 — held in memory only, never sent again.
+
+**2. Every request derives its own one-time key** — a fresh `counter` + random `nonce` feed HKDF to
+produce a request key used *once*. The body is encrypted with AES-256-GCM under that key; the
+request metadata (session, counter, nonce, timestamp, method, path, body hash) is signed separately
+with HMAC-SHA256 under the `mac` key.
+
+**3. Server verifies in cheapest-first order** — timestamp within window → nonce not already used
+(replay check) → HMAC signature valid → only then decrypt.
+
+**4. The response uses a distinct key** — same counter/nonce, a different HKDF "info" string, so
+the response is never encrypted under the same key as the request that triggered it.
+
+| Design choice | Why |
+|---|---|
+| Ephemeral X25519 keypairs | Perfect forward secrecy — a key leaked later can't decrypt past traffic |
+| HKDF per counter+nonce | No key is ever reused across two messages |
+| AES-256-GCM | Authenticated encryption — tampering is detected, not just hidden from |
+| HMAC over a separate mac key | Proves metadata (path/method/timestamp) wasn't altered, independent of body decryption |
+| Nonce + timestamp window | A captured request replayed later, even unmodified, is rejected |
+
 ## Production deployment
 
 1. Read [SECURITY.md](SECURITY.md) and complete both checklists (backend + frontend).
