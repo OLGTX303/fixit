@@ -212,13 +212,42 @@ async function remove(c) {
 .acv-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.3); }
 .acv-sentinel { height: 1px; }
 
+/* Frosted-glass modal background: opaque enough to read text, still has the glass look */
+.lg-modal {
+  background:
+    radial-gradient(ellipse 50% 36% at 18% 8%, rgba(255,255,255,0.55) 0%, transparent 60%),
+    rgba(255,255,255,0.88);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+
 .acv-modal-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; font-weight: 800; border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .acv-close { background: none; border: none; cursor: pointer; color: var(--fx-muted); }
 .acv-modal-body { padding: 16px 20px; overflow-y: auto; }
-.acv-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--fx-muted); margin-bottom: 4px; }
+.acv-lbl { display: block; font-size: 12px; font-weight: 700; color: #5c4a44; margin-bottom: 4px; }
 .acv-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 8px; }
 .acv-modal-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(0,0,0,0.06); }
+
+/* Higher-contrast form fields inside the coupon modal */
+.acv-modal-body input.fx-input,
+.acv-modal-body select.fx-input {
+  background: #ffffff;
+  color: #1b1c1c;
+  border: 1px solid rgba(0,0,0,0.15);
+  box-shadow: none;
+}
+.acv-modal-body input.fx-input:focus-within,
+.acv-modal-body select.fx-input:focus-within,
+.acv-modal-body input.fx-input:focus,
+.acv-modal-body select.fx-input:focus {
+  border-color: var(--fx-accent);
+  box-shadow: 0 0 0 3px rgba(255,102,53,0.15);
+}
+.acv-modal-body input.fx-input::placeholder {
+  color: #8a8a8a;
+  opacity: 1;
+}
 </style>
