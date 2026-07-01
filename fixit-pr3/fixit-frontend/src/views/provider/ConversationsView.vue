@@ -216,10 +216,18 @@ function selectJob(jobId) {
 </template>
 
 <style scoped>
-.msg-split { display: flex; height: calc(100vh - 0px); overflow: hidden; }
+.msg-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  height: calc(100dvh - 24px - env(safe-area-inset-top));
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+  overflow: hidden;
+}
 
 .msg-panel-left {
   width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
   background:
     radial-gradient(ellipse 60% 40% at 10% 5%, rgba(255,255,255,0.32) 0%, transparent 65%),
     rgba(255,255,255,0.08);
@@ -270,7 +278,7 @@ function selectJob(jobId) {
 .msg-empty-list p { font-size: 13px; color: var(--fx-muted); margin: 0; }
 .msg-find-btn { margin-top: 6px; padding: 9px 22px; border-radius: 999px; border: none; background: var(--fx-accent); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
 
-.msg-panel-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msg-panel-right { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .msg-chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--fx-muted); font-size: 14px; }
 
 .conv-row { width: 100%; border: none; cursor: pointer; padding: 14px 16px; text-align: left; transition: transform 0.15s ease, box-shadow 0.15s ease; }
