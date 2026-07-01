@@ -99,6 +99,54 @@ function channelDelta(baseline, sample, channel) {
   return val - base
 }
 
+function channelValue(rgb, channel) {
+  return channel === 'r' ? rgb.r : channel === 'g' ? rgb.g : rgb.b
+}
+
+/**
+ * In bright ambient light (daytime), the camera's auto-exposure compresses the
+ * sensor response and the baseline channel often already sits close to 255 —
+ * so the same physical reflection produces a much smaller absolute delta than
+ * it would indoors, even though the face is genuinely reflecting the flash. A
+ * single fixed absolute threshold (e.g. "delta > 5") that works well in dim
+ * light rejects real users in daylight. Scale the required delta by the
+ * remaining headroom to 255, so a small delta still counts when the channel
+ * was already near-saturated pre-flash.
+ */
+function isReflected(baseline, sample, expected) {
+  const delta = channelDelta(baseline, sample, expected)
+  const otherDeltas = ['r', 'g', 'b']
+    .filter((c) => c !== expected)
+    .map((c) => channelDelta(baseline, sample, c))
+  const maxOther = Math.max(...otherDeltas, 0)
+
+  const headroom = Math.max(20, 255 - channelValue(baseline, expected))
+  const relativeDelta = delta / headroom
+
+  // Two regimes, OR'd: the original absolute check (works in normal/dim
+  // lighting) and a relative check scaled to available headroom (kicks in
+  // when ambient light has already pushed the baseline near saturation).
+  const passesAbsolute = delta > 5 && delta > maxOther + 1
+  const passesRelative = delta > 1.5 && delta > maxOther && relativeDelta > 0.06
+  return { reflected: passesAbsolute || passesRelative, delta, maxOther }
+}
+
+/** Best-effort: lock exposure/white-balance so auto-exposure can't fight the
+ * flash signal mid-check. Unsupported on most browsers — silently no-ops. */
+async function tryLockExposure(video) {
+  try {
+    const track = video.srcObject?.getVideoTracks?.()[0]
+    if (!track) return
+    const caps = track.getCapabilities?.()
+    const constraints = {}
+    if (caps?.exposureMode?.includes('manual')) constraints.exposureMode = 'manual'
+    if (caps?.whiteBalanceMode?.includes('manual')) constraints.whiteBalanceMode = 'manual'
+    if (Object.keys(constraints).length) await track.applyConstraints({ advanced: [constraints] })
+  } catch {
+    /* not supported — the relative threshold below covers this case anyway */
+  }
+}
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
@@ -111,6 +159,7 @@ export async function runColorReflectionCheck(video, { onFlash, onProgress }) {
   const sequence = generateColorSequence()
   const hash = await hashColorSequence(sequence)
 
+  await tryLockExposure(video)
   await sleep(300)
   const baselineFrame = captureFrame(video)
   if (!baselineFrame) {
@@ -124,25 +173,28 @@ export async function runColorReflectionCheck(video, { onFlash, onProgress }) {
     const color = sequence[i]
     onProgress(i + 1, sequence.length, color)
     onFlash(color)
-    await sleep(FLASH_MS)
-    const frame = captureFrame(video)
-    const sample = frame
-      ? sampleFaceRegion(frame.ctx, frame.width, frame.height)
-      : baseline
-
     const expected = expectedDominant(color)
-    const delta = channelDelta(baseline, sample, expected)
-    const otherDeltas = ['r', 'g', 'b']
-      .filter((c) => c !== expected)
-      .map((c) => channelDelta(baseline, sample, c))
-    const maxOther = Math.max(...otherDeltas, 0)
 
-    const reflected = delta > 5 && delta > maxOther + 1
+    // Sample twice: early (before auto-exposure has time to compensate the
+    // extra screen light) and at the original timing. Auto-exposure reacts
+    // faster in bright ambient conditions, so a late-only sample under-reads
+    // the real signal in daylight — take whichever sample shows it best.
+    await sleep(FLASH_MS * 0.35)
+    const earlyFrame = captureFrame(video)
+    const earlySample = earlyFrame ? sampleFaceRegion(earlyFrame.ctx, earlyFrame.width, earlyFrame.height) : baseline
+    await sleep(FLASH_MS * 0.65)
+    const lateFrame = captureFrame(video)
+    const lateSample = lateFrame ? sampleFaceRegion(lateFrame.ctx, lateFrame.width, lateFrame.height) : baseline
+
+    const early = isReflected(baseline, earlySample, expected)
+    const late = isReflected(baseline, lateSample, expected)
+    const best = Math.abs(early.delta) >= Math.abs(late.delta) ? early : late
+
     flashResults.push({
       color: color.name,
       expected_channel: expected,
-      channel_delta: Math.round(delta * 10) / 10,
-      reflected,
+      channel_delta: Math.round(best.delta * 10) / 10,
+      reflected: early.reflected || late.reflected,
     })
     onFlash(null)
     await sleep(SETTLE_MS)
